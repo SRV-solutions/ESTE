@@ -1,6 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/database'; // Asegúrate de tener la configuración de Sequelize
 import Location from './Location';
+import ServiceOrder from './ServiceOrder';
 
 class Event extends Model {
   public id!: number;
@@ -9,7 +10,8 @@ class Event extends Model {
   public locationId!: number;
 
   public static associate() {
-    Event.belongsTo(Location, { foreignKey: 'locationId', as: 'location' });
+    Event.belongsTo(Location, { foreignKey: 'locationId'});
+    Event.hasOne(ServiceOrder, { foreignKey: 'eventId' })
   }
 }
 

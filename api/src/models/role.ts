@@ -7,7 +7,7 @@ class Role extends Model {
   public roleName!: string;
 
   public static associate() {
-    Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
+    Role.hasMany(User, { foreignKey: 'roleId'});
   }
 }
 

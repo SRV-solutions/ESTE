@@ -6,12 +6,12 @@ class StoreItem extends Model {
   public id!: number;
   public itemIdParent!: number;
   public itemIdChild!: number;
-  public quality!: number;
+  public quantity!: number;
 
   // Método para definir asociaciones
   public static associate() {
-    StoreItem.belongsTo(Item, { foreignKey: 'itemIdParent', as: 'parentItem' });
-    StoreItem.belongsTo(Item, { foreignKey: 'itemIdChild', as: 'childItem' });
+    StoreItem.belongsTo(Item, { foreignKey: 'itemIdParent'});
+    StoreItem.belongsTo(Item, { foreignKey: 'itemIdChild' });
   }
 }
 
@@ -35,7 +35,7 @@ StoreItem.init({
       key: 'id',     // Clave primaria de la tabla referenciada
     },
   },
-  quality: {
+  quantity: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },

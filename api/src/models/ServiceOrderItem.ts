@@ -3,7 +3,7 @@ import { sequelize } from '../config/database'; // Asegúrate de tener la config
 import ServiceOrder from './ServiceOrder'; // Asegúrate de importar el modelo ServiceOrder
 import Item from './Item'; // Asegúrate de importar el modelo Item
 
-class OrderItem extends Model {
+class ServiceOrderItem extends Model {
   public id!: number;
   public serviceOrderId!: number;
   public itemId!: number;
@@ -11,12 +11,12 @@ class OrderItem extends Model {
 
   // Método para definir asociaciones
   public static associate() {
-    OrderItem.belongsTo(ServiceOrder, { foreignKey: 'serviceOrderId', as: 'serviceOrder' });
-    OrderItem.belongsTo(Item, { foreignKey: 'itemId', as: 'item' });
+    ServiceOrderItem.belongsTo(ServiceOrder, { foreignKey: 'serviceOrderId' });
+    ServiceOrderItem.belongsTo(Item, { foreignKey: 'itemId'});
   }
 }
 
-OrderItem.init({
+ServiceOrderItem.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -42,10 +42,10 @@ OrderItem.init({
   },
 }, {
   sequelize,
-  modelName: 'OrderItem',
-  tableName: 'OrderItem', // Cambié a 'order_items' para seguir la convención de nombres
+  modelName: 'ServiceOrderItem',
+  tableName: 'ServiceOrderItem', // Cambié a 'order_items' para seguir la convención de nombres
   timestamps: false, // Si no tienes createdAt y updatedAt
 });
 
 // Exportar el modelo
-export default OrderItem;
+export default ServiceOrderItem;

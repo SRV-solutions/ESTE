@@ -1,19 +1,42 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/database'; // Asegúrate de tener la configuración de Sequelize
 import Event from './Event'; // Asegúrate de importar el modelo Event
-import OrderItem from './OrderItem'; // Asegúrate de importar el modelo OrderItem
+import User from './User'; // Asegúrate de importar el modelo Event
+import ServiceOrderItem from './ServiceOrderItem'; // Asegúrate de importar el modelo OrderItem
+import ServiceOrderStoreItem from './ServiceOrderStoreItem';
+
+enum Status {
+  "Creada",
+  "En Revision",
+  "Abrobada",
+  "Rechazada",
+  "En Proceso",
+  "Lista",
+  "Despachada",
+  "Entregada",
+  "Vuelta",
+  "Recibida",
+  "Desarmada"
+}
 
 class ServiceOrder extends Model {
   public id!: number;
   public eventId!: number;
   public createdDate!: Date;
-  public status!: string;
+  public status!: Status;
   public observations!: string;
+  public checkedBy!: number;
+  public orderBy!: number;
+  public deployedBy!: number;
 
-  // Método para definir asociaciones
   public static associate() {
-    ServiceOrder.belongsTo(Event, { foreignKey: 'eventId', as: 'event' });
-    ServiceOrder.hasMany(OrderItem, { foreignKey: 'serviceOrderId', as: 'orderItems' });
+    ServiceOrder.belongsTo(User, { foreignKey: 'checkedBy' });
+    ServiceOrder.belongsTo(User, { foreignKey: 'deployedBy' });
+    ServiceOrder.belongsTo(User, { foreignKey: 'orderBy' });
+    ServiceOrder.belongsTo(Event, { foreignKey: 'eventId' });
+
+    ServiceOrder.hasMany(ServiceOrderItem, { foreignKey: 'serviceOrderId' });
+    ServiceOrder.hasOne(ServiceOrderStoreItem, { foreignKey: 'serviceOrderId' })
   }
 }
 
@@ -27,6 +50,27 @@ ServiceOrder.init({
     type: DataTypes.INTEGER,
     references: {
       model: 'Event', // Nombre de la tabla referenciada
+      key: 'id',      // Clave primaria de la tabla referenciada
+    },
+  },
+  orderBy: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'User', // Nombre de la tabla referenciada
+      key: 'id',      // Clave primaria de la tabla referenciada
+    },
+  },
+  deployedBy: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'User', // Nombre de la tabla referenciada
+      key: 'id',      // Clave primaria de la tabla referenciada
+    },
+  },
+  checkedBy: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'User', // Nombre de la tabla referenciada
       key: 'id',      // Clave primaria de la tabla referenciada
     },
   },

@@ -12,9 +12,9 @@ class ServiceOrderStoreItem extends Model {
   public quality!: number;
 
   public static associate() {
-    ServiceOrderStoreItem.belongsTo(ServiceOrder, { foreignKey: 'serviceOrderId', as: 'serviceOrder' });
-    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdParent', as: 'parentItem' });
-    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdChild', as: 'childItem' });
+    ServiceOrderStoreItem.belongsTo(ServiceOrder, { foreignKey: 'serviceOrderId' });
+    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdParent' });
+    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdChild' });
   }
 }
 

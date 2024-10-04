@@ -1,8 +1,9 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/database'; // Asegúrate de tener la configuración de Sequelize
 import User from './User'; // Asegúrate de importar el modelo User
-import OrderItem from './OrderItem'; // Asegúrate de importar el modelo OrderItem
+import ServiceOrderItem from './ServiceOrderItem'; // Asegúrate de importar el modelo OrderItem
 import ServiceOrderStoreItem from './ServiceOrderStoreItem'; // Asegúrate de importar el modelo ServiceOrderStoreItem
+import StoreItem from './StoreItem';
 
 class Item extends Model {
   public id!: number;
@@ -14,14 +15,17 @@ class Item extends Model {
   public value!: number;
   public weight!: number;
   public isStorable!: boolean;
+  public isActive!: boolean;
   public uses!: number;
   public ownerId!: number;
 
   public static associate() {
-    Item.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
-    Item.hasMany(OrderItem, { foreignKey: 'itemId', as: 'orderItems' });
-    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdParent', as: 'parentStoreItems' });
-    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdChild', as: 'childStoreItems' });
+    Item.belongsTo(User, { foreignKey: 'ownerId'});
+    Item.hasMany(ServiceOrderItem, { foreignKey: 'itemId'});
+    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdParent' });
+    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdChild' });
+    Item.hasMany(StoreItem, { foreignKey: 'itemIdParent' });
+    Item.hasMany(StoreItem, { foreignKey: 'itemIdChild' });
   }
 }
 
@@ -60,6 +64,10 @@ Item.init({
     allowNull: false,
   },
   isStorable: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+  },
+  isActive: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
   },
