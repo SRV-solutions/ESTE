@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { User } from '../models/user';
-import { Role } from '../models/role';
+import Role from '../models/Role';
+import User from '../models/User';
 
 // Obtener un usuario por ID
 export const getUser = async (req: Request, res: any) => {

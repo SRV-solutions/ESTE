@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { Role } from '../models/role';
-import { User } from '../models/user';
+import Role from '../models/Role';
+import User from '../models/User';
 
 export const getRole = async (req: Request, res: any)=>{
     const { id } = req.params;

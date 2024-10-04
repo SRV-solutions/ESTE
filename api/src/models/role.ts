@@ -1,30 +1,31 @@
-import { DataTypes, Model } from 'sequelize';
+import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/database';
-import { User } from './user';
+import User from './User';
 
-export class Role extends Model {
+class Role extends Model {
   public id!: number;
-  public name!: string;
+  public roleName!: string;
+
+  public static associate() {
+    Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
+  }
 }
 
 Role.init({
   id: {
     type: DataTypes.INTEGER,
-    autoIncrement: true,
     primaryKey: true,
+    autoIncrement: true,
   },
-  name: {
+  roleName: {
     type: DataTypes.STRING,
     allowNull: false,
   },
 }, {
   sequelize,
-  tableName: 'roles',
+  modelName: 'Role',
+  tableName: 'Role',
+  timestamps: false,
 });
 
-Role.hasMany(User, {
-  foreignKey: 'roleId',
-});
-User.belongsTo(Role, {
-  foreignKey: 'roleId',
-});
+export default Role;
