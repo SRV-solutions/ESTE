@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import ServiceOrder from '../models/ServiceOrder';
 import Event from '../models/Event';
 import User from '../models/User';
-import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
+import ServiceOrderItem from '../models/ServiceOrderItem';
 import Item from '../models/Item';
 
 export const createServiceOrder = async (req: Request, res: Response) => {
@@ -13,8 +13,7 @@ export const createServiceOrder = async (req: Request, res: Response) => {
     observations,
     checkedBy,
     orderBy,
-    deployedBy,
-    items
+    deployedBy
   } = req.body;
 
   try {
@@ -37,18 +36,34 @@ export const createServiceOrder = async (req: Request, res: Response) => {
       orderBy,
       deployedBy  
     });
-    if (items && items.length !== 0) {
-      const searchedItems = await Item.findAll({
-        where: {
-          id: items.map((item:any) => item.id)
-        }
-      })
-      console.log(searchedItems);
-      
-      // ServiceOrderStoreItem.bulkBuild
-    }
     res.status(201).json(serviceOrder);
   } catch (error) {
     res.status(500).json({ message: 'Error creating role', error });
+  }
+};
+
+export const getServiceOrderById = async (req: Request, res: any) => {
+  const { id } = req.params
+  try {
+    const searchedServiceOrder = await ServiceOrder.findByPk(id, {
+      include: [
+        {
+          model: ServiceOrderItem,
+          include: [
+            {
+              model: Item
+            }
+          ]
+        }
+      ]
+    });
+    if (!searchedServiceOrder) {
+      return res.status(404).json({ message: 'Service Order not found' });
+    }
+    return res.status(200).json(searchedServiceOrder);
+
+  } catch (error) {
+    console.error('Error fetching service order:', error);
+    return res.status(500).json({ message: 'Internal Server Error' });
   }
 };

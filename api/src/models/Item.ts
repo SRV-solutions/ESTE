@@ -10,11 +10,12 @@ class Item extends Model {
   public name!: string;
   public description!: string;
   public type!: string;
-  public cant!: number;
+  public quantity!: number;
   public unity!: string;
   public value!: number;
   public weight!: number;
   public isStorable!: boolean;
+  public isContainer!: boolean;
   public isActive!: boolean;
   public uses!: number;
   public ownerId!: number;
@@ -47,7 +48,7 @@ Item.init({
     type: DataTypes.STRING,
     allowNull: false,
   },
-  cant: {
+  quantity: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
@@ -64,6 +65,10 @@ Item.init({
     allowNull: false,
   },
   isStorable: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+  },
+  isContainer: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
   },

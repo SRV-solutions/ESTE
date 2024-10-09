@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { createServiceOrder } from '../controllers/serviceOrderController';
+import { createServiceOrder, getServiceOrderById } from '../controllers/serviceOrderController';
 
 const router = Router();
 
 router.post('/', createServiceOrder)
+router.get('/:id', getServiceOrderById)
 
 export default router;

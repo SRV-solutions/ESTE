@@ -3,6 +3,7 @@ import { sequelize } from './config/database';
 import userRoutes from './routes/userRoutes';
 import roleRoutes from './routes/roleRoutes';
 import serviceOrderRoutes from './routes/serviceOrderRoutes';
+import serviceOrderItemsRoutes from './routes/serviceOrderItemRoutes';
 // import locationRoutes from './routes/locationRoutes';
 // import eventRoutes from './routes/eventRoutes';
 // import orderItemRoutes from './routes/orderItemRoutes';
@@ -35,6 +36,7 @@ app.use(express.json());
 app.use('/users', userRoutes);
 app.use('/roles', roleRoutes);
 app.use('/service-orders', serviceOrderRoutes);
+app.use('/service-order-items', serviceOrderItemsRoutes);
 // app.use('/locations', locationRoutes);
 // app.use('/events', eventRoutes);
 // app.use('/order-items', orderItemRoutes);
@@ -80,11 +82,12 @@ async function seeder():Promise<void> {
       name: "HDMI",
       description: "HDMI para videos y LCD",
       type: "cable",
-      cant: 45,
+      quantity: 45,
       unity: "mts",
       value: 15,
       weight: 300,
       isStorable: true,
+      isContainer: false,
       isActive: true,
       uses: 2,
       ownerId: userRole.id
@@ -93,11 +96,12 @@ async function seeder():Promise<void> {
       name: "Baul Azul",
       description: "Baul Azul para cables",
       type: "baul",
-      cant: 2,
+      quantity: 2,
       unity: "mts3",
       value: 2,
       weight: 15000,
       isStorable: false,
+      isContainer: true,
       isActive: true,
       uses: 5,
       ownerId: userRole.id
@@ -105,11 +109,12 @@ async function seeder():Promise<void> {
       name: "Panel 20x20",
       description: "Paneles de marca sony de 20px X 20px",
       type: "panel",
-      cant: 30,
+      quantity: 30,
       unity: "px",
       value: 200,
       weight: 15000,
       isStorable: true,
+      isContainer: false,
       isActive: true,
       uses: 10,
       ownerId: userRole.id
@@ -117,23 +122,25 @@ async function seeder():Promise<void> {
       name: "Baul de Paneles",
       description: "Baul rojo para paneles",
       type: "baul",
-      cant: 5,
+      quantity: 5,
       unity: "mts3",
       value: 2,
       weight: 15000,
       isStorable: false,
+      isContainer: true,
       isActive: true,
       uses: 2,
       ownerId: userRole.id
     },{
       name: "Totem para tele",
       description: "Totem para tele 50 Pulgadas",
-      type: "Totem",
-      cant: 5,
+      type: "totem",
+      quantity: 5,
       unity: "mts",
       value: 2,
       weight: 15000,
       isStorable: false,
+      isContainer: false,
       isActive: true,
       uses: 2,
       ownerId: userRole.id
