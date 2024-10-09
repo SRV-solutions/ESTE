@@ -4,9 +4,10 @@ import Event from '../models/Event';
 import User from '../models/User';
 import ServiceOrderItem from '../models/ServiceOrderItem';
 import Item from '../models/Item';
+import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
 
 export const createServiceOrder = async (req: Request, res: Response) => {
-  const { 
+  const {
     eventId,
     createdDate,
     status,
@@ -34,7 +35,7 @@ export const createServiceOrder = async (req: Request, res: Response) => {
       observations,
       checkedBy,
       orderBy,
-      deployedBy  
+      deployedBy
     });
     res.status(201).json(serviceOrder);
   } catch (error) {
@@ -51,7 +52,7 @@ export const getServiceOrderById = async (req: Request, res: any) => {
           model: ServiceOrderItem,
           include: [
             {
-              model: Item
+              model: Item,
             }
           ]
         }
@@ -59,6 +60,46 @@ export const getServiceOrderById = async (req: Request, res: any) => {
     });
     if (!searchedServiceOrder) {
       return res.status(404).json({ message: 'Service Order not found' });
+    }
+    if (searchedServiceOrder.ServiceOrderItems && searchedServiceOrder.ServiceOrderItems.length !== 0) {
+      const filterServiceOrderContainerItems = searchedServiceOrder.ServiceOrderItems.filter(serviceOrderItem => {
+        if (serviceOrderItem.Item.isContainer) {
+          return serviceOrderItem
+        }
+      })
+      if (filterServiceOrderContainerItems && filterServiceOrderContainerItems.length !== 0) {
+        const searchedServiceOrderStoreItem = await ServiceOrderStoreItem.findAll({
+          where: {
+            serviceOrderId: filterServiceOrderContainerItems.map(filterServiceOrderContainerItem => {
+              return filterServiceOrderContainerItem.serviceOrderId
+            }),
+            itemIdParent: filterServiceOrderContainerItems.map(filterServiceOrderContainerItem => {
+              return filterServiceOrderContainerItem.itemId
+            }),
+          },
+          include: [
+            { model: Item, as: 'ParentItem' },
+            { model: Item, as: 'ChildItem' }
+          ]
+        })
+        const filterServiceOrderNotContainerItems = searchedServiceOrder.ServiceOrderItems.filter(serviceOrderItem => {
+          if (!serviceOrderItem.Item.isContainer) {
+            return serviceOrderItem
+          }
+        })
+        const newServiceOrder = {
+          id: searchedServiceOrder.id,
+          eventId: searchedServiceOrder.eventId,
+          orderBy: searchedServiceOrder.orderBy,
+          deployedBy: searchedServiceOrder.deployedBy,
+          checkedBy: searchedServiceOrder.checkedBy,
+          createdDate: searchedServiceOrder.createdDate,
+          status: searchedServiceOrder.status,
+          observations: searchedServiceOrder.observations,
+          ServiceOrderItems: [...filterServiceOrderNotContainerItems, ...searchedServiceOrderStoreItem]
+        }
+        return res.status(200).json(newServiceOrder);
+      }
     }
     return res.status(200).json(searchedServiceOrder);
 

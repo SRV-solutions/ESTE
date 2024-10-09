@@ -28,6 +28,7 @@ class ServiceOrder extends Model {
   public checkedBy!: number;
   public orderBy!: number;
   public deployedBy!: number;
+  public ServiceOrderItems!: Array<ServiceOrderItem>
 
   public static associate() {
     ServiceOrder.belongsTo(User, { foreignKey: 'checkedBy' });

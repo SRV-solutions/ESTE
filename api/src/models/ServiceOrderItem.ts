@@ -8,6 +8,7 @@ class ServiceOrderItem extends Model {
   public serviceOrderId!: number;
   public itemId!: number;
   public quantity!: number;
+  public Item!: Item
 
   // Método para definir asociaciones
   public static associate() {

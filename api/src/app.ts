@@ -3,7 +3,8 @@ import { sequelize } from './config/database';
 import userRoutes from './routes/userRoutes';
 import roleRoutes from './routes/roleRoutes';
 import serviceOrderRoutes from './routes/serviceOrderRoutes';
-import serviceOrderItemsRoutes from './routes/serviceOrderItemRoutes';
+import serviceOrderItemRoutes from './routes/serviceOrderItemRoutes';
+import serviceOrderStoreItemRoutes from './routes/serviceOrderStoreItemRoutes';
 // import locationRoutes from './routes/locationRoutes';
 // import eventRoutes from './routes/eventRoutes';
 // import orderItemRoutes from './routes/orderItemRoutes';
@@ -35,8 +36,9 @@ app.use(express.json());
 
 app.use('/users', userRoutes);
 app.use('/roles', roleRoutes);
-app.use('/service-orders', serviceOrderRoutes);
-app.use('/service-order-items', serviceOrderItemsRoutes);
+app.use('/service-orders', serviceOrderRoutes);//orden de servicios para eventos
+app.use('/service-order-items', serviceOrderItemRoutes);//items para eventos
+app.use('/service-order-store-items', serviceOrderStoreItemRoutes);//baules de cables para eventos
 // app.use('/locations', locationRoutes);
 // app.use('/events', eventRoutes);
 // app.use('/order-items', orderItemRoutes);

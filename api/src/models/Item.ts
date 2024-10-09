@@ -23,8 +23,8 @@ class Item extends Model {
   public static associate() {
     Item.belongsTo(User, { foreignKey: 'ownerId'});
     Item.hasMany(ServiceOrderItem, { foreignKey: 'itemId'});
-    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdParent' });
-    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdChild' });
+    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdParent', as: 'ParentItem' });
+    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdChild', as: 'ChildItem' });
     Item.hasMany(StoreItem, { foreignKey: 'itemIdParent' });
     Item.hasMany(StoreItem, { foreignKey: 'itemIdChild' });
   }

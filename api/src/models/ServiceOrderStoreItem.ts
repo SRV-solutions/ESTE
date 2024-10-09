@@ -9,12 +9,12 @@ class ServiceOrderStoreItem extends Model {
   public serviceOrderId!: number;  // Relación con ServiceOrder
   public itemIdParent!: number;     // Relación con el ítem padre
   public itemIdChild!: number;      // Relación con el ítem hijo
-  public quality!: number;
+  public quantity!: number;
 
   public static associate() {
     ServiceOrderStoreItem.belongsTo(ServiceOrder, { foreignKey: 'serviceOrderId' });
-    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdParent' });
-    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdChild' });
+    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdParent', as: 'ParentItem' });
+    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdChild', as: 'ChildItem' });
   }
 }
 
@@ -48,7 +48,7 @@ ServiceOrderStoreItem.init({
       key: 'id',             // Clave primaria de la tabla referenciada
     },
   },
-  quality: {
+  quantity: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },

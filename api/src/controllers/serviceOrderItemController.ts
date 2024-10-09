@@ -17,7 +17,7 @@ export const createServiceOrderItem = async (req: Request, res: Response) => {
       return
     }
     if (!quantity || isNaN(quantity)) {
-      res.status(404).json({ message: 'error en la cantidad ingrresada' });
+      res.status(404).json({ message: 'error en la cantidad ingresada' });
       return
     }
     if (searchedItem.quantity < quantity) {
