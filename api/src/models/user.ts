@@ -11,9 +11,9 @@ class User extends Model {
 
   public static associate() {
     User.belongsTo(Role, { foreignKey: 'roleId'});
-    User.hasMany(ServiceOrder, { foreignKey: 'checkedBy'});
-    User.hasMany(ServiceOrder, { foreignKey: 'deployedBy'});
-    User.hasMany(ServiceOrder, { foreignKey: 'orderBy'});
+    User.hasMany(ServiceOrder, { foreignKey: 'checkedBy', as: 'CheckedBy' });
+    User.hasMany(ServiceOrder, { foreignKey: 'deployedBy', as: 'DeployedBy' });
+    User.hasMany(ServiceOrder, { foreignKey: 'orderedBy', as: 'OrderedBy' });
   }
 }
 

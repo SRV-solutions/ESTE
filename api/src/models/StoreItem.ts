@@ -6,8 +6,7 @@ class StoreItem extends Model {
   public id!: number;
   public itemIdParent!: number;
   public itemIdChild!: number;
-  public quantity!: number;
-
+  
   // Método para definir asociaciones
   public static associate() {
     StoreItem.belongsTo(Item, { foreignKey: 'itemIdParent'});
@@ -34,11 +33,7 @@ StoreItem.init({
       model: 'Item', // Nombre de la tabla referenciada
       key: 'id',     // Clave primaria de la tabla referenciada
     },
-  },
-  quantity: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
+  }
 }, {
   sequelize,
   modelName: 'StoreItem',

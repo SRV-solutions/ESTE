@@ -9,7 +9,6 @@ class ServiceOrderStoreItem extends Model {
   public serviceOrderId!: number;  // Relación con ServiceOrder
   public itemIdParent!: number;     // Relación con el ítem padre
   public itemIdChild!: number;      // Relación con el ítem hijo
-  public quantity!: number;
 
   public static associate() {
     ServiceOrderStoreItem.belongsTo(ServiceOrder, { foreignKey: 'serviceOrderId' });
@@ -47,11 +46,7 @@ ServiceOrderStoreItem.init({
       model: 'Item',         // Nombre de la tabla referenciada
       key: 'id',             // Clave primaria de la tabla referenciada
     },
-  },
-  quantity: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
+  }
 }, {
   sequelize,
   modelName: 'ServiceOrderStoreItem',

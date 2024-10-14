@@ -11,7 +11,7 @@ class Event extends Model {
 
   public static associate() {
     Event.belongsTo(Location, { foreignKey: 'locationId'});
-    Event.hasOne(ServiceOrder, { foreignKey: 'eventId' })
+    Event.hasOne(ServiceOrder, { foreignKey: 'eventId', as: 'Event' })
   }
 }
 

@@ -5,36 +5,42 @@ import User from './User'; // Asegúrate de importar el modelo Event
 import ServiceOrderItem from './ServiceOrderItem'; // Asegúrate de importar el modelo OrderItem
 import ServiceOrderStoreItem from './ServiceOrderStoreItem';
 
-enum Status {
-  "Creada",
-  "En Revision",
-  "Abrobada",
-  "Rechazada",
-  "En Proceso",
-  "Lista",
-  "Despachada",
-  "Entregada",
-  "Vuelta",
-  "Recibida",
-  "Desarmada"
+export enum ServiceOrderStatus {
+  Created = 'Created', // Fiama o alguien crea lo necesario para algún evento
+  InReview = 'In Review', // Entra en una espera para que alguien revise la orden
+  Approved = 'Approved', // Alguien del staff chequea y aprueba la Orden de Servicio
+  Rejected = 'Rejected', // Alguien del staff chequea y rechaza la Orden de Servicio
+  InProcess = 'In Process', // Claudio o alguien en el depósito arma los ítems necesarios
+  Ready = 'Ready', // La orden ya está armada y lista para ser cargada
+  Dispatched = 'Dispatched', // La Orden fue despachada con éxito
+  Delivered = 'Delivered', // La Orden fue entregada al lugar del evento
+  Returning = 'Returning', // La Orden está en viaje, mayormente hacia el depósito
+  Received = 'Received', // La orden fue recibida con éxito en el depósito
+  UnderReview = 'Under Review', // La Orden de Servicio debe ser revisada para chequear los materiales
+  Disassembled = 'Disassembled', // La Orden fue desarmada y cada ítem fue devuelto a su lugar
 }
 
 class ServiceOrder extends Model {
   public id!: number;
   public eventId!: number;
   public createdDate!: Date;
-  public status!: Status;
+  public status!: ServiceOrderStatus;
   public observations!: string;
   public checkedBy!: number;
   public orderBy!: number;
   public deployedBy!: number;
   public ServiceOrderItems!: Array<ServiceOrderItem>
+  public DeployedBy!: User
+  public OrderedBy!: User
+  public CheckedBy!: User
+  public Event!: Event
 
   public static associate() {
-    ServiceOrder.belongsTo(User, { foreignKey: 'checkedBy' });
-    ServiceOrder.belongsTo(User, { foreignKey: 'deployedBy' });
-    ServiceOrder.belongsTo(User, { foreignKey: 'orderBy' });
-    ServiceOrder.belongsTo(Event, { foreignKey: 'eventId' });
+    ServiceOrder.belongsTo(User, { foreignKey: 'deployedBy', as: 'DeployedBy' });
+    ServiceOrder.belongsTo(User, { foreignKey: 'checkedBy', as: 'CheckedBy' });
+    ServiceOrder.belongsTo(User, { foreignKey: 'orderedBy', as: 'OrderedBy' });
+    ServiceOrder.belongsTo(Event, { foreignKey: 'eventId', as: 'Event' });
+    
 
     ServiceOrder.hasMany(ServiceOrderItem, { foreignKey: 'serviceOrderId' });
     ServiceOrder.hasOne(ServiceOrderStoreItem, { foreignKey: 'serviceOrderId' })
@@ -54,7 +60,7 @@ ServiceOrder.init({
       key: 'id',      // Clave primaria de la tabla referenciada
     },
   },
-  orderBy: {
+  orderedBy: {
     type: DataTypes.INTEGER,
     references: {
       model: 'User', // Nombre de la tabla referenciada
@@ -80,7 +86,7 @@ ServiceOrder.init({
     allowNull: false,
   },
   status: {
-    type: DataTypes.STRING,
+    type: DataTypes.ENUM(...Object.values(ServiceOrderStatus)),
     allowNull: false,
   },
   observations: {

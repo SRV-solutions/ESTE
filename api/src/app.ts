@@ -20,6 +20,7 @@ import ServiceOrderItem from './models/ServiceOrderItem';
 import Item from './models/Item';
 import StoreItem from './models/StoreItem';
 import ServiceOrderStoreItem from './models/ServiceOrderStoreItem';
+import Category from './models/Category';
 
 User.associate();
 Role.associate();
@@ -30,6 +31,7 @@ ServiceOrderItem.associate()
 Item.associate()
 StoreItem.associate()
 ServiceOrderStoreItem.associate()
+Category.associate()
 
 const app = express();
 app.use(express.json());
@@ -46,7 +48,7 @@ app.use('/service-order-store-items', serviceOrderStoreItemRoutes);//baules de c
 // app.use('/store-items', storeItemRoutes);
 
 //add locaton
-async function seeder():Promise<void> {
+async function seeder(): Promise<void> {
   const newLocation = await Location.create({
     locationName: 'Faena',
     address: 'faena 123',
@@ -69,7 +71,7 @@ async function seeder():Promise<void> {
     username: 'Operador',
     email: 'mail0@mail.mail',
     roleId: userRole.id
-  },{
+  }, {
     username: 'Operador 2',
     email: 'mail1@mail.mail',
     roleId: adminRole.id
@@ -79,7 +81,7 @@ async function seeder():Promise<void> {
     roleId: userRole.id
   }]
   await User.bulkCreate(users)
-  const items = [
+  const categories = [
     {
       name: "HDMI",
       description: "HDMI para videos y LCD",
@@ -91,8 +93,6 @@ async function seeder():Promise<void> {
       isStorable: true,
       isContainer: false,
       isActive: true,
-      uses: 2,
-      ownerId: userRole.id
     },
     {
       name: "Baul Azul",
@@ -105,9 +105,7 @@ async function seeder():Promise<void> {
       isStorable: false,
       isContainer: true,
       isActive: true,
-      uses: 5,
-      ownerId: userRole.id
-    },{
+    }, {
       name: "Panel 20x20",
       description: "Paneles de marca sony de 20px X 20px",
       type: "panel",
@@ -118,9 +116,7 @@ async function seeder():Promise<void> {
       isStorable: true,
       isContainer: false,
       isActive: true,
-      uses: 10,
-      ownerId: userRole.id
-    },{
+    }, {
       name: "Baul de Paneles",
       description: "Baul rojo para paneles",
       type: "baul",
@@ -131,9 +127,7 @@ async function seeder():Promise<void> {
       isStorable: false,
       isContainer: true,
       isActive: true,
-      uses: 2,
-      ownerId: userRole.id
-    },{
+    }, {
       name: "Totem para tele",
       description: "Totem para tele 50 Pulgadas",
       type: "totem",
@@ -144,17 +138,116 @@ async function seeder():Promise<void> {
       isStorable: false,
       isContainer: false,
       isActive: true,
+    }, {
+      name: "Cable de tension",
+      description: "Cable de tension largo de no se que",
+      type: "cable",
+      quantity: 6,
+      unity: "v",
+      value: 150,
+      weight: 3000,
+      isStorable: true,
+      isContainer: false,
+      isActive: true,
+    }
+  ]
+  const newCategories = await Category.bulkCreate(categories)
+
+  const items = [
+    {
+      isActive: true,
       uses: 2,
-      ownerId: userRole.id
+      ownerId: userRole.id,
+      categoryId: newCategories[0].id // cable HDMI
+    }, {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[1].id//baul azul
+    },
+    {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[1].id//baul azul
+    },
+    {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[0].id// cable HDMI
+    },
+    {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[4].id// Totem TV
+    }, {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[5].id// Cable tension
+    }, {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[3].id// Baul Paneles
+    }, {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[2].id// Panel
+    }, {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[2].id// Panel
+    }, {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[2].id// Panel
+    }, {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[2].id// Panel
+    }, {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[2].id// Panel
+    }, {
+      isActive: true,
+      uses: 2,
+      ownerId: userRole.id,
+      categoryId: newCategories[2].id// Panel
     }
   ]
   const newItems = await Item.bulkCreate(items)
-  await StoreItem.create({
-    itemIdParent: newItems[3].id,
-    itemIdChild: newItems[2].id,
-    quantity: 6
-  })
-  
+  const newStoreItems = [
+    {
+      itemIdParent: newItems[6].id,
+      itemIdChild: newItems[7].id
+    }, {
+      itemIdParent: newItems[6].id,
+      itemIdChild: newItems[8].id
+    },
+    {
+      itemIdParent: newItems[6].id,
+      itemIdChild: newItems[9].id
+    }, {
+      itemIdParent: newItems[6].id,
+      itemIdChild: newItems[10].id
+    }, {
+      itemIdParent: newItems[6].id,
+      itemIdChild: newItems[11].id
+    }, {
+      itemIdParent: newItems[6].id,
+      itemIdChild: newItems[12].id
+    }
+  ]
+  await StoreItem.bulkCreate(newStoreItems)
 }
 
 sequelize.sync({ force: true }).then(() => {

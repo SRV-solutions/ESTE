@@ -7,7 +7,6 @@ class ServiceOrderItem extends Model {
   public id!: number;
   public serviceOrderId!: number;
   public itemId!: number;
-  public quantity!: number;
   public Item!: Item
 
   // Método para definir asociaciones
@@ -36,11 +35,7 @@ ServiceOrderItem.init({
       model: 'Item', // Nombre de la tabla referenciada
       key: 'id',     // Clave primaria de la tabla referenciada
     },
-  },
-  quantity: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
+  }
 }, {
   sequelize,
   modelName: 'ServiceOrderItem',
