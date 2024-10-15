@@ -54,25 +54,25 @@ export const getServiceOrderById = async (req: Request, res: any) => {
           include: [
             {
               model: Item,
-              include: [Category]
+              include: [Category], // Incluyendo la categoría del ítem
             },
           ],
         },
         {
           model: User,
-          as: 'DeployedBy',
+          as: 'DeployedBy', // Incluyendo el usuario que realizó el deploy
         },
         {
-          model: User, 
-          as: 'CheckedBy'
+          model: User,
+          as: 'CheckedBy', // Incluyendo el usuario que realizó el check
         },
         {
-          model: User, 
-          as: 'OrderedBy'
+          model: User,
+          as: 'OrderedBy', // Incluyendo el usuario que realizó la orden
         },
         {
           model: Event,
-          as: 'Event',
+          as: 'Event', // Incluyendo la información del evento
         },
       ],
     });
@@ -81,55 +81,59 @@ export const getServiceOrderById = async (req: Request, res: any) => {
       return res.status(404).json({ message: 'Service Order not found' });
     }
 
+    // Obtener los items que son contenedores
     const containerItems = searchedServiceOrder.ServiceOrderItems.filter(
-      (serviceOrderItem) => {
-        //serviceOrderItem.Item.isContainer
-        console.log(serviceOrderItem.Item);
-        
-      }
+      (serviceOrderItem) => serviceOrderItem.Item.Category.isContainer
     );
 
-    // const nonContainerItems = searchedServiceOrder.ServiceOrderItems.filter(
-    //   (serviceOrderItem) => !serviceOrderItem.Item.isContainer
-    // );
+    // Obtener los items que no son contenedores
+    const nonContainerItems = searchedServiceOrder.ServiceOrderItems.filter(
+      (serviceOrderItem) => !serviceOrderItem.Item.Category.isContainer
+    );
 
+    // Obtener los items que están dentro de los contenedores
     let itemsInContainers: Array<any> = [];
     if (containerItems.length > 0) {
       const containerIds = containerItems.map((item) => item.itemId);
       itemsInContainers = await ServiceOrderStoreItem.findAll({
         where: {
-          itemIdParent: containerIds,
+          itemIdParent: containerIds, // Buscar los items dentro de los contenedores
         },
-        include: [{ model: Item, as: 'ChildItem' }],
+        include: [{
+          model: Item,
+          as: 'ChildItem',
+          include: [{
+            model: Category
+          }]
+        }],
       });
     }
 
+    // Preparar la respuesta con los items dentro de los contenedores
     const responseItems = containerItems.map((container) => {
       const containedItems = itemsInContainers.filter(
         (child) => child.itemIdParent === container.itemId
       );
       return {
         ...container.toJSON(),
-        containedItems: containedItems.map((childItem) =>
-          childItem.ChildItem.toJSON()
-        ),
+        containedItems: containedItems.map((childItem) => childItem.ChildItem.toJSON()),
       };
     });
 
-    // const newServiceOrder = {
-    //   ...searchedServiceOrder.toJSON(),
-    //   DeployedBy: searchedServiceOrder.DeployedBy?.toJSON(),
-    //   CheckedBy: searchedServiceOrder.CheckedBy?.toJSON(),
-    //   OrderedBy: searchedServiceOrder.OrderedBy?.toJSON(),
-    //   Event: searchedServiceOrder.Event?.toJSON(),
-    //   ServiceOrderItems: [
-    //     ...nonContainerItems.map((item) => item.toJSON()),
-    //     ...responseItems,
-    //   ],
-    // };
+    // Construir la nueva orden de servicio con todos los datos
+    const newServiceOrder = {
+      ...searchedServiceOrder.toJSON(),
+      DeployedBy: searchedServiceOrder.DeployedBy?.toJSON(),
+      CheckedBy: searchedServiceOrder.CheckedBy?.toJSON(),
+      OrderedBy: searchedServiceOrder.OrderedBy?.toJSON(),
+      Event: searchedServiceOrder.Event?.toJSON(),
+      ServiceOrderItems: [
+        ...nonContainerItems.map((item) => item.toJSON()),
+        ...responseItems
+      ],
+    };
 
-    return res.status(200)
-    // .json(newServiceOrder);
+    return res.status(200).json(newServiceOrder);
   } catch (error) {
     console.error('Error fetching service order:', error);
     return res.status(500).json({ message: 'Internal Server Error' });

@@ -23,20 +23,6 @@ export const createServiceOrderItem = async (req: Request, res: Response) => {
       res.status(404).json({ message: 'El item no existe' });
       return
     }
-
-    // if (!needed || isNaN(needed)) {
-    //   res.status(404).json({ message: 'error en la cantidad ingresada' });
-    //   return
-    // }    
-    // const quantityItemsCategory = await Item.findAll({
-    //   where: {
-    //     categoryId: searchedItem.Category.id
-    //   }
-    // })    
-    // if (quantityItemsCategory.length === 0) {
-    //   res.status(404).json({ message: 'No hay items suficiente' });
-    //   return
-    // }
     
     const searchedServiceOrderItemByItem = await ServiceOrderItem.findOne({
       where: {
