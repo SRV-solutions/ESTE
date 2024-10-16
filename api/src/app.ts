@@ -1,7 +1,8 @@
-import express from 'express';
+import express, { Response, Request, NextFunction } from 'express';
 import { sequelize } from './config/database';
 import userRoutes from './routes/userRoutes';
 import roleRoutes from './routes/roleRoutes';
+import itemRoutes from './routes/itemRoutes';
 import serviceOrderRoutes from './routes/serviceOrderRoutes';
 import serviceOrderItemRoutes from './routes/serviceOrderItemRoutes';
 import serviceOrderStoreItemRoutes from './routes/serviceOrderStoreItemRoutes';
@@ -34,10 +35,25 @@ ServiceOrderStoreItem.associate()
 Category.associate()
 
 const app = express();
+
 app.use(express.json());
+
+app.use((req: Request, res: any, next: NextFunction) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
+
 
 app.use('/users', userRoutes);
 app.use('/roles', roleRoutes);
+app.use('/items', itemRoutes);
 app.use('/service-orders', serviceOrderRoutes);//orden de servicios para eventos
 app.use('/service-order-items', serviceOrderItemRoutes);//items para eventos
 app.use('/service-order-store-items', serviceOrderStoreItemRoutes);//baules de cables para eventos

@@ -17,10 +17,6 @@ export const getRole = async (req: Request, res: any)=>{
     }
 }
 
-export const getRole2 = async (req: Request, res: Response) => {
-  
-};
-
 // Crear un nuevo rol
 export const createRole = async (req: Request, res: Response) => {
   const { name } = req.body;

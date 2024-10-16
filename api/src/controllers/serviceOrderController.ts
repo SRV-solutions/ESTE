@@ -17,6 +17,8 @@ export const createServiceOrder = async (req: Request, res: Response) => {
     orderedBy,
     deployedBy
   } = req.body;
+  
+  console.log(req.body);
 
   try {
     const event = await Event.findByPk(eventId)
