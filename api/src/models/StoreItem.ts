@@ -6,11 +6,11 @@ class StoreItem extends Model {
   public id!: number;
   public itemIdParent!: number;
   public itemIdChild!: number;
-  
+
   // Método para definir asociaciones
   public static associate() {
-    StoreItem.belongsTo(Item, { foreignKey: 'itemIdParent'});
-    StoreItem.belongsTo(Item, { foreignKey: 'itemIdChild' });
+    StoreItem.belongsTo(Item, { foreignKey: 'itemIdParent', as: 'StoreItemParent' });
+    StoreItem.belongsTo(Item, { foreignKey: 'itemIdChild', as: 'StoreItemChild' });
   }
 }
 

@@ -6,6 +6,7 @@ import ServiceOrderItem from '../models/ServiceOrderItem';
 import Item from '../models/Item';
 import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
 import Category from '../models/Category';
+import StoreItem from '../models/StoreItem';
 
 export const createServiceOrder = async (req: Request, res: Response) => {
   const {
@@ -17,8 +18,6 @@ export const createServiceOrder = async (req: Request, res: Response) => {
     orderedBy,
     deployedBy
   } = req.body;
-  
-  console.log(req.body);
 
   try {
     const event = await Event.findByPk(eventId)
@@ -56,7 +55,7 @@ export const getServiceOrderById = async (req: Request, res: any) => {
           include: [
             {
               model: Item,
-              include: [Category], // Incluyendo la categoría del ítem
+              include: [Category],
             },
           ],
         },
@@ -103,12 +102,26 @@ export const getServiceOrderById = async (req: Request, res: any) => {
         },
         include: [{
           model: Item,
-          as: 'ChildItem',
+          as: 'ServiceOrderStoreItemChild',
           include: [{
             model: Category
           }]
         }],
       });
+
+      const allStoreItems = await StoreItem.findAll({
+        where: {
+          itemIdParent: containerIds, // Buscar los items dentro de los contenedores
+        },
+        include: [{
+          model: Item,
+          as: 'StoreItemChild',
+          include: [{
+            model: Category
+          }]
+        }],
+      });
+      itemsInContainers.push(...allStoreItems)
     }
 
     // Preparar la respuesta con los items dentro de los contenedores
@@ -116,10 +129,9 @@ export const getServiceOrderById = async (req: Request, res: any) => {
       const containedItems = itemsInContainers.filter(
         (child) => child.itemIdParent === container.itemId
       );
-      return {
-        ...container.toJSON(),
-        containedItems: containedItems.map((childItem) => childItem.ChildItem.toJSON()),
-      };
+      const parsedJson = container.toJSON()
+      parsedJson.Item.StoreItemParentItem = containedItems.map((childItem) => childItem.ServiceOrderStoreItemChild ? childItem.ServiceOrderStoreItemChild.toJSON() : childItem.StoreItemChild.toJSON())
+      return parsedJson
     });
 
     // Construir la nueva orden de servicio con todos los datos

@@ -11,16 +11,17 @@ class Item extends Model {
   public isActive!: boolean;
   public uses!: number;
   public ownerId!: number;
-  public Category!: Category
+  public Category!: Category;
+  public StoreItemParent!: Array<any>
 
   public static associate() {
-    Item.belongsTo(User, { foreignKey: 'ownerId'});
-    Item.belongsTo(Category, { foreignKey: 'categoryId'});
-    Item.hasMany(ServiceOrderItem, { foreignKey: 'itemId'});
-    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdParent', as: 'ParentItem' });
-    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdChild', as: 'ChildItem' });
-    Item.hasMany(StoreItem, { foreignKey: 'itemIdParent' });
-    Item.hasMany(StoreItem, { foreignKey: 'itemIdChild' });
+    Item.belongsTo(User, { foreignKey: 'ownerId' });
+    Item.belongsTo(Category, { foreignKey: 'categoryId' });
+    Item.hasMany(ServiceOrderItem, { foreignKey: 'itemId' });
+    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdParent', as: 'ServiceOrderStoreItemParent' });
+    Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdChild', as: 'ServiceOrderStoreItemChild' });
+    Item.hasMany(StoreItem, { foreignKey: 'itemIdParent', as: 'StoreItemParent' });
+    Item.hasMany(StoreItem, { foreignKey: 'itemIdChild', as: 'StoreItemChild' });
 
   }
 }
@@ -45,7 +46,7 @@ Item.init({
       model: 'User', // Nombre de la tabla referenciada
       key: 'id',     // Clave primaria de la tabla referenciada
     },
-  },categoryId: {
+  }, categoryId: {
     type: DataTypes.INTEGER,
     references: {
       model: 'Category', // Nombre de la tabla referenciada

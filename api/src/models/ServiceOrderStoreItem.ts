@@ -12,8 +12,8 @@ class ServiceOrderStoreItem extends Model {
 
   public static associate() {
     ServiceOrderStoreItem.belongsTo(ServiceOrder, { foreignKey: 'serviceOrderId' });
-    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdParent', as: 'ParentItem' });
-    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdChild', as: 'ChildItem' });
+    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdParent', as: 'ServiceOrderStoreItemParent' });
+    ServiceOrderStoreItem.belongsTo(Item, { foreignKey: 'itemIdChild', as: 'ServiceOrderStoreItemChild' });
   }
 }
 

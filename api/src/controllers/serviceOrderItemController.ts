@@ -61,3 +61,41 @@ export const createServiceOrderItem = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error creating role', error });
   }
 };
+
+
+export const createServiceOrderItems = async (req: Request, res: Response) => {
+  const { serviceOrderId, categoryId, quantity } = req.body;
+  try {
+    const searchedServiceOrder = await ServiceOrder.findByPk(serviceOrderId)
+    const searchedItems = await Item.findAll({
+      include: {
+        model: Category,
+        where:{
+          id: categoryId
+        }
+      }
+    })
+    if (!searchedServiceOrder) {
+      res.status(404).json({ message: 'La orden de servicio no existe' });
+      return
+    }
+    if (searchedItems.length < quantity) {
+      res.status(404).json({ message: 'No hay items suficientes' });
+      return
+    }
+
+    // validar que el item no este adentro de un baul de una orden de servicio 
+    // 
+
+    const depuredItems = searchedItems.map(item => {
+      return {
+        serviceOrderId: serviceOrderId,
+        itemId: item.id
+      }
+    })
+    const newServiceOrderItem = await ServiceOrderItem.bulkCreate(depuredItems)
+    res.status(201).json(newServiceOrderItem);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating role', error });
+  }
+};
