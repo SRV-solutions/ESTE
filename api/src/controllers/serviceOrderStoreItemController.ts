@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
 
-import ServiceOrder from '../models/ServiceOrder';
+import ServiceOrder, { ServiceOrderStatus } from '../models/ServiceOrder';
 import Item from '../models/Item';
 import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
 import Category from '../models/Category';
@@ -99,5 +99,30 @@ export const createServiceOrderStoreItem = async (req: Request, res: any) => {
   } catch (error) {
     console.error('Error creating ServiceOrderStoreItem:', error);
     return res.status(500).json({ message: 'Error creating ServiceOrderStoreItem', error });
+  }
+};
+
+export const createServiceOrderStoreItems = async (req: Request, res: Response) => {
+  const { serviceOrderId, itemIdParent, categoryId, quantity } = req.body;
+
+  try {
+    const searchedServiceOrder = await ServiceOrder.findByPk(serviceOrderId);
+    if (!searchedServiceOrder) {
+      res.status(404).json({ message: 'La orden de servicio no existe' });
+      return;
+    }
+    const searchedItems = await Item.findAll({
+      include: {
+        model: Category,
+        where: { id: categoryId }
+      }
+    });
+    if (searchedItems.length < quantity) {
+      res.status(404).json({ message: 'No hay suficientes items disponibles en esta categoría' });
+      return;
+    }
+
+  } catch (error) {
+    res.status(500).json({ message: 'Error creando items en la orden de servicio', error });
   }
 };

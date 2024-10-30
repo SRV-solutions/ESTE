@@ -11,6 +11,7 @@ class Item extends Model {
   public isActive!: boolean;
   public uses!: number;
   public ownerId!: number;
+  public categoryId!: number;
   public Category!: Category;
   public StoreItemParent!: Array<any>
 
@@ -46,7 +47,8 @@ Item.init({
       model: 'User', // Nombre de la tabla referenciada
       key: 'id',     // Clave primaria de la tabla referenciada
     },
-  }, categoryId: {
+  }, 
+  categoryId: {
     type: DataTypes.INTEGER,
     references: {
       model: 'Category', // Nombre de la tabla referenciada

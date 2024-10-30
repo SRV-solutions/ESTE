@@ -46,9 +46,7 @@ export const getItems = async (_req: Request, res: any) => {
       
       return [parentId, ...childIds]; // Devuelve un array con el ID del padre y los hijos
     });
-    
-    console.log(childItemIds);
-    
+        
     const itemsWithoutChildren = await Item.findAll({
       where: {
         id: { [Op.notIn]: childItemIds }, // Excluir items que son hijos
