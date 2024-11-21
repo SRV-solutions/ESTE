@@ -40,7 +40,7 @@ export const createServiceOrderStoreItem = async (req: Request, res: any) => {
     }
 
     const searchedServiceOrderItemByServiceOrderId = await ServiceOrderItem.findOne({
-      where:{
+      where: {
         serviceOrderId: serviceOrderId,
         itemId: searchedItemParent.id
       }
@@ -111,17 +111,29 @@ export const createServiceOrderStoreItems = async (req: Request, res: Response) 
       res.status(404).json({ message: 'La orden de servicio no existe' });
       return;
     }
-    const searchedItems = await Item.findAll({
+    const searchedItemChilds = await Item.findAll({
       include: {
         model: Category,
         where: { id: categoryId }
       }
     });
-    if (searchedItems.length < quantity) {
+    if (searchedItemChilds.length < quantity) {
       res.status(404).json({ message: 'No hay suficientes items disponibles en esta categoría' });
       return;
     }
 
+    const searchedParentItem = await Item.findByPk(itemIdParent)
+    if (!searchedParentItem) {
+      res.status(404).json({ message: 'El item padre no existe' });
+      return;
+    }
+    const depuredServiceOrderStoreItemData = searchedItemChilds.map(itemChild => ({
+      serviceOrderId,
+      itemIdParent: searchedParentItem,
+      itemIdChild: itemChild
+    }))
+    console.log(depuredServiceOrderStoreItemData);
+    
   } catch (error) {
     res.status(500).json({ message: 'Error creando items en la orden de servicio', error });
   }

@@ -95,9 +95,29 @@ const AddItemsToServiceOrder = () => {
     }
   }
 
-  const handleAddItemToStore = () => {
+  const handleAddItemToStore = async() => {
     console.log(quantityToStore, selectedStoreItem);
+    if (!selectedItem || quantity <= 0) return;
 
+    try {
+      const response = await axios.post('http://localhost:3000/service-order-store-items/bulk', {
+        serviceOrderId: Number(id),
+        categoryId: selectedItem.Category.id,
+        quantity,
+      });
+
+      if (response.status === 201) {
+        setServiceOrder((prev) => ({
+          ...prev,
+          ServiceOrderItems: [...prev.ServiceOrderItems, { Item: selectedItem, quantity }],
+        }));
+        setSelectedItem(null);
+        setQuantity(1);
+        fetchServiceOrder();
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || 'Error al agregar el ítem');
+    }
   }
 
   const renderTableRows = (item, color) => (
@@ -202,6 +222,7 @@ const AddItemsToServiceOrder = () => {
                         </Table>
                         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', justifyContent: 'space-between' }}>
                           <Autocomplete
+                          style={{width: '50vh'}}
                             options={allItems}
                             getOptionLabel={(option) => `${option.id} - ${option.Category.name} - ${option.Category.description}`}
                             onChange={(event, newValue) => setSelectedStoreItem(newValue)}
