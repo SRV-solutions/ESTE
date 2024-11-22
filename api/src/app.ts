@@ -1,5 +1,7 @@
-import express, { Response, Request, NextFunction } from 'express';
+import express, { Request, NextFunction } from 'express';
 import { sequelize } from './config/database';
+import bcrypt from 'bcrypt';
+
 import userRoutes from './routes/userRoutes';
 import roleRoutes from './routes/roleRoutes';
 import itemRoutes from './routes/itemRoutes';
@@ -83,20 +85,28 @@ async function seeder(): Promise<void> {
   const adminRole = await Role.create({
     roleName: "Admin"
   })
-  const users = [{
-    username: 'Operador',
-    email: 'mail0@mail.mail',
-    roleId: userRole.id
-  }, {
-    username: 'Operador 2',
-    email: 'mail1@mail.mail',
-    roleId: adminRole.id
-  }, {
-    username: 'Operador 3',
-    email: 'mail2@mail.mail',
-    roleId: userRole.id
-  }]
-  await User.bulkCreate(users)
+  const users = await Promise.all([
+    {
+      username: 'Operador',
+      password: await bcrypt.hash('1234', 10), // Hashear contraseña
+      email: 'mail0@mail.mail',
+      roleId: userRole.id
+    },
+    {
+      username: 'Operador 2',
+      password: await bcrypt.hash('1234', 10), // Hashear contraseña
+      email: 'mail1@mail.mail',
+      roleId: adminRole.id
+    },
+    {
+      username: 'Operador 3',
+      password: await bcrypt.hash('1234', 10), // Hashear contraseña
+      email: 'mail2@mail.mail',
+      roleId: userRole.id
+    }
+  ]);
+
+  await User.bulkCreate(users);
   const categories = [
     {
       name: "HDMI",

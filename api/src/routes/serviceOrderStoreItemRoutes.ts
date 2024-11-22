@@ -1,9 +1,11 @@
 import { Router } from 'express';
-import { createServiceOrderStoreItem, createServiceOrderStoreItems } from '../controllers/serviceOrderStoreItemController';
+import { createServiceOrderStoreItem, createServiceOrderStoreItems, deleteServiceOrderStoreItem } from '../controllers/serviceOrderStoreItemController';
+import { isAuth, isAdmin } from '../middlewares/auth';
 
 const router = Router();
 
-router.post('/', createServiceOrderStoreItem)
-router.post('/bulk', createServiceOrderStoreItems)
+router.delete('/:serviceOrderId/:itemIdParent/:itemIdChild', isAuth, deleteServiceOrderStoreItem)
+router.post('/', isAuth, createServiceOrderStoreItem)
+router.post('/bulk', isAuth, createServiceOrderStoreItems)
 
 export default router;

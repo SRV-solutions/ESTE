@@ -111,30 +111,74 @@ export const createServiceOrderStoreItems = async (req: Request, res: Response) 
       res.status(404).json({ message: 'La orden de servicio no existe' });
       return;
     }
+
     const searchedItemChilds = await Item.findAll({
       include: {
         model: Category,
-        where: { id: categoryId }
-      }
+        where: { id: categoryId },
+      },
+      limit: quantity,
     });
+
     if (searchedItemChilds.length < quantity) {
-      res.status(404).json({ message: 'No hay suficientes items disponibles en esta categoría' });
+      res.status(400).json({ message: 'No hay suficientes ítems disponibles en esta categoría' });
       return;
     }
 
-    const searchedParentItem = await Item.findByPk(itemIdParent)
+    const searchedParentItem = await Item.findByPk(itemIdParent);
+
     if (!searchedParentItem) {
-      res.status(404).json({ message: 'El item padre no existe' });
+      res.status(404).json({ message: 'El ítem padre no existe' });
       return;
     }
-    const depuredServiceOrderStoreItemData = searchedItemChilds.map(itemChild => ({
+
+    const depuredServiceOrderStoreItemData = searchedItemChilds.map((itemChild) => ({
       serviceOrderId,
-      itemIdParent: searchedParentItem,
-      itemIdChild: itemChild
-    }))
-    console.log(depuredServiceOrderStoreItemData);
-    
+      itemIdParent,
+      itemIdChild: itemChild.id,
+    }));
+
+    await ServiceOrderStoreItem.bulkCreate(depuredServiceOrderStoreItemData);
+
+    res.status(201).json({ message: 'Ítems creados exitosamente en la orden de servicio' });
   } catch (error) {
-    res.status(500).json({ message: 'Error creando items en la orden de servicio', error });
+    res.status(500).json({ message: 'Error creando ítems en la orden de servicio', error });
   }
 };
+
+export const deleteServiceOrderStoreItem = async (req: Request, res: any) => {
+  const { serviceOrderId, itemIdParent, itemIdChild } = req.params;
+  console.log(req.params);
+  
+
+  try {
+    if (!serviceOrderId) {
+      return res.status(400).json({ message: 'Debe seleccionar una orden de servicio válida' });
+    }
+    const itemsToDelete = await ServiceOrderStoreItem.findAll({ where: { serviceOrderId } });
+    
+    if (itemsToDelete.length === 0) {
+      return res.status(404).json({ message: `No se encontraron items para la orden de servicio con ID ${serviceOrderId}` });
+    }
+
+    const itemToDeleteExist = itemsToDelete.some(item => (item.itemIdParent === Number(itemIdParent) && item.itemIdChild === Number(itemIdChild)))
+    
+    if (!itemToDeleteExist) {
+      return res.status(404).json({ message: `El item no se encuentra en la orden de servicio ${serviceOrderId}` });
+
+    }
+    await ServiceOrderStoreItem.destroy({
+      where: {
+        serviceOrderId,
+        itemIdParent,
+        itemIdChild
+      }
+    });
+
+    res.status(200).json({ message: 'Item de la orden de servicio eliminados exitosamente' });
+
+  } catch (error) {
+    console.error('Error al eliminar item de la orden de servicio:', error);
+    res.status(500).json({ message: 'Error al eliminar item de la orden de servicio', error });
+  }
+}

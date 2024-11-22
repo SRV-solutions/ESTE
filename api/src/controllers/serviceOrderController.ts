@@ -96,6 +96,7 @@ export const getServiceOrderById = async (req: Request, res: any) => {
     let itemsInContainers: Array<any> = [];
     if (containerItems.length > 0) {
       const containerIds = containerItems.map((item) => item.itemId);
+      
       itemsInContainers = await ServiceOrderStoreItem.findAll({
         where: {
           itemIdParent: containerIds, // Buscar los items dentro de los contenedores
@@ -108,7 +109,7 @@ export const getServiceOrderById = async (req: Request, res: any) => {
           }]
         }],
       });
-
+      
       const allStoreItems = await StoreItem.findAll({
         where: {
           itemIdParent: containerIds, // Buscar los items dentro de los contenedores

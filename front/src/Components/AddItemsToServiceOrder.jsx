@@ -39,9 +39,18 @@ const AddItemsToServiceOrder = () => {
     fetchServiceOrder();
   }, [id]);
 
+  // Obtener token del localStorage y enviar con las solicitudes
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+    return { Authorization: `Bearer ${token}` };
+  };
+
   const fetchItems = async () => {
     try {
-      const { data } = await axios.get('http://localhost:3000/items');
+      const { data } = await axios.get('http://localhost:3000/items', {
+        headers: getAuthHeaders(),
+      });
       setAllItems(data);
     } catch (error) {
       console.error('Error al cargar los ítems:', error);
@@ -50,7 +59,10 @@ const AddItemsToServiceOrder = () => {
 
   const fetchServiceOrder = async () => {
     try {
-      const { data } = await axios.get(`http://localhost:3000/service-orders/${id}`);
+      const { data } = await axios.get(`http://localhost:3000/service-orders/${id}`, {
+        headers: getAuthHeaders(),
+      });
+      
       setServiceOrder(data);
     } catch (error) {
       console.error('Error al cargar la orden de servicio:', error);
@@ -61,11 +73,15 @@ const AddItemsToServiceOrder = () => {
     if (!selectedItem || quantity <= 0) return;
 
     try {
-      const response = await axios.post('http://localhost:3000/service-order-items/bulk', {
-        serviceOrderId: Number(id),
-        categoryId: selectedItem.Category.id,
-        quantity,
-      });
+      const response = await axios.post(
+        'http://localhost:3000/service-order-items/bulk',
+        {
+          serviceOrderId: Number(id),
+          categoryId: selectedItem.Category.id,
+          quantity,
+        },
+        { headers: getAuthHeaders() }
+      );
 
       if (response.status === 201) {
         setServiceOrder((prev) => ({
@@ -83,42 +99,62 @@ const AddItemsToServiceOrder = () => {
 
   const handleDeleteAllItems = async () => {
     try {
-      const response = await axios.delete(`http://localhost:3000/service-order-items/${id}`);
+      const response = await axios.delete(`http://localhost:3000/service-order-items/${id}`, {
+        headers: getAuthHeaders(),
+      });
 
       if (response.status === 200) {
         fetchServiceOrder();
       }
     } catch (error) {
-      console.log(error);
-
-      alert(error.response?.data?.message || 'Error al agregar el ítem');
+      console.error('Error al eliminar todos los ítems:', error);
+      alert(error.response?.data?.message || 'Error al eliminar ítems');
     }
-  }
+  };
 
-  const handleAddItemToStore = async() => {
-    console.log(quantityToStore, selectedStoreItem);
-    if (!selectedItem || quantity <= 0) return;
+  const handleAddItemToStore = async (storeItemId) => {        
+    if (!selectedStoreItem || quantityToStore <= 0) return;
 
     try {
-      const response = await axios.post('http://localhost:3000/service-order-store-items/bulk', {
+      const itemIdParent = storeItemId
+
+      const itemChildren = allItems.filter(item => item.Category.id === selectedStoreItem.Category.id);
+
+      if (itemChildren.length < quantityToStore) {
+        alert('No hay suficientes ítems disponibles en esta categoría');
+        return;
+      }
+
+      const storeItemData = {
         serviceOrderId: Number(id),
-        categoryId: selectedItem.Category.id,
-        quantity,
-      });
+        itemIdParent,
+        categoryId: selectedStoreItem.Category.id,
+        quantity: quantityToStore,
+      };
+
+
+      const response = await axios.post(
+        'http://localhost:3000/service-order-store-items/bulk',
+        storeItemData,
+        { headers: getAuthHeaders() }
+      );
 
       if (response.status === 201) {
         setServiceOrder((prev) => ({
           ...prev,
-          ServiceOrderItems: [...prev.ServiceOrderItems, { Item: selectedItem, quantity }],
+          ServiceOrderItems: [
+            ...prev.ServiceOrderItems,
+            { Item: selectedStoreItem, quantity: quantityToStore }
+          ],
         }));
-        setSelectedItem(null);
-        setQuantity(1);
+        setSelectedStoreItem(null);
+        setQuantityToStore(1);
         fetchServiceOrder();
       }
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al agregar el ítem');
+      alert(error.response?.data?.message || 'Error al agregar el ítem al almacén');
     }
-  }
+  };
 
   const renderTableRows = (item, color) => (
     <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
@@ -142,7 +178,6 @@ const AddItemsToServiceOrder = () => {
         <Typography>Encargado de Armarla: {serviceOrder.DeployedBy.username}</Typography>
         <Typography>Estatus: {serviceOrder.status}</Typography>
 
-        {/* Barra de búsqueda y campo de cantidad */}
         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
           <Autocomplete
             options={allItems}
@@ -153,7 +188,6 @@ const AddItemsToServiceOrder = () => {
             )}
             sx={{ flexGrow: 1, marginRight: 1 }}
           />
-
           <TextField
             label="Cantidad"
             type="number"
@@ -163,7 +197,6 @@ const AddItemsToServiceOrder = () => {
             inputProps={{ min: 1 }}
             sx={{ width: 100, marginRight: 1 }}
           />
-
           <Button
             variant="contained"
             color="primary"
@@ -216,18 +249,17 @@ const AddItemsToServiceOrder = () => {
                               {Item.StoreItemParentItem.map((containedItem) =>
                                 renderTableRows(containedItem.StoreItemChildItem || containedItem)
                               )}
-
                             </TableBody>
                           )}
                         </Table>
                         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', justifyContent: 'space-between' }}>
                           <Autocomplete
-                          style={{width: '50vh'}}
+                            style={{ width: '50vh' }}
                             options={allItems}
                             getOptionLabel={(option) => `${option.id} - ${option.Category.name} - ${option.Category.description}`}
                             onChange={(event, newValue) => setSelectedStoreItem(newValue)}
                             renderInput={(params) => (
-                              <TextField {...params} label="Buscar ítem por nombre o descripción" variant="outlined" fullWidth />
+                              <TextField {...params} label="Buscar ítem del almacén" variant="outlined" fullWidth />
                             )}
                           />
                           <TextField
@@ -237,31 +269,37 @@ const AddItemsToServiceOrder = () => {
                             value={quantityToStore}
                             onChange={(e) => setQuantityToStore(Math.max(Number(e.target.value), 1))}
                             inputProps={{ min: 1 }}
+                            sx={{ width: 100, marginRight: 1 }}
                           />
                           <Button
                             variant="contained"
                             color="primary"
-                            onClick={handleAddItemToStore}
+                            onClick={() => handleAddItemToStore(Item.id)}
+                            disabled={!selectedStoreItem || quantityToStore < 1}
                           >
-                            Agregar Ítem
+                            Agregar ítem al almacén
                           </Button>
                         </div>
                       </AccordionDetails>
                     </Accordion>
                   </TableCell>
                 </TableRow>
-              ) : renderTableRows(Item)
+              ) : (
+                renderTableRows(Item)
+              )
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
 
-      <Button variant="contained" color="error" onClick={() => { handleDeleteAllItems() }}>
-        Vaciar Orden
-      </Button>
-      <Button variant="contained" color="success" onClick={() => { }}>
-        Crear Orden
-      </Button>
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={handleDeleteAllItems}
+          sx={{ mt: 2 }}
+        >
+          Eliminar todos los ítems
+        </Button>
+      </TableContainer>
     </>
   );
 };

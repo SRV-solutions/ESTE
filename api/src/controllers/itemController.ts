@@ -5,7 +5,7 @@ import Category from '../models/Category';
 import Item from '../models/Item';
 import StoreItem from '../models/StoreItem';
 
-export const getItems = async (_req: Request, res: any) => {
+export const getItems = async (req: Request, res: any) => {
   try {
     // Consulta para obtener solo los items que tienen hijos almacenados dentro de ellos
     const itemsWithChildren = await Item.findAll({
@@ -56,7 +56,6 @@ export const getItems = async (_req: Request, res: any) => {
 
     return res.json([...filteredItemsWithChildren, ...itemsWithoutChildren]);
   } catch (error) {
-    console.log(error);
     res.status(500).json({ message: 'Error fetching items', error });
   }
 };

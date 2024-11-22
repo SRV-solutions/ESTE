@@ -7,4 +7,5 @@ export const sequelize = new Sequelize({
     password: process.env.DB_PASSWORD || '1234',
     host: process.env.DB_HOST || 'localhost',
     database: process.env.DB_NAME || 'este',
+    logging: false,
 });
