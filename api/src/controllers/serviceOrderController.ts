@@ -154,3 +154,35 @@ export const getServiceOrderById = async (req: Request, res: any) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+export const getServiceOrders = async (req: Request, res: any) => {
+  try {
+    const serviceOrders = await ServiceOrder.findAll({
+      include: [
+        {
+          model: User,
+          as: 'DeployedBy',
+        },
+        {
+          model: User,
+          as: 'CheckedBy',
+        },
+        {
+          model: User,
+          as: 'OrderedBy',
+        },
+        {
+          model: Event,
+          as: 'Event',
+        },
+      ],
+    });    
+    if (serviceOrders.length === 0) {
+      return res.status(404).json({ message: 'No se encontraron órdenes de servicio.' });
+    }
+
+    return res.status(200).json(serviceOrders);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor.', error });
+  }
+};

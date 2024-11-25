@@ -32,7 +32,9 @@ const ServiceOrderForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} style={{
+      margin: '3%'
+    }}>
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6}>
           <TextField
