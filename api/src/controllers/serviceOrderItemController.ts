@@ -5,6 +5,7 @@ import ServiceOrder, { ServiceOrderStatus } from '../models/ServiceOrder';
 import ServiceOrderItem from '../models/ServiceOrderItem';
 import Item from '../models/Item';
 import Category from '../models/Category';
+import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
 
 export const createServiceOrderItem = async (req: Request, res: Response) => {
   const { serviceOrderId, itemId } = req.body;
@@ -66,67 +67,67 @@ export const createServiceOrderItems = async (req: Request, res: Response) => {
   const { serviceOrderId, categoryId, quantity } = req.body;
 
   try {
+    // Verificar si la orden de servicio existe
     const searchedServiceOrder = await ServiceOrder.findByPk(serviceOrderId);
     if (!searchedServiceOrder) {
-      res.status(404).json({ message: 'La orden de servicio no existe' });
-      return;
+      return res.status(404).json({ message: 'La orden de servicio no existe' });
     }
 
+    // Obtener ítems de la categoría específica
     const searchedItems = await Item.findAll({
       include: {
         model: Category,
-        where: { id: categoryId }
-      }
+        where: { id: categoryId },
+      },
     });
 
     if (searchedItems.length < quantity) {
-      res.status(404).json({ message: 'No hay suficientes items disponibles en esta categoría' });
-      return;
+      return res.status(404).json({ message: 'No hay suficientes ítems disponibles en esta categoría' });
     }
 
-    // Filtramos ítems ya asociados a órdenes de servicio activas
-    const availableItems = [];
-    for (const item of searchedItems) {
-      const existingServiceOrderItem = await ServiceOrderItem.findOne({
-        where: { itemId: item.id },
+    // Obtener IDs de ítems ya asociados a órdenes activas o almacenados
+    const activeItemIds = new Set(
+      await ServiceOrderItem.findAll({
+        attributes: ['itemId'],
         include: {
           model: ServiceOrder,
           where: {
-            status: {
-              [Op.ne]: ServiceOrderStatus.Disassembled // Excluir el estado "Disassembled"
-            }
-          }
-        }
-      });
+            status: { [Op.ne]: ServiceOrderStatus.Disassembled },
+          },
+        },
+      }).then((items) => items.map((item) => item.itemId))
+    );
 
-      if (!existingServiceOrderItem) {
-        availableItems.push(item); // Sólo incluimos ítems que no están en órdenes activas
-      }
+    const storedItemIds = new Set(
+      await ServiceOrderStoreItem.findAll({
+        attributes: ['itemIdChild'],
+      }).then((items) => items.map((item) => item.itemIdChild))
+    );
 
-      // Detenemos el ciclo si ya tenemos suficientes ítems
-      if (availableItems.length === quantity) {
-        break;
-      }
-    }
+    // Filtrar ítems disponibles
+    const availableItems = searchedItems.filter(
+      (item) => !activeItemIds.has(item.id) && !storedItemIds.has(item.id)
+    );
 
     if (availableItems.length < quantity) {
-      res.status(404).json({ message: 'No hay suficientes items disponibles fuera de órdenes activas' });
-      return;
+      return res.status(404).json({ message: 'No hay suficientes ítems disponibles fuera de órdenes activas' });
     }
 
-    // Preparamos los datos de los ítems a agregar
-    const depuredItems = availableItems.slice(0, quantity).map(item => ({
-      serviceOrderId: serviceOrderId,
-      itemId: item.id
+    // Crear ítems seleccionados
+    const depuredItems = availableItems.slice(0, quantity).map((item) => ({
+      serviceOrderId,
+      itemId: item.id,
     }));
 
     const newServiceOrderItems = await ServiceOrderItem.bulkCreate(depuredItems);
-    res.status(201).json(newServiceOrderItems);
 
+    res.status(201).json({ message: 'Ítems creados exitosamente', data: newServiceOrderItems });
   } catch (error) {
-    res.status(500).json({ message: 'Error creando items en la orden de servicio', error });
+    console.error('Error al crear ítems en la orden de servicio:', error);
+    res.status(500).json({ message: 'Error creando ítems en la orden de servicio', error });
   }
 };
+
 
 export const deleteServiceOrderItems = async (req: Request, res: any) => {
   const { serviceOrderId } = req.params;

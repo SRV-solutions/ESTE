@@ -20,16 +20,25 @@ const ServiceOrderForm = () => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
-
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+    return { Authorization: `Bearer ${token}` };
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const response = await axios.post('http://localhost:3000/service-orders', formData);
-      navigate(`/service-orders/${response.data.id}/items`); // Redirigir a la nueva ruta
+    try {  
+      const response = await axios.post(
+        'http://localhost:3000/service-orders',
+        formData,
+        { headers: getAuthHeaders() }
+      );
+        navigate(`/service-orders/${response.data.id}/items`);
     } catch (error) {
       console.error('Error al crear la orden de servicio:', error);
     }
   };
+  
 
   return (
     <form onSubmit={handleSubmit} style={{

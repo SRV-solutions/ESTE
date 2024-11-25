@@ -106,33 +106,68 @@ export const createServiceOrderStoreItems = async (req: Request, res: Response) 
   const { serviceOrderId, itemIdParent, categoryId, quantity } = req.body;
 
   try {
+    // Verificar existencia de la orden de servicio
     const searchedServiceOrder = await ServiceOrder.findByPk(serviceOrderId);
     if (!searchedServiceOrder) {
-      res.status(404).json({ message: 'La orden de servicio no existe' });
-      return;
+      return res.status(404).json({ message: 'La orden de servicio no existe' });
     }
 
+    // Verificar existencia de ítems hijos en la categoría
     const searchedItemChilds = await Item.findAll({
       include: {
         model: Category,
-        where: { id: categoryId },
+        where: { id: categoryId, isStorable: true }, // Filtro directo en la consulta
       },
-      limit: quantity,
     });
 
     if (searchedItemChilds.length < quantity) {
-      res.status(400).json({ message: 'No hay suficientes ítems disponibles en esta categoría' });
-      return;
+      return res.status(400).json({ message: 'No hay suficientes ítems disponibles en esta categoría' });
     }
 
+    // Verificar existencia del ítem padre
     const searchedParentItem = await Item.findByPk(itemIdParent);
-
     if (!searchedParentItem) {
-      res.status(404).json({ message: 'El ítem padre no existe' });
-      return;
+      return res.status(404).json({ message: 'El ítem padre no existe' });
     }
 
-    const depuredServiceOrderStoreItemData = searchedItemChilds.map((itemChild) => ({
+    // Obtener IDs de ítems ya en órdenes activas
+    const activeOrderItems = new Set(
+      await ServiceOrderItem.findAll({
+        attributes: ['itemId'],
+        include: {
+          model: ServiceOrder,
+          where: {
+            status: { [Op.ne]: ServiceOrderStatus.Disassembled },
+          },
+        },
+      }).then((results) => results.map((item) => item.itemId))
+    );
+
+    const activeStoreItems = new Set(
+      await ServiceOrderStoreItem.findAll({
+        attributes: ['itemIdChild'],
+        include: {
+          model: ServiceOrder,
+          where: {
+            status: { [Op.ne]: ServiceOrderStatus.Disassembled },
+          },
+        },
+      }).then((results) => results.map((item) => item.itemIdChild))
+    );
+
+    // Filtrar ítems disponibles
+    const availableItems = searchedItemChilds.filter(
+      (item) => !activeOrderItems.has(item.id) && !activeStoreItems.has(item.id)
+    );
+
+    if (availableItems.length < quantity) {
+      return res.status(404).json({
+        message: 'No hay suficientes ítems disponibles fuera de órdenes activas',
+      });
+    }
+
+    // Crear los ítems seleccionados
+    const depuredServiceOrderStoreItemData = availableItems.slice(0, quantity).map((itemChild) => ({
       serviceOrderId,
       itemIdParent,
       itemIdChild: itemChild.id,
@@ -142,27 +177,26 @@ export const createServiceOrderStoreItems = async (req: Request, res: Response) 
 
     res.status(201).json({ message: 'Ítems creados exitosamente en la orden de servicio' });
   } catch (error) {
+    console.error('Error creando ítems en la orden de servicio:', error);
     res.status(500).json({ message: 'Error creando ítems en la orden de servicio', error });
   }
 };
 
+
 export const deleteServiceOrderStoreItem = async (req: Request, res: any) => {
   const { serviceOrderId, itemIdParent, itemIdChild } = req.params;
-  console.log(req.params);
-  
-
   try {
     if (!serviceOrderId) {
       return res.status(400).json({ message: 'Debe seleccionar una orden de servicio válida' });
     }
     const itemsToDelete = await ServiceOrderStoreItem.findAll({ where: { serviceOrderId } });
-    
+
     if (itemsToDelete.length === 0) {
       return res.status(404).json({ message: `No se encontraron items para la orden de servicio con ID ${serviceOrderId}` });
     }
 
     const itemToDeleteExist = itemsToDelete.some(item => (item.itemIdParent === Number(itemIdParent) && item.itemIdChild === Number(itemIdChild)))
-    
+
     if (!itemToDeleteExist) {
       return res.status(404).json({ message: `El item no se encuentra en la orden de servicio ${serviceOrderId}` });
 

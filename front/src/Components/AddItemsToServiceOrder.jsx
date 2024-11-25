@@ -14,8 +14,10 @@ import {
   TextField,
   Autocomplete,
   Button,
+  IconButton,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 
@@ -97,6 +99,33 @@ const AddItemsToServiceOrder = () => {
     }
   };
 
+  const handleDeleteItem = async (itemId, itemIdParent) => {
+    try {      
+      if (itemIdParent) {
+        const response = await axios.delete(
+          `http://localhost:3000/service-order-store-items/${id}/${itemIdParent}/${itemId}`,
+          { headers: getAuthHeaders() }
+        );
+  
+        if (response.status === 200) {
+          fetchServiceOrder();
+        }
+        return
+      }
+      const response = await axios.delete(
+        `http://localhost:3000/service-order-items/${id}/${itemId}`,
+        { headers: getAuthHeaders() }
+      );
+
+      if (response.status === 200) {
+        fetchServiceOrder();
+      }
+    } catch (error) {
+      console.error('Error al eliminar el ítem:', error);
+      alert(error.response?.data?.message || 'Error al eliminar el ítem');
+    }
+  };
+
   const handleDeleteAllItems = async () => {
     try {
       const response = await axios.delete(`http://localhost:3000/service-order-items/${id}`, {
@@ -156,19 +185,32 @@ const AddItemsToServiceOrder = () => {
     }
   };
 
-  const renderTableRows = (item, color) => (
+  const renderTableRows = (item, color, itemIdParent = NaN) => (
     <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
-      <TableCell component="th" scope="row">{item.id}</TableCell>
+      <TableCell>{item.id}</TableCell>
       <TableCell align="center">{item.Category.name}</TableCell>
       <TableCell align="center">{item.Category.description}</TableCell>
       <TableCell align="center">{item.Category.type}</TableCell>
       <TableCell align="center">{item.Category.isStorable ? 'SI' : 'NO'}</TableCell>
       <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
+      <TableCell align="center">
+        <IconButton
+          onClick={() => handleDeleteItem(item.id, itemIdParent)}
+          sx={{
+            color: '#757575',
+            '&:hover': {
+              color: '#ff0000',
+              cursor: 'pointer',
+            },
+          }}
+        >
+          <DeleteIcon />
+        </IconButton>
+      </TableCell>
     </TableRow>
   );
-
   return (
-    <>
+    <div style={{ margin: '3%' }}>
       <TableContainer component={Paper} sx={{ padding: 2 }}>
         <Typography variant="h6">Orden de Servicio N°: {serviceOrder.id}</Typography>
         <Typography>Evento: {serviceOrder.Event.eventName}</Typography>
@@ -177,7 +219,7 @@ const AddItemsToServiceOrder = () => {
         <Typography>Encargado de Chequearla: {serviceOrder.CheckedBy.username}</Typography>
         <Typography>Encargado de Armarla: {serviceOrder.DeployedBy.username}</Typography>
         <Typography>Estatus: {serviceOrder.status}</Typography>
-
+  
         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
           <Autocomplete
             options={allItems}
@@ -206,7 +248,7 @@ const AddItemsToServiceOrder = () => {
             Agregar Ítem
           </Button>
         </div>
-
+  
         <Table sx={{ minWidth: 650 }} aria-label="simple table">
           <TableHead>
             <TableRow>
@@ -216,6 +258,7 @@ const AddItemsToServiceOrder = () => {
               <TableCell align="center">TIPO</TableCell>
               <TableCell align="center">ES ALMACENABLE</TableCell>
               <TableCell align="center">ES CONTENEDOR</TableCell>
+              <TableCell align="center">ACCIONES</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -241,13 +284,14 @@ const AddItemsToServiceOrder = () => {
                               <TableCell align="center">TIPO</TableCell>
                               <TableCell align="center">ES ALMACENABLE</TableCell>
                               <TableCell align="center">ES CONTENEDOR</TableCell>
+                              <TableCell align="center">ACCIONES</TableCell>
                             </TableRow>
                           </TableHead>
                           {renderTableRows(Item, '#adadad')}
                           {Item.StoreItemParentItem?.length > 0 && (
                             <TableBody>
                               {Item.StoreItemParentItem.map((containedItem) =>
-                                renderTableRows(containedItem.StoreItemChildItem || containedItem)
+                                renderTableRows(containedItem.StoreItemChildItem || containedItem, 'white', Item.id)
                               )}
                             </TableBody>
                           )}
@@ -290,7 +334,7 @@ const AddItemsToServiceOrder = () => {
             ))}
           </TableBody>
         </Table>
-
+  
         <Button
           variant="outlined"
           color="error"
@@ -300,8 +344,9 @@ const AddItemsToServiceOrder = () => {
           Eliminar todos los ítems
         </Button>
       </TableContainer>
-    </>
+    </div>
   );
+  
 };
 
 export default AddItemsToServiceOrder;
