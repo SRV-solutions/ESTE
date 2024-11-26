@@ -7,7 +7,6 @@ import User from '../models/User';
 // Clave secreta para JWT (colócala en un archivo .env)
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
-// Obtener todos los usuarios
 export const getAllUsers = async (req: Request, res: any) => {
   try {
     const users = await User.findAll({
@@ -28,7 +27,6 @@ export const getAllUsers = async (req: Request, res: any) => {
   }
 };
 
-// Obtener un usuario por ID
 export const getUser = async (req: Request, res: any) => {
   const { id } = req.params;
   try {
@@ -51,7 +49,6 @@ export const getUser = async (req: Request, res: any) => {
   }
 };
 
-// Crear un nuevo usuario
 export const createUser = async (req: Request, res: any) => {
   const { username, email, password, roleId } = req.body;
   try {
@@ -78,7 +75,6 @@ export const createUser = async (req: Request, res: any) => {
   }
 };
 
-// Registro de usuario
 export const register = async (req: Request, res: any) => {
   const { username, email, password, roleId } = req.body;
   try {
@@ -105,7 +101,6 @@ export const register = async (req: Request, res: any) => {
   }
 };
 
-// Login de usuario
 export const login = async (req: Request, res: any) => {
   const { email, password } = req.body;
   try {

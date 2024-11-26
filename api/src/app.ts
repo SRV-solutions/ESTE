@@ -8,8 +8,8 @@ import itemRoutes from './routes/itemRoutes';
 import serviceOrderRoutes from './routes/serviceOrderRoutes';
 import serviceOrderItemRoutes from './routes/serviceOrderItemRoutes';
 import serviceOrderStoreItemRoutes from './routes/serviceOrderStoreItemRoutes';
+import eventRoutes from './routes/eventRoutes';
 // import locationRoutes from './routes/locationRoutes';
-// import eventRoutes from './routes/eventRoutes';
 // import orderItemRoutes from './routes/orderItemRoutes';
 // import itemRoutes from './routes/itemRoutes';
 // import storeItemRoutes from './routes/storeItemRoutes';
@@ -59,8 +59,8 @@ app.use('/items', itemRoutes);
 app.use('/service-orders', serviceOrderRoutes);//orden de servicios para eventos
 app.use('/service-order-items', serviceOrderItemRoutes);//items para eventos
 app.use('/service-order-store-items', serviceOrderStoreItemRoutes);//baules de cables para eventos
+app.use('/events', eventRoutes);
 // app.use('/locations', locationRoutes);
-// app.use('/events', eventRoutes);
 // app.use('/order-items', orderItemRoutes);
 // app.use('/items', itemRoutes);
 // app.use('/store-items', storeItemRoutes);
