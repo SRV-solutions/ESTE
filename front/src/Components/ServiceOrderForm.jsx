@@ -25,8 +25,8 @@ const ServiceOrderForm = () => {
         const [usersResponse, eventsResponse] = await Promise.all([
           axios.get('http://localhost:3000/users', { headers }),
           axios.get('http://localhost:3000/events', { headers }),
-        ]);
-        setUsers(usersResponse.data);
+        ]);        
+        setUsers(usersResponse.data);        
         setEvents(eventsResponse.data);
       } catch (error) {
         console.error('Error al obtener datos:', error);
@@ -76,7 +76,7 @@ const ServiceOrderForm = () => {
           >
             {events.map((event) => (
               <MenuItem key={event.id} value={event.id}>
-                {event.name}
+                {event.id} - {event.eventName}
               </MenuItem>
             ))}
           </TextField>
@@ -118,7 +118,7 @@ const ServiceOrderForm = () => {
             >
               {users.map((user) => (
                 <MenuItem key={user.id} value={user.id}>
-                  {user.name}
+                  {user.id} - {user.username}
                 </MenuItem>
               ))}
             </TextField>

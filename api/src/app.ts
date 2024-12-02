@@ -90,7 +90,7 @@ async function seeder(): Promise<void> {
       username: 'Operador',
       password: await bcrypt.hash('1234', 10), // Hashear contraseña
       email: 'mail0@mail.mail',
-      roleId: userRole.id
+      roleId: userRole.id 
     },
     {
       username: 'Operador 2',

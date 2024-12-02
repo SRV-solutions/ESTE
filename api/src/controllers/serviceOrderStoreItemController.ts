@@ -102,7 +102,7 @@ export const createServiceOrderStoreItem = async (req: Request, res: any) => {
   }
 };
 
-export const createServiceOrderStoreItems = async (req: Request, res: Response) => {
+export const createServiceOrderStoreItems = async (req: Request, res: any) => {
   const { serviceOrderId, itemIdParent, categoryId, quantity } = req.body;
 
   try {
