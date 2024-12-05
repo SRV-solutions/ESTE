@@ -68,7 +68,7 @@ const ServiceOrderForm = () => {
           <TextField
             select
             fullWidth
-            label="Event"
+            label="Evento"
             name="eventId"
             value={formData.eventId}
             onChange={handleChange}
@@ -84,7 +84,7 @@ const ServiceOrderForm = () => {
         <Grid item xs={12} sm={6}>
           <TextField
             fullWidth
-            label="Created Date"
+            label="Fecha de creacion"
             name="createdDate"
             type="date"
             value={formData.createdDate}
@@ -98,7 +98,7 @@ const ServiceOrderForm = () => {
         <Grid item xs={12}>
           <TextField
             fullWidth
-            label="Observations"
+            label="Observaciones"
             name="observations"
             value={formData.observations}
             onChange={handleChange}
@@ -110,7 +110,7 @@ const ServiceOrderForm = () => {
             <TextField
               select
               fullWidth
-              label={field.replace(/([A-Z])/g, ' $1').trim()}
+              label={field === 'checkedBy' ? 'Verificador': field === 'orderedBy' ? 'Solicitante' : 'Armador'}
               name={field}
               value={formData[field]}
               onChange={handleChange}
@@ -126,7 +126,7 @@ const ServiceOrderForm = () => {
         ))}
         <Grid item xs={12}>
           <Button type="submit" variant="contained" color="primary">
-            Create Service Order
+            Crear Orden de Servicio
           </Button>
         </Grid>
       </Grid>

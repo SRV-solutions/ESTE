@@ -69,12 +69,12 @@ app.use('/events', eventRoutes);
 async function seeder(): Promise<void> {
   const newLocation = await Location.create({
     locationName: 'Faena',
-    address: 'faena 123',
+    address: 'faena 1589',
     city: 'CABA',
     country: 'BSAS'
   })
   await Event.create({
-    eventName: "Faena algo",
+    eventName: "Faena Arts - Google",
     dateEvent: '06/10/2024',
     locationId: newLocation.id
   })
@@ -87,21 +87,21 @@ async function seeder(): Promise<void> {
   })
   const users = await Promise.all([
     {
-      username: 'Operador',
+      username: 'Marcos',
       password: await bcrypt.hash('1234', 10), // Hashear contraseña
-      email: 'mail0@mail.mail',
+      email: 'marcos.costa@wearesrv.com',
       roleId: userRole.id 
     },
     {
-      username: 'Operador 2',
+      username: 'Facundo',
       password: await bcrypt.hash('1234', 10), // Hashear contraseña
-      email: 'mail1@mail.mail',
+      email: 'facundo.coto@esteeventos.com',
       roleId: adminRole.id
     },
     {
-      username: 'Operador 3',
+      username: 'Eduardo',
       password: await bcrypt.hash('1234', 10), // Hashear contraseña
-      email: 'mail2@mail.mail',
+      email: 'eduardo.colonnese@esteeventos.com',
       roleId: userRole.id
     }
   ]);
@@ -166,7 +166,7 @@ async function seeder(): Promise<void> {
       isActive: true,
     }, {
       name: "Cable de tension",
-      description: "Cable de tension largo de no se que",
+      description: "Cable de tension",
       type: "cable",
       quantity: 6,
       unity: "v",

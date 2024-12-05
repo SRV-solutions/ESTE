@@ -15,6 +15,8 @@ import {
   Autocomplete,
   Button,
   IconButton,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -35,7 +37,11 @@ const AddItemsToServiceOrder = () => {
   const [selectedStoreItem, setSelectedStoreItem] = useState(null);
   const [quantityToStore, setQuantityToStore] = useState(1);
   const [quantity, setQuantity] = useState(1);
-
+  const [alertInfo, setAlertInfo] = useState({
+    open: false,
+    message: '',
+    severity: 'info',
+  });
   useEffect(() => {
     fetchItems();
     fetchServiceOrder();
@@ -47,7 +53,9 @@ const AddItemsToServiceOrder = () => {
     if (!token) throw new Error('No token found');
     return { Authorization: `Bearer ${token}` };
   };
-
+  const showAlert = (message, severity = 'info') => {
+    setAlertInfo({ open: true, message, severity });
+  };
   const fetchItems = async () => {
     try {
       const { data } = await axios.get('http://localhost:3000/items', {
@@ -64,7 +72,7 @@ const AddItemsToServiceOrder = () => {
       const { data } = await axios.get(`http://localhost:3000/service-orders/${id}`, {
         headers: getAuthHeaders(),
       });
-      
+
       setServiceOrder(data);
     } catch (error) {
       console.error('Error al cargar la orden de servicio:', error);
@@ -93,22 +101,26 @@ const AddItemsToServiceOrder = () => {
         setSelectedItem(null);
         setQuantity(1);
         fetchServiceOrder();
+        showAlert('Ítem agregado correctamente', 'success');
+
       }
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al agregar el ítem');
+      showAlert(error.response?.data?.message || 'Error al agregar el ítem', 'error');
     }
   };
 
   const handleDeleteItem = async (itemId, itemIdParent) => {
-    try {      
+    try {
       if (itemIdParent) {
         const response = await axios.delete(
           `http://localhost:3000/service-order-store-items/${id}/${itemIdParent}/${itemId}`,
           { headers: getAuthHeaders() }
         );
-  
+
         if (response.status === 200) {
           fetchServiceOrder();
+          showAlert('Ítem eliminado correctamente', 'success');
+
         }
         return
       }
@@ -122,7 +134,7 @@ const AddItemsToServiceOrder = () => {
       }
     } catch (error) {
       console.error('Error al eliminar el ítem:', error);
-      alert(error.response?.data?.message || 'Error al eliminar el ítem');
+      showAlert(error.response?.data?.message || 'Error al eliminar el ítem', 'error');
     }
   };
 
@@ -137,11 +149,16 @@ const AddItemsToServiceOrder = () => {
       }
     } catch (error) {
       console.error('Error al eliminar todos los ítems:', error);
-      alert(error.response?.data?.message || 'Error al eliminar ítems');
+      showAlert(error.response?.data?.message || 'Error al eliminar ítems', 'error');
+
     }
   };
 
-  const handleAddItemToStore = async (storeItemId) => {        
+  const handleCloseAlert = () => {
+    setAlertInfo((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleAddItemToStore = async (storeItemId) => {
     if (!selectedStoreItem || quantityToStore <= 0) return;
 
     try {
@@ -150,7 +167,7 @@ const AddItemsToServiceOrder = () => {
       const itemChildren = allItems.filter(item => item.Category.id === selectedStoreItem.Category.id);
 
       if (itemChildren.length < quantityToStore) {
-        alert('No hay suficientes ítems disponibles en esta categoría');
+        showAlert('No hay suficientes ítems disponibles en esta categoría', 'error');
         return;
       }
 
@@ -176,12 +193,14 @@ const AddItemsToServiceOrder = () => {
             { Item: selectedStoreItem, quantity: quantityToStore }
           ],
         }));
+        showAlert('Item agregado correctamente al almacen', 'success');
+
         setSelectedStoreItem(null);
         setQuantityToStore(1);
         fetchServiceOrder();
       }
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al agregar el ítem al almacén');
+      showAlert(error.response?.data?.message || 'Error al agregar el ítem al almacén', 'error');
     }
   };
 
@@ -219,7 +238,7 @@ const AddItemsToServiceOrder = () => {
         <Typography>Encargado de Chequearla: {serviceOrder.CheckedBy.username}</Typography>
         <Typography>Encargado de Armarla: {serviceOrder.DeployedBy.username}</Typography>
         <Typography>Estatus: {serviceOrder.status}</Typography>
-  
+
         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
           <Autocomplete
             options={allItems}
@@ -248,7 +267,7 @@ const AddItemsToServiceOrder = () => {
             Agregar Ítem
           </Button>
         </div>
-  
+
         <Table sx={{ minWidth: 650 }} aria-label="simple table">
           <TableHead>
             <TableRow>
@@ -334,7 +353,7 @@ const AddItemsToServiceOrder = () => {
             ))}
           </TableBody>
         </Table>
-  
+
         <Button
           variant="outlined"
           color="error"
@@ -344,9 +363,23 @@ const AddItemsToServiceOrder = () => {
           Eliminar todos los ítems
         </Button>
       </TableContainer>
+      <Snackbar
+        open={alertInfo.open}
+        autoHideDuration={6000}
+        onClose={handleCloseAlert}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleCloseAlert}
+          severity={alertInfo.severity}
+          sx={{ width: '100%' }}
+        >
+          {alertInfo.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
-  
+
 };
 
 export default AddItemsToServiceOrder;

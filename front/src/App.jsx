@@ -15,7 +15,13 @@ const App = () => {
       <div style={{ paddingTop: '64px' }}> {/* Espacio para el NavBar fijo */}
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+          />
+
           <Route
             path="/service-orders/new"
             element={
@@ -40,11 +46,11 @@ const App = () => {
               </PrivateRoute>
             }
           />
-           <Route
+          <Route
             path="/service-orders"
             element={
               <PrivateRoute>
-                <ServiceOrderList/>
+                <ServiceOrderList />
               </PrivateRoute>
             }
           />
