@@ -26,9 +26,10 @@ const Login = () => {
       if (!response.ok) {
         throw new Error('Credenciales incorrectas');
       }
-
+      
       const data = await response.json();
       localStorage.setItem('token', data.token); // Guarda el token
+      localStorage.setItem('userData', JSON.stringify(data.userData)); // Guarda el token
       navigate('/service-orders/new'); // Redirige a una ruta protegida
     } catch (error) {
       setError(error.message);

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+
 import ServiceOrder from '../models/ServiceOrder';
 import Event from '../models/Event';
 import User from '../models/User';
@@ -96,7 +98,7 @@ export const getServiceOrderById = async (req: Request, res: any) => {
     let itemsInContainers: Array<any> = [];
     if (containerItems.length > 0) {
       const containerIds = containerItems.map((item) => item.itemId);
-      
+
       itemsInContainers = await ServiceOrderStoreItem.findAll({
         where: {
           itemIdParent: containerIds, // Buscar los items dentro de los contenedores
@@ -109,7 +111,7 @@ export const getServiceOrderById = async (req: Request, res: any) => {
           }]
         }],
       });
-      
+
       const allStoreItems = await StoreItem.findAll({
         where: {
           itemIdParent: containerIds, // Buscar los items dentro de los contenedores
@@ -155,34 +157,78 @@ export const getServiceOrderById = async (req: Request, res: any) => {
   }
 };
 
+
 export const getServiceOrders = async (req: Request, res: any) => {
   try {
+    // Obtener el token del encabezado Authorization
+    const authHeader = req.headers['authorization'];
+    const token = authHeader ? authHeader.split(' ')[1] : undefined;
+
+    // Verificar si el token está presente
+    if (!token) {
+      return res.status(401).json({ message: 'No autorizado. Token no proporcionado.' });
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+
+    // Verificar y decodificar el token de forma síncrona
+    let userData;
+    try {
+      userData = jwt.verify(token, JWT_SECRET) as any;
+    } catch (err) {
+      return res.status(403).json({ message: 'Token inválido o expirado.' });
+    }
+
+    // Verificar si el usuario está en el token
+    if (!userData) {
+      return res.status(401).json({ message: 'Token inválido.' });
+    }
+
+    // Obtener las órdenes de servicio
     const serviceOrders = await ServiceOrder.findAll({
       include: [
         {
           model: User,
           as: 'DeployedBy',
+          attributes: ['id', 'username', 'email', 'roleId'], // Solo traer los campos necesarios
         },
         {
           model: User,
           as: 'CheckedBy',
+          attributes: ['id', 'username', 'email', 'roleId'],
         },
         {
           model: User,
           as: 'OrderedBy',
+          attributes: ['id', 'username', 'email', 'roleId'],
         },
         {
           model: Event,
           as: 'Event',
         },
       ],
-    });    
-    if (serviceOrders.length === 0) {
+    });
+
+    // Filtrar las órdenes dependiendo si el usuario es admin o no
+    const filteredOrders = serviceOrders.filter((order) => {
+      return (
+        order.CheckedBy.id === userData.id ||
+        order.OrderedBy.id === userData.id ||
+        order.DeployedBy.id === userData.id
+      );
+    });
+
+    const finalServiceOrders = userData.isAdmin ? serviceOrders : filteredOrders;
+
+    // Si no hay órdenes de servicio, retornar un error
+    if (finalServiceOrders.length === 0) {
       return res.status(404).json({ message: 'No se encontraron órdenes de servicio.' });
     }
 
-    return res.status(200).json(serviceOrders);
+    // Retornar las órdenes encontradas
+    return res.status(200).json(finalServiceOrders);
   } catch (error) {
+    console.error('Error al obtener las órdenes de servicio:', error);
     return res.status(500).json({ message: 'Error interno del servidor.', error });
   }
 };

@@ -25,8 +25,8 @@ const ServiceOrderForm = () => {
         const [usersResponse, eventsResponse] = await Promise.all([
           axios.get('http://localhost:3000/users', { headers }),
           axios.get('http://localhost:3000/events', { headers }),
-        ]);        
-        setUsers(usersResponse.data);        
+        ]);
+        setUsers(usersResponse.data);
         setEvents(eventsResponse.data);
       } catch (error) {
         console.error('Error al obtener datos:', error);
@@ -105,12 +105,12 @@ const ServiceOrderForm = () => {
             multiline
           />
         </Grid>
-        {['checkedBy', 'orderedBy', 'deployedBy'].map((field) => (
+        {['orderedBy', 'checkedBy', 'deployedBy'].map((field) => (
           <Grid item xs={12} sm={4} key={field}>
             <TextField
               select
               fullWidth
-              label={field === 'checkedBy' ? 'Verificador': field === 'orderedBy' ? 'Solicitante' : 'Armador'}
+              label={field === 'checkedBy' ? 'Chequeado por' : field === 'orderedBy' ? 'Creada Por' : 'Armada Por'}
               name={field}
               value={formData[field]}
               onChange={handleChange}

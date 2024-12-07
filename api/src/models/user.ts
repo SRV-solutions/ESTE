@@ -10,7 +10,7 @@ class User extends Model {
   public email!: string;
   public password!: string; // Campo para almacenar la contraseña
   public roleId!: number;
-
+  public Role!: Role
   // Asociaciones con otros modelos
   public static associate() {
     User.belongsTo(Role, { foreignKey: 'roleId' });
