@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Login from './Components/Login';
 import ServiceOrderForm from './Components/ServiceOrderForm';
-import AddItemsToServiceOrder from './Components/AddItemsToServiceOrder';
+import AddItemsToServiceOrder from './Components/AddItemsToServiceOrder/Index';
 import PrivateRoute from './Components/PrivateRoute';
 import NavBar from './Components/NavBar';
 import ServiceOrderList from './Components/ServiceOrderList'

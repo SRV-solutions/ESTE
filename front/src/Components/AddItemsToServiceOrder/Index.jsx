@@ -1,0 +1,330 @@
+import React, { useEffect, useState } from 'react';
+import {
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
+    Typography,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    TextField,
+    Autocomplete,
+    Button,
+    IconButton,
+    Snackbar,
+    Alert,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
+} from '@mui/material';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import ServiceOrderHeader from './ServiceOrderHeader';
+import ServiceOrderTable from './ServiceOrderTable';
+
+const AddItemsToServiceOrder = () => {
+    const { id } = useParams();
+
+    const [serviceOrder, setServiceOrder] = useState({
+        Event: {},
+        OrderedBy: { username: '' },
+        DeployedBy: { username: '' },
+        CheckedBy: { username: '' },
+        ServiceOrderItems: [],
+    });
+    const [alertInfo, setAlertInfo] = useState({
+        open: false,
+        message: '',
+        severity: 'info',
+    });
+    const [allItems, setAllItems] = useState([]);
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [selectedStoreItem, setSelectedStoreItem] = useState(null);
+    const [quantityToStore, setQuantityToStore] = useState(1);
+    const [quantity, setQuantity] = useState(1);
+    const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
+    useEffect(() => {
+        fetchItems();
+        fetchServiceOrder();
+    }, [id]);
+
+    const handleConfirmDeleteAllItems = () => {
+        setConfirmDialogOpen(true);
+    };
+
+    const handleCancelDelete = () => {
+        setConfirmDialogOpen(false);
+    };
+
+    const handleConfirmDelete = () => {
+        setConfirmDialogOpen(false);
+        handleDeleteAllItems();
+    };
+
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No token found');
+        return { Authorization: `Bearer ${token}` };
+    };
+
+    const showAlert = (message, severity = 'info') => {
+        setAlertInfo({ open: true, message, severity });
+    };
+
+    const fetchItems = async () => {
+        try {
+            const { data } = await axios.get('http://localhost:3000/items', {
+                headers: getAuthHeaders(),
+            });
+            setAllItems(data);
+        } catch (error) {
+            console.error('Error al cargar los ítems:', error);
+        }
+    };
+
+    const fetchServiceOrder = async () => {
+        try {
+            const { data } = await axios.get(`http://localhost:3000/service-orders/${id}`, {
+                headers: getAuthHeaders(),
+            });
+
+            setServiceOrder(data);
+        } catch (error) {
+            console.error('Error al cargar la orden de servicio:', error);
+        }
+    };
+
+    const handleAddItem = async () => {
+        if (!selectedItem || quantity <= 0) return;
+
+        try {
+            const response = await axios.post(
+                'http://localhost:3000/service-order-items/bulk',
+                {
+                    serviceOrderId: Number(id),
+                    categoryId: selectedItem.Category.id,
+                    quantity,
+                },
+                { headers: getAuthHeaders() }
+            );
+
+            if (response.status === 201) {
+                setServiceOrder((prev) => ({
+                    ...prev,
+                    ServiceOrderItems: [...prev.ServiceOrderItems, { Item: selectedItem, quantity }],
+                }));
+                setSelectedItem(null);
+                setQuantity(1);
+                fetchServiceOrder();
+                showAlert('Ítem agregado correctamente', 'success');
+
+            }
+        } catch (error) {
+            showAlert(error.response?.data?.message || 'Error al agregar el ítem', 'error');
+        }
+    };
+
+    const handleDeleteItem = async (itemId, itemIdParent) => {
+        try {
+            if (itemIdParent) {
+                const response = await axios.delete(
+                    `http://localhost:3000/service-order-store-items/${id}/${itemIdParent}/${itemId}`,
+                    { headers: getAuthHeaders() }
+                );
+
+                if (response.status === 200) {
+                    fetchServiceOrder();
+                    showAlert('Ítem eliminado correctamente', 'success');
+
+                }
+                return
+            }
+            const response = await axios.delete(
+                `http://localhost:3000/service-order-items/${id}/${itemId}`,
+                { headers: getAuthHeaders() }
+            );
+
+            if (response.status === 200) {
+                fetchServiceOrder();
+            }
+        } catch (error) {
+            console.error('Error al eliminar el ítem:', error);
+            showAlert(error.response?.data?.message || 'Error al eliminar el ítem', 'error');
+        }
+    };
+
+    const handleDeleteAllItems = async () => {
+        try {
+            const response = await axios.delete(`http://localhost:3000/service-order-items/${id}`, {
+                headers: getAuthHeaders(),
+            });
+
+            if (response.status === 200) {
+                fetchServiceOrder();
+                showAlert('Todos los ítems fueron eliminados correctamente', 'success');
+            }
+        } catch (error) {
+            console.error('Error al eliminar todos los ítems:', error);
+            showAlert(error.response?.data?.message || 'Error al eliminar ítems', 'error');
+        }
+    };
+
+    const handleCloseAlert = () => {
+        setAlertInfo((prev) => ({ ...prev, open: false }));
+    };
+
+    const handleAddItemToStore = async (storeItemId) => {
+        if (!selectedStoreItem || quantityToStore <= 0) return;
+
+        try {
+            const itemIdParent = storeItemId
+
+            const itemChildren = allItems.filter(item => item.Category.id === selectedStoreItem.Category.id);
+
+            if (itemChildren.length < quantityToStore) {
+                showAlert('No hay suficientes ítems disponibles en esta categoría', 'error');
+                return;
+            }
+
+            const storeItemData = {
+                serviceOrderId: Number(id),
+                itemIdParent,
+                categoryId: selectedStoreItem.Category.id,
+                quantity: quantityToStore,
+            };
+
+
+            const response = await axios.post(
+                'http://localhost:3000/service-order-store-items/bulk',
+                storeItemData,
+                { headers: getAuthHeaders() }
+            );
+
+            if (response.status === 201) {
+                setServiceOrder((prev) => ({
+                    ...prev,
+                    ServiceOrderItems: [
+                        ...prev.ServiceOrderItems,
+                        { Item: selectedStoreItem, quantity: quantityToStore }
+                    ],
+                }));
+                showAlert('Item agregado correctamente al almacen', 'success');
+
+                setSelectedStoreItem(null);
+                setQuantityToStore(1);
+                fetchServiceOrder();
+            }
+        } catch (error) {
+            showAlert(error.response?.data?.message || 'Error al agregar el ítem al almacén', 'error');
+        }
+    };
+
+    const renderTableRows = (item, color, itemIdParent = NaN) => (
+        <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
+            <TableCell>{item.id}</TableCell>
+            <TableCell align="center">{item.Category.name}</TableCell>
+            <TableCell align="center">{item.Category.description}</TableCell>
+            <TableCell align="center">{item.Category.type}</TableCell>
+            <TableCell align="center">{item.Category.isStorable ? 'SI' : 'NO'}</TableCell>
+            <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
+            <TableCell align="center">
+                <IconButton
+                    onClick={() => handleDeleteItem(item.id, itemIdParent)}
+                    sx={{
+                        color: '#757575',
+                        '&:hover': {
+                            color: '#ff0000',
+                            cursor: 'pointer',
+                        },
+                    }}
+                >
+                    <DeleteIcon />
+                </IconButton>
+            </TableCell>
+        </TableRow>
+    );
+
+    return (
+        <div style={{ margin: '3%' }}>
+            <TableContainer component={Paper} sx={{ padding: 2 }}>
+                <ServiceOrderHeader
+                    serviceOrder={serviceOrder}
+                    allItems={allItems}
+                    setSelectedItem={setSelectedItem}
+                    selectedItem={selectedItem}
+                    setQuantity={setQuantity}
+                    quantity={quantity}
+                    handleAddItem={handleAddItem}
+                />
+
+                <ServiceOrderTable
+                    serviceOrder={serviceOrder}
+                    allItems={allItems}
+                    setSelectedStoreItem={setSelectedStoreItem}
+                    selectedStoreItem={selectedStoreItem}
+                    setQuantityToStore={setQuantityToStore}
+                    quantityToStore={quantityToStore}
+                    handleAddItemToStore={handleAddItemToStore}
+                    renderTableRows={renderTableRows}
+                />
+                
+                <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={handleConfirmDeleteAllItems}
+                    sx={{ mt: 2 }}
+                >
+                    Eliminar todos los ítems
+                </Button>
+
+                <Dialog
+                    open={confirmDialogOpen}
+                    onClose={handleCancelDelete}
+                >
+                    <DialogTitle>Confirmar eliminación</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            ¿Estás seguro de que deseas eliminar todos los ítems? Esta acción no se puede deshacer.
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCancelDelete} color="primary">
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleConfirmDelete} color="error">
+                            Confirmar
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+            </TableContainer>
+
+            <Snackbar
+                open={alertInfo.open}
+                autoHideDuration={6000}
+                onClose={handleCloseAlert}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={handleCloseAlert}
+                    severity={alertInfo.severity}
+                    sx={{ width: '100%' }}
+                >
+                    {alertInfo.message}
+                </Alert>
+            </Snackbar>
+        </div>
+    );
+
+};
+
+export default AddItemsToServiceOrder;

@@ -30,6 +30,7 @@ import axios from 'axios';
 
 const AddItemsToServiceOrder = () => {
   const { id } = useParams();
+  
   const [serviceOrder, setServiceOrder] = useState({
     Event: {},
     OrderedBy: { username: '' },
@@ -37,24 +38,22 @@ const AddItemsToServiceOrder = () => {
     CheckedBy: { username: '' },
     ServiceOrderItems: [],
   });
-  const [allItems, setAllItems] = useState([]);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [selectedStoreItem, setSelectedStoreItem] = useState(null);
-  const [quantityToStore, setQuantityToStore] = useState(1);
-  const [quantity, setQuantity] = useState(1);
   const [alertInfo, setAlertInfo] = useState({
     open: false,
     message: '',
     severity: 'info',
   });
+  const [allItems, setAllItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedStoreItem, setSelectedStoreItem] = useState(null);
+  const [quantityToStore, setQuantityToStore] = useState(1);
+  const [quantity, setQuantity] = useState(1);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchItems();
     fetchServiceOrder();
   }, [id]);
-
-
 
   const handleConfirmDeleteAllItems = () => {
     setConfirmDialogOpen(true);
@@ -74,9 +73,11 @@ const AddItemsToServiceOrder = () => {
     if (!token) throw new Error('No token found');
     return { Authorization: `Bearer ${token}` };
   };
+
   const showAlert = (message, severity = 'info') => {
     setAlertInfo({ open: true, message, severity });
   };
+
   const fetchItems = async () => {
     try {
       const { data } = await axios.get('http://localhost:3000/items', {
@@ -249,6 +250,7 @@ const AddItemsToServiceOrder = () => {
       </TableCell>
     </TableRow>
   );
+
   return (
     <div style={{ margin: '3%' }}>
       <TableContainer component={Paper} sx={{ padding: 2 }}>
