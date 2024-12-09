@@ -17,6 +17,11 @@ import {
   IconButton,
   Snackbar,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -42,12 +47,28 @@ const AddItemsToServiceOrder = () => {
     message: '',
     severity: 'info',
   });
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
   useEffect(() => {
     fetchItems();
     fetchServiceOrder();
   }, [id]);
 
-  // Obtener token del localStorage y enviar con las solicitudes
+
+
+  const handleConfirmDeleteAllItems = () => {
+    setConfirmDialogOpen(true);
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmDialogOpen(false);
+  };
+
+  const handleConfirmDelete = () => {
+    setConfirmDialogOpen(false);
+    handleDeleteAllItems();
+  };
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('No token found');
@@ -146,11 +167,11 @@ const AddItemsToServiceOrder = () => {
 
       if (response.status === 200) {
         fetchServiceOrder();
+        showAlert('Todos los ítems fueron eliminados correctamente', 'success');
       }
     } catch (error) {
       console.error('Error al eliminar todos los ítems:', error);
       showAlert(error.response?.data?.message || 'Error al eliminar ítems', 'error');
-
     }
   };
 
@@ -357,11 +378,31 @@ const AddItemsToServiceOrder = () => {
         <Button
           variant="outlined"
           color="error"
-          onClick={handleDeleteAllItems}
+          onClick={handleConfirmDeleteAllItems}
           sx={{ mt: 2 }}
         >
           Eliminar todos los ítems
         </Button>
+        <Dialog
+          open={confirmDialogOpen}
+          onClose={handleCancelDelete}
+        >
+          <DialogTitle>Confirmar eliminación</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              ¿Estás seguro de que deseas eliminar todos los ítems? Esta acción no se puede deshacer.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCancelDelete} color="primary">
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmDelete} color="error">
+              Confirmar
+            </Button>
+          </DialogActions>
+        </Dialog>
+
       </TableContainer>
       <Snackbar
         open={alertInfo.open}

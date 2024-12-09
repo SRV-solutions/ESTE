@@ -1,9 +1,28 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
+
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+
+  try {
+    const { exp } = jwtDecode(token);
+    const isTokenExpired = Date.now() >= exp * 1000;
+
+    if (isTokenExpired) {
+      localStorage.removeItem('token');
+      return <Navigate to="/login" />;
+    }
+
+    return children;
+  } catch (error) {
+    localStorage.removeItem('token')
+    return <Navigate to="/login" />;
+  }
 };
 
 export default PrivateRoute;

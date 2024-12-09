@@ -128,32 +128,59 @@ export const createServiceOrderItems = async (req: Request, res: any) => {
   }
 };
 
-
 export const deleteServiceOrderItems = async (req: Request, res: any) => {
   const { serviceOrderId } = req.params;
 
   try {
-    // Validación de `serviceOrderId`
     if (!serviceOrderId) {
-      return res.status(400).json({ message: 'Debe seleccionar una orden de servicio válida' });
+      return res.status(400).json({ message: 'Debe seleccionar una orden de servicio válida.' });
     }
 
-    // Verifica si existen items con el `serviceOrderId` especificado
     const itemsToDelete = await ServiceOrderItem.findAll({ where: { serviceOrderId } });
 
     if (itemsToDelete.length === 0) {
-      return res.status(404).json({ message: `No se encontraron items para la orden de servicio con ID ${serviceOrderId}` });
+      return res.status(404).json({ message: `No se encontraron items para la orden de servicio con ID ${serviceOrderId}.` });
     }
 
-    // Eliminación de los items
-    await ServiceOrderItem.destroy({ where: { serviceOrderId } });
-    res.status(200).json({ message: 'Items de la orden de servicio eliminados exitosamente' });
+    const items2delete = itemsToDelete.map(item => item.itemId);
 
+    const containerItems = await Item.findAll({
+      where: { id: items2delete },
+      include: [
+        {
+          model: Category,
+          where: { isContainer: true }, 
+        },
+      ],
+    });
+
+    const containerItemIds = containerItems.map(item => item.id);
+
+    const deletedContainers = await ServiceOrderStoreItem.destroy({
+      where: {
+        itemIdParent: containerItemIds,
+        serviceOrderId,
+      },
+    });
+
+
+    const deletedItems = await ServiceOrderItem.destroy({
+      where: { serviceOrderId },
+    });
+
+    return res.status(200).json({
+      message: 'Items de la orden de servicio eliminados exitosamente.',
+      deletedContainers,
+      deletedItems,
+    });
   } catch (error) {
-    console.error('Error al eliminar items de la orden de servicio:', error);
-    res.status(500).json({ message: 'Error al eliminar items de la orden de servicio', error });
+    return res.status(500).json({
+      message: 'Error al eliminar items de la orden de servicio.',
+      error: error,
+    });
   }
 };
+
 
 export const deleteServiceOrderItem = async (req: Request, res: any) => {
   const { serviceOrderId, itemId } = req.params;

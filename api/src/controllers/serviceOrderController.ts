@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
-import ServiceOrder from '../models/ServiceOrder';
+import ServiceOrder, { ServiceOrderStatus } from '../models/ServiceOrder';
 import Event from '../models/Event';
 import User from '../models/User';
 import ServiceOrderItem from '../models/ServiceOrderItem';
@@ -157,7 +157,6 @@ export const getServiceOrderById = async (req: Request, res: any) => {
   }
 };
 
-
 export const getServiceOrders = async (req: Request, res: any) => {
   try {
     // Obtener el token del encabezado Authorization
@@ -229,6 +228,33 @@ export const getServiceOrders = async (req: Request, res: any) => {
     return res.status(200).json(finalServiceOrders);
   } catch (error) {
     console.error('Error al obtener las órdenes de servicio:', error);
+    return res.status(500).json({ message: 'Error interno del servidor.', error });
+  }
+};
+
+export const updateStatusServiceOrderById = async (req: Request, res: any) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!Object.values(ServiceOrderStatus).includes(status)) {
+      return res.status(400).json({
+        message: `Estado no permitido. Los estados válidos son: ${Object.values(ServiceOrderStatus).join(', ')}`,
+      });
+    }
+    const serviceOrder = await ServiceOrder.findByPk(id);
+
+    if (!serviceOrder) {
+      return res.status(404).json({ message: 'Orden de servicio no encontrada.' });
+    }
+    serviceOrder.status = status;
+    await serviceOrder.save();
+
+    return res.status(200).json({
+      message: 'Estado de la orden de servicio actualizado correctamente.',
+      serviceOrder,
+    });
+  } catch (error) {
+    console.error('Error al actualizar el estado de la orden de servicio:', error);
     return res.status(500).json({ message: 'Error interno del servidor.', error });
   }
 };
