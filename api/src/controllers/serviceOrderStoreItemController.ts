@@ -182,7 +182,6 @@ export const createServiceOrderStoreItems = async (req: Request, res: any) => {
   }
 };
 
-
 export const deleteServiceOrderStoreItem = async (req: Request, res: any) => {
   const { serviceOrderId, itemIdParent, itemIdChild } = req.params;
   try {

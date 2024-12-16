@@ -101,15 +101,17 @@ export const register = async (req: Request, res: any) => {
   }
 };
 
-export const login = async (req: Request, res: any) => {
-  const { email, password } = req.body;
+export const login = async (req: Request, res: any) => {  
+  
+  const { email, password } = req.body;  
   try {
-    const user = await User.findOne({ where: { email }, include: [Role] });
+    const user = await User.findOne({ where: { email }, include: [Role] });    
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Contraseña incorrecta' });
     }
@@ -134,7 +136,7 @@ export const login = async (req: Request, res: any) => {
         isAdmin 
       }
     });
-  } catch (error) {
+  } catch (error) {    
     res.status(500).json({ message: 'Error al iniciar sesión', error });
   }
 };

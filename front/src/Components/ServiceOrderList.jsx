@@ -36,6 +36,22 @@ const ServiceOrderList = () => {
     { value: 'myOrderServices', label: 'Mis Órdenes de Servicio' },
   ];
 
+  const status = {
+    created: 'Creada',
+    in_review: 'En Revisión',
+    approved: 'Aprobada',
+    rejected: 'Rechazada',
+    in_process: 'En Proceso',
+    ready: 'Lista',
+    dispatched: 'Despachada',
+    delivered: 'En Viaje de ida',
+    returning: 'En Viaje de regreso',
+    received: 'Recibido',
+    under_review: 'Bajo Revisión',
+    disassembled: 'Desarmada',
+  };
+  
+
   const STATUS_FILTERS = [
     { value: '', label: 'Todos' },
     { value: 'Created', label: 'Creada' },
@@ -52,15 +68,13 @@ const ServiceOrderList = () => {
         const userData = JSON.parse(localStorage.getItem('userData'));
         setCurrentUserId(userData?.id);
         setIsAdmin(userData?.isAdmin);
-
         const response = await axios.get('http://localhost:3000/service-orders', {
           headers: { Authorization: `Bearer ${token}` },
-        });
-
+        });        
         setServiceOrders(response.data);
         setFilteredOrders(response.data);
-      } catch (err) {
-        setError('Error al cargar las órdenes de servicio.');
+      } catch (err) {        
+        setError(err?.response?.data?.message || 'Error al cargar las órdenes de servicio.');
         console.error('Error fetching service orders:', err);
       } finally {
         setLoading(false);
@@ -170,7 +184,7 @@ const ServiceOrderList = () => {
                       ? new Date(order.Event.dateEvent).toLocaleDateString()
                       : 'Desconocido'}
                   </TableCell>
-                  <TableCell>{order.status || 'Desconocido'}</TableCell>
+                  <TableCell>{status[order.status] || 'Desconocido'}</TableCell>
                   <TableCell style={getCellStyle(order.OrderedBy)}>
                     {order.OrderedBy?.username || 'Desconocido'}
                   </TableCell>

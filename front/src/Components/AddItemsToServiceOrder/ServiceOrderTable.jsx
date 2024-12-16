@@ -19,12 +19,18 @@ const ServiceOrderTable = ({
   serviceOrder,
   allItems,
   setSelectedStoreItem,
-  selectedStoreItem, 
+  selectedStoreItem,
   setQuantityToStore,
   quantityToStore,
   handleAddItemToStore,
   renderTableRows,
 }) => {
+
+  const handleAddItemAndReset = (itemId) => {
+    handleAddItemToStore(itemId); // Llama la función existente para agregar el ítem
+    setSelectedStoreItem(null); // Reinicia el valor del Autocomplete
+
+  };
   return (
     <Table sx={{ minWidth: 650 }} aria-label="simple table">
       <TableHead>
@@ -78,6 +84,7 @@ const ServiceOrderTable = ({
                         style={{ width: '50vh' }}
                         options={allItems}
                         getOptionLabel={(option) => `${option.id} - ${option.Category.name} - ${option.Category.description}`}
+                        value={selectedStoreItem} // Vincula el estado actual
                         onChange={(event, newValue) => setSelectedStoreItem(newValue)}
                         renderInput={(params) => (
                           <TextField {...params} label="Buscar ítem del almacén" variant="outlined" fullWidth />
@@ -95,7 +102,7 @@ const ServiceOrderTable = ({
                       <Button
                         variant="contained"
                         color="primary"
-                        onClick={() => handleAddItemToStore(Item.id)}
+                        onClick={() => handleAddItemAndReset(Item.id)}
                         disabled={!selectedStoreItem || quantityToStore < 1}
                       >
                         Agregar ítem al almacén

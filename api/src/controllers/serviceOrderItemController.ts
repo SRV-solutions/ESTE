@@ -142,10 +142,10 @@ export const deleteServiceOrderItems = async (req: Request, res: any) => {
       return res.status(404).json({ message: `No se encontraron items para la orden de servicio con ID ${serviceOrderId}.` });
     }
 
-    const items2delete = itemsToDelete.map(item => item.itemId);
+    const iteToDeleteIds = itemsToDelete.map(item => item.itemId);
 
     const containerItems = await Item.findAll({
-      where: { id: items2delete },
+      where: { id: iteToDeleteIds },
       include: [
         {
           model: Category,
@@ -201,12 +201,39 @@ export const deleteServiceOrderItem = async (req: Request, res: any) => {
       return res.status(404).json({ message: `El item no se encuentra en la orden de servicio ${serviceOrderId}` });
 
     }
-    await ServiceOrderItem.destroy({
-      where: {
-        serviceOrderId,
-        itemId
-      }
+  
+    const iteToDeleteIds = itemsToDelete.map(item => item.itemId);
+
+    const containerItems = await Item.findAll({
+      where: { id: iteToDeleteIds },
+      include: [
+        {
+          model: Category,
+          where: { isContainer: true }, 
+        },
+      ],
     });
+
+    const containerItemIds = containerItems.map(item => item.id);
+
+    const deletedContainers = await ServiceOrderStoreItem.destroy({
+      where: {
+        itemIdParent: containerItemIds,
+        serviceOrderId,
+      },
+    });
+
+
+    const deletedItems = await ServiceOrderItem.destroy({
+      where: { serviceOrderId },
+    });
+
+    // await ServiceOrderItem.destroy({
+    //   where: {
+    //     serviceOrderId,
+    //     itemId
+    //   }
+    // });
 
     res.status(200).json({ message: 'Item de la orden de servicio eliminados exitosamente' });
 

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Typography, Autocomplete, TextField, Button } from '@mui/material';
 
+ 
+
 const ServiceOrderHeader = ({
   serviceOrder,
   allItems,
@@ -10,6 +12,32 @@ const ServiceOrderHeader = ({
   quantity,
   handleAddItem,
 }) => {
+
+  
+  const status = {
+    created: 'Creada',
+    in_review: 'En Revisión',
+    approved: 'Aprobada',
+    rejected: 'Rechazada',
+    in_process: 'En Proceso',
+    ready: 'Lista',
+    dispatched: 'Despachada',
+    delivered: 'En Viaje de ida',
+    returning: 'En Viaje de regreso',
+    received: 'Recibido',
+    under_review: 'Bajo Revisión',
+    disassembled: 'Desarmada',
+  };
+  
+  
+
+  const handleAddItemAndReset = () => {
+    if (selectedItem && quantity > 0) {
+      handleAddItem(); // Llama la función existente para agregar el ítem
+      setSelectedItem(null); // Reinicia el valor del Autocomplete
+    }
+  };
+
   return (
     <>
       <Typography variant="h6">Orden de Servicio N°: {serviceOrder.id}</Typography>
@@ -18,15 +46,23 @@ const ServiceOrderHeader = ({
       <Typography>Creada por: {serviceOrder.OrderedBy.username}</Typography>
       <Typography>Encargado de Chequearla: {serviceOrder.CheckedBy.username}</Typography>
       <Typography>Encargado de Armarla: {serviceOrder.DeployedBy.username}</Typography>
-      <Typography>Estatus: {serviceOrder.status}</Typography>
+      <Typography>Estado de la Orden de Servicio: {status[serviceOrder.status]}</Typography>
 
       <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
         <Autocomplete
           options={allItems}
-          getOptionLabel={(option) => `${option.id} - ${option.Category.name} - ${option.Category.description}`}
+          getOptionLabel={(option) =>
+            `${option.id} - ${option.Category.name} - ${option.Category.description}`
+          }
+          value={selectedItem} // Vincula el estado actual
           onChange={(event, newValue) => setSelectedItem(newValue)}
           renderInput={(params) => (
-            <TextField {...params} label="Buscar ítem por nombre o descripción" variant="outlined" fullWidth />
+            <TextField
+              {...params}
+              label="Buscar ítem por nombre o descripción"
+              variant="outlined"
+              fullWidth
+            />
           )}
           sx={{ flexGrow: 1, marginRight: 1 }}
         />
@@ -42,7 +78,7 @@ const ServiceOrderHeader = ({
         <Button
           variant="contained"
           color="primary"
-          onClick={handleAddItem}
+          onClick={handleAddItemAndReset}
           disabled={!selectedItem || quantity < 1}
         >
           Agregar Ítem

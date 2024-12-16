@@ -22,11 +22,10 @@ const Login = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-
       if (!response.ok) {
         throw new Error('Credenciales incorrectas');
       }
-      
+
       const data = await response.json();
       localStorage.setItem('token', data.token); // Guarda el token
       localStorage.setItem('userData', JSON.stringify(data.userData)); // Guarda el token

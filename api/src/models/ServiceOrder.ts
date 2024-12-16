@@ -6,18 +6,18 @@ import ServiceOrderItem from './ServiceOrderItem'; // Asegúrate de importar el 
 import ServiceOrderStoreItem from './ServiceOrderStoreItem';
 
 export enum ServiceOrderStatus {
-  Created = 'Created', // Fiama o alguien crea lo necesario para algún evento
-  InReview = 'In Review', // Entra en una espera para que alguien revise la orden
-  Approved = 'Approved', // Alguien del staff chequea y aprueba la Orden de Servicio
-  Rejected = 'Rejected', // Alguien del staff chequea y rechaza la Orden de Servicio
-  InProcess = 'In Process', // Claudio o alguien en el depósito arma los ítems necesarios
-  Ready = 'Ready', // La orden ya está armada y lista para ser cargada
-  Dispatched = 'Dispatched', // La Orden fue despachada con éxito
-  Delivered = 'Delivered', // La Orden fue entregada al lugar del evento
-  Returning = 'Returning', // La Orden está en viaje, mayormente hacia el depósito
-  Received = 'Received', // La orden fue recibida con éxito en el depósito
-  UnderReview = 'Under Review', // La Orden de Servicio debe ser revisada para chequear los materiales
-  Disassembled = 'Disassembled', // La Orden fue desarmada y cada ítem fue devuelto a su lugar
+  Created = 'created', // Fiama o alguien crea lo necesario para algún evento
+  InReview = 'in_review', // Entra en una espera para que alguien revise la orden
+  Approved = 'approved', // Alguien del staff chequea y aprueba la Orden de Servicio
+  Rejected = 'rejected', // Alguien del staff chequea y rechaza la Orden de Servicio
+  InProcess = 'in_process', // Claudio o alguien en el depósito arma los ítems necesarios
+  Ready = 'ready', // La orden ya está armada y lista para ser cargada
+  Dispatched = 'dispatched', // La Orden fue despachada con éxito
+  Delivered = 'delivered', // La Orden fue entregada al lugar del evento
+  Returning = 'returning', // La Orden está en viaje, mayormente hacia el depósito
+  Received = 'received', // La orden fue recibida con éxito en el depósito
+  UnderReview = 'under_review', // La Orden de Servicio debe ser revisada para chequear los materiales
+  Disassembled = 'disassembled', // La Orden fue desarmada y cada ítem fue devuelto a su lugar
 }
 
 class ServiceOrder extends Model {

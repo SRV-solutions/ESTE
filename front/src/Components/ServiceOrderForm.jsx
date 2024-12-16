@@ -8,7 +8,7 @@ const ServiceOrderForm = () => {
   const [formData, setFormData] = useState({
     eventId: '',
     createdDate: '',
-    status: 'Created',
+    status: 'created',
     observations: '',
     checkedBy: '',
     orderedBy: '',

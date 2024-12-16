@@ -43,8 +43,7 @@ app.use(express.json());
 app.use((req: Request, res: any, next: NextFunction) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');  
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -277,7 +276,7 @@ async function seeder(): Promise<void> {
 }
 
 sequelize.sync({ force: false }).then(() => {
-  //seeder()
+  // seeder()
   console.log('Database connected and synchronized');
 }).catch(err => {
   console.error('Unable to connect to the database:', err);

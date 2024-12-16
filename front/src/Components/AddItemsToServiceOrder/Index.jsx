@@ -1,18 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
-    Typography,
-    Table,
-    TableBody,
     TableCell,
     TableContainer,
-    TableHead,
     TableRow,
     Paper,
-    TextField,
-    Autocomplete,
     Button,
     IconButton,
     Snackbar,
@@ -23,7 +14,6 @@ import {
     DialogContentText,
     DialogActions,
 } from '@mui/material';
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
