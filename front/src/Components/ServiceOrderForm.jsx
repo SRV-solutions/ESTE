@@ -17,6 +17,7 @@ const ServiceOrderForm = () => {
 
   const [users, setUsers] = useState([]);
   const [events, setEvents] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -26,8 +27,23 @@ const ServiceOrderForm = () => {
           axios.get('http://localhost:3000/users', { headers }),
           axios.get('http://localhost:3000/events', { headers }),
         ]);
+
         setUsers(usersResponse.data);
         setEvents(eventsResponse.data);
+
+        // Obtener el usuario actual desde localStorage
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        if (userData) {
+          setCurrentUser(userData);
+
+          // Si el usuario no es admin, asignar automáticamente como creador
+          if (!userData.isAdmin) {
+            setFormData((prevData) => ({
+              ...prevData,
+              orderedBy: userData.id,
+            }));
+          }
+        }
       } catch (error) {
         console.error('Error al obtener datos:', error);
       }
@@ -84,7 +100,7 @@ const ServiceOrderForm = () => {
         <Grid item xs={12} sm={6}>
           <TextField
             fullWidth
-            label="Fecha de creacion"
+            label="Fecha de creación"
             name="createdDate"
             type="date"
             value={formData.createdDate}
@@ -105,12 +121,30 @@ const ServiceOrderForm = () => {
             multiline
           />
         </Grid>
-        {['orderedBy', 'checkedBy', 'deployedBy'].map((field) => (
+        <Grid item xs={12} sm={4}>
+          <TextField
+            select
+            fullWidth
+            label="Creada Por"
+            name="orderedBy"
+            value={formData.orderedBy}
+            onChange={handleChange}
+            required
+            disabled={!currentUser?.isAdmin} // Deshabilitar si no es admin
+          >
+            {users.map((user) => (
+              <MenuItem key={user.id} value={user.id}>
+                {user.id} - {user.username}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+        {['checkedBy', 'deployedBy'].map((field) => (
           <Grid item xs={12} sm={4} key={field}>
             <TextField
               select
               fullWidth
-              label={field === 'checkedBy' ? 'Chequeado por' : field === 'orderedBy' ? 'Creada Por' : 'Armada Por'}
+              label={field === 'checkedBy' ? 'Chequeado por' : 'Armada por'}
               name={field}
               value={formData[field]}
               onChange={handleChange}

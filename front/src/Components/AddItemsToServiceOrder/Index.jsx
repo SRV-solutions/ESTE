@@ -47,6 +47,35 @@ const AddItemsToServiceOrder = () => {
         fetchServiceOrder();
     }, [id]);
 
+    const userData = JSON.parse(localStorage.getItem('userData'));
+
+    const canEditOrder = () => {
+        // El creador puede editar si el estado es 'created'
+        if (
+            userData.email === serviceOrder.OrderedBy.email &&
+            serviceOrder.status === 'created'
+        ) {
+            return true;
+        }
+        
+        // El encargado del armado puede editar si el estado es 'approved' o 'in_process'
+        if (
+            userData.email === serviceOrder.DeployedBy.email &&
+            (serviceOrder.status === 'approved' || serviceOrder.status === 'in_process')
+        ) {
+            return true;
+        }
+        
+        // El chequeador nunca puede editar
+        if (userData.email === serviceOrder.CheckedBy.email) {
+            return false;
+        }
+    
+        // Por defecto, no puede editar
+        return false;
+    };
+    
+
     const handleConfirmDeleteAllItems = () => {
         setConfirmDialogOpen(true);
     };
@@ -116,7 +145,6 @@ const AddItemsToServiceOrder = () => {
                 setQuantity(1);
                 fetchServiceOrder();
                 showAlert('Ítem agregado correctamente', 'success');
-
             }
         } catch (error) {
             showAlert(error.response?.data?.message || 'Error al agregar el ítem', 'error');
@@ -134,10 +162,10 @@ const AddItemsToServiceOrder = () => {
                 if (response.status === 200) {
                     fetchServiceOrder();
                     showAlert('Ítem eliminado correctamente', 'success');
-
                 }
-                return
+                return;
             }
+
             const response = await axios.delete(
                 `http://localhost:3000/service-order-items/${id}/${itemId}`,
                 { headers: getAuthHeaders() }
@@ -176,7 +204,7 @@ const AddItemsToServiceOrder = () => {
         if (!selectedStoreItem || quantityToStore <= 0) return;
 
         try {
-            const itemIdParent = storeItemId
+            const itemIdParent = storeItemId;
 
             const itemChildren = allItems.filter(item => item.Category.id === selectedStoreItem.Category.id);
 
@@ -192,7 +220,6 @@ const AddItemsToServiceOrder = () => {
                 quantity: quantityToStore,
             };
 
-
             const response = await axios.post(
                 'http://localhost:3000/service-order-store-items/bulk',
                 storeItemData,
@@ -207,7 +234,7 @@ const AddItemsToServiceOrder = () => {
                         { Item: selectedStoreItem, quantity: quantityToStore }
                     ],
                 }));
-                showAlert('Item agregado correctamente al almacen', 'success');
+                showAlert('Ítem agregado correctamente al almacén', 'success');
 
                 setSelectedStoreItem(null);
                 setQuantityToStore(1);
@@ -226,20 +253,22 @@ const AddItemsToServiceOrder = () => {
             <TableCell align="center">{item.Category.type}</TableCell>
             <TableCell align="center">{item.Category.isStorable ? 'SI' : 'NO'}</TableCell>
             <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
-            <TableCell align="center">
-                <IconButton
-                    onClick={() => handleDeleteItem(item.id, itemIdParent)}
-                    sx={{
-                        color: '#757575',
-                        '&:hover': {
-                            color: '#ff0000',
-                            cursor: 'pointer',
-                        },
-                    }}
-                >
-                    <DeleteIcon />
-                </IconButton>
-            </TableCell>
+            {canEditOrder() && (
+                <TableCell align="center">
+                    <IconButton
+                        onClick={() => handleDeleteItem(item.id, itemIdParent)}
+                        sx={{
+                            color: '#757575',
+                            '&:hover': {
+                                color: '#ff0000',
+                                cursor: 'pointer',
+                            },
+                        }}
+                    >
+                        <DeleteIcon />
+                    </IconButton>
+                </TableCell>
+            )}
         </TableRow>
     );
 
@@ -254,6 +283,7 @@ const AddItemsToServiceOrder = () => {
                     setQuantity={setQuantity}
                     quantity={quantity}
                     handleAddItem={handleAddItem}
+                    canEditOrder={canEditOrder}
                 />
 
                 <ServiceOrderTable
@@ -265,44 +295,38 @@ const AddItemsToServiceOrder = () => {
                     quantityToStore={quantityToStore}
                     handleAddItemToStore={handleAddItemToStore}
                     renderTableRows={renderTableRows}
+                    canEditOrder={canEditOrder}
                 />
-                
-                <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={handleConfirmDeleteAllItems}
-                    sx={{ mt: 2 }}
-                >
-                    Eliminar todos los ítems
-                </Button>
 
-                <Dialog
-                    open={confirmDialogOpen}
-                    onClose={handleCancelDelete}
-                >
+                {canEditOrder() && (
+                    <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={handleConfirmDeleteAllItems}
+                        sx={{ mt: 2 }}
+                    >
+                        Eliminar todos los ítems
+                    </Button>
+                )}
+
+                <Dialog open={confirmDialogOpen} onClose={handleCancelDelete}>
                     <DialogTitle>Confirmar eliminación</DialogTitle>
                     <DialogContent>
                         <DialogContentText>
-                            ¿Estás seguro de que deseas eliminar todos los ítems? Esta acción no se puede deshacer.
+                            ¿Estás seguro de que deseas eliminar todos los ítems? Esta acción no puede deshacerse.
                         </DialogContentText>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={handleCancelDelete} color="primary">
-                            Cancelar
-                        </Button>
-                        <Button onClick={handleConfirmDelete} color="error">
-                            Confirmar
-                        </Button>
+                        <Button onClick={handleCancelDelete}>Cancelar</Button>
+                        <Button onClick={handleConfirmDelete}>Confirmar</Button>
                     </DialogActions>
                 </Dialog>
-
             </TableContainer>
 
             <Snackbar
                 open={alertInfo.open}
                 autoHideDuration={6000}
                 onClose={handleCloseAlert}
-                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
             >
                 <Alert
                     onClose={handleCloseAlert}
@@ -314,7 +338,6 @@ const AddItemsToServiceOrder = () => {
             </Snackbar>
         </div>
     );
-
 };
 
 export default AddItemsToServiceOrder;

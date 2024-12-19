@@ -24,13 +24,14 @@ const ServiceOrderTable = ({
   quantityToStore,
   handleAddItemToStore,
   renderTableRows,
+  canEditOrder
 }) => {
 
   const handleAddItemAndReset = (itemId) => {
     handleAddItemToStore(itemId); // Llama la función existente para agregar el ítem
     setSelectedStoreItem(null); // Reinicia el valor del Autocomplete
-
   };
+
   return (
     <Table sx={{ minWidth: 650 }} aria-label="simple table">
       <TableHead>
@@ -41,7 +42,7 @@ const ServiceOrderTable = ({
           <TableCell align="center">TIPO</TableCell>
           <TableCell align="center">ES ALMACENABLE</TableCell>
           <TableCell align="center">ES CONTENEDOR</TableCell>
-          <TableCell align="center">ACCIONES</TableCell>
+          {canEditOrder() && <TableCell align="center">ACCIONES</TableCell>}
         </TableRow>
       </TableHead>
       <TableBody>
@@ -67,10 +68,10 @@ const ServiceOrderTable = ({
                           <TableCell align="center">TIPO</TableCell>
                           <TableCell align="center">ES ALMACENABLE</TableCell>
                           <TableCell align="center">ES CONTENEDOR</TableCell>
-                          <TableCell align="center">ACCIONES</TableCell>
+                          {canEditOrder() && <TableCell align="center">ACCIONES</TableCell>}
                         </TableRow>
                       </TableHead>
-                      {renderTableRows(Item, '#adadad')}
+                      {renderTableRows(Item, '#add')}
                       {Item.StoreItemParentItem?.length > 0 && (
                         <TableBody>
                           {Item.StoreItemParentItem.map((containedItem) =>
@@ -80,33 +81,37 @@ const ServiceOrderTable = ({
                       )}
                     </Table>
                     <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', justifyContent: 'space-between' }}>
-                      <Autocomplete
-                        style={{ width: '50vh' }}
-                        options={allItems}
-                        getOptionLabel={(option) => `${option.id} - ${option.Category.name} - ${option.Category.description}`}
-                        value={selectedStoreItem} // Vincula el estado actual
-                        onChange={(event, newValue) => setSelectedStoreItem(newValue)}
-                        renderInput={(params) => (
-                          <TextField {...params} label="Buscar ítem del almacén" variant="outlined" fullWidth />
-                        )}
-                      />
-                      <TextField
-                        label="Cantidad"
-                        type="number"
-                        variant="outlined"
-                        value={quantityToStore}
-                        onChange={(e) => setQuantityToStore(Math.max(Number(e.target.value), 1))}
-                        inputProps={{ min: 1 }}
-                        sx={{ width: 100, marginRight: 1 }}
-                      />
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => handleAddItemAndReset(Item.id)}
-                        disabled={!selectedStoreItem || quantityToStore < 1}
-                      >
-                        Agregar ítem al almacén
-                      </Button>
+                      {canEditOrder() && (
+                        <>
+                          <Autocomplete
+                            style={{ width: '50vh' }}
+                            options={allItems}
+                            getOptionLabel={(option) => `${option.id} - ${option.Category.name} - ${option.Category.description}`}
+                            value={selectedStoreItem}
+                            onChange={(event, newValue) => setSelectedStoreItem(newValue)}
+                            renderInput={(params) => (
+                              <TextField {...params} label="Buscar ítem del almacén" variant="outlined" fullWidth />
+                            )}
+                          />
+                          <TextField
+                            label="Cantidad"
+                            type="number"
+                            variant="outlined"
+                            value={quantityToStore}
+                            onChange={(e) => setQuantityToStore(Math.max(Number(e.target.value), 1))}
+                            inputProps={{ min: 1 }}
+                            sx={{ width: 100, marginRight: 1 }}
+                          />
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => handleAddItemAndReset(Item.id)}
+                            disabled={!selectedStoreItem || quantityToStore < 1}
+                          >
+                            Agregar ítem al almacén
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </AccordionDetails>
                 </Accordion>

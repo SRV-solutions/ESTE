@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import jwt from 'jsonwebtoken';
 
 import ServiceOrder, { ServiceOrderStatus } from '../models/ServiceOrder';
@@ -10,7 +10,7 @@ import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
 import Category from '../models/Category';
 import StoreItem from '../models/StoreItem';
 
-export const createServiceOrder = async (req: Request, res: Response) => {
+export const createServiceOrder = async (req: any, res: any) => {
   const {
     eventId,
     createdDate,
@@ -18,32 +18,49 @@ export const createServiceOrder = async (req: Request, res: Response) => {
     observations,
     checkedBy,
     orderedBy,
-    deployedBy
+    deployedBy,
   } = req.body;
 
+  // Usuario autenticado desde el middleware `isAuth`
+  const authenticatedUser = req.user;
+
   try {
-    const event = await Event.findByPk(eventId)
+    // Validar si el evento existe
+    const event = await Event.findByPk(eventId);
     if (!event) {
-      res.status(404).json({ message: 'Event not not found' });
-      return
+      return res.status(404).json({ message: 'Event not found' });
     }
-    const user = await User.findByPk(orderedBy)
+
+    // Validar si el usuario autenticado tiene permiso para asignar la orden
+    if (!authenticatedUser.isAdmin && orderedBy !== authenticatedUser.id) {
+      return res.status(403).json({ 
+        message: 'No tienes permisos para asignar esta orden a otro usuario.' 
+      });
+    }
+
+    // Validar si el usuario al que se asigna la orden existe
+    const user = await User.findByPk(orderedBy);
     if (!user) {
-      res.status(404).json({ message: 'User not not found' });
-      return
+      return res.status(404).json({ message: 'User not found' });
     }
-    const serviceOrder: ServiceOrder = await ServiceOrder.create({
+
+    // Crear la orden de servicio
+    const serviceOrder = await ServiceOrder.create({
       eventId,
       createdDate,
       status,
       observations,
       checkedBy,
       orderedBy,
-      deployedBy
+      deployedBy,
     });
-    res.status(201).json(serviceOrder);
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating role', error });
+
+    return res.status(201).json(serviceOrder);
+  } catch (error: any) {
+    return res.status(500).json({ 
+      message: 'Error creating service order', 
+      error: error.message 
+    });
   }
 };
 

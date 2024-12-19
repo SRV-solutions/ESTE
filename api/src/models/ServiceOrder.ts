@@ -6,11 +6,11 @@ import ServiceOrderItem from './ServiceOrderItem'; // Asegúrate de importar el 
 import ServiceOrderStoreItem from './ServiceOrderStoreItem';
 
 export enum ServiceOrderStatus {
-  Created = 'created', // Fiama o alguien crea lo necesario para algún evento
+  Created = 'created', //se puede editar - solo el que la crea  // Fiama o alguien crea lo necesario para algún evento
   InReview = 'in_review', // Entra en una espera para que alguien revise la orden
-  Approved = 'approved', // Alguien del staff chequea y aprueba la Orden de Servicio
+  Approved = 'approved', //se puede editar - solo el que la arma // Alguien del staff chequea y aprueba la Orden de Servicio
   Rejected = 'rejected', // Alguien del staff chequea y rechaza la Orden de Servicio
-  InProcess = 'in_process', // Claudio o alguien en el depósito arma los ítems necesarios
+  InProcess = 'in_process', //se puede editar - solo el que la arma // Claudio o alguien en el depósito arma los ítems necesarios
   Ready = 'ready', // La orden ya está armada y lista para ser cargada
   Dispatched = 'dispatched', // La Orden fue despachada con éxito
   Delivered = 'delivered', // La Orden fue entregada al lugar del evento

@@ -1,8 +1,6 @@
 import React from 'react';
 import { Typography, Autocomplete, TextField, Button } from '@mui/material';
 
- 
-
 const ServiceOrderHeader = ({
   serviceOrder,
   allItems,
@@ -11,9 +9,9 @@ const ServiceOrderHeader = ({
   setQuantity,
   quantity,
   handleAddItem,
+  canEditOrder
 }) => {
 
-  
   const status = {
     created: 'Creada',
     in_review: 'En Revisión',
@@ -28,9 +26,8 @@ const ServiceOrderHeader = ({
     under_review: 'Bajo Revisión',
     disassembled: 'Desarmada',
   };
-  
-  
 
+  
   const handleAddItemAndReset = () => {
     if (selectedItem && quantity > 0) {
       handleAddItem(); // Llama la función existente para agregar el ítem
@@ -46,44 +43,46 @@ const ServiceOrderHeader = ({
       <Typography>Creada por: {serviceOrder.OrderedBy.username}</Typography>
       <Typography>Encargado de Chequearla: {serviceOrder.CheckedBy.username}</Typography>
       <Typography>Encargado de Armarla: {serviceOrder.DeployedBy.username}</Typography>
-      <Typography>Estado de la Orden de Servicio: {status[serviceOrder.status]}</Typography>
+      <Typography>Estado de la Orden de Servicio: {status[serviceOrder.status] || 'Estado desconocido'}</Typography>
 
-      <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
-        <Autocomplete
-          options={allItems}
-          getOptionLabel={(option) =>
-            `${option.id} - ${option.Category.name} - ${option.Category.description}`
-          }
-          value={selectedItem} // Vincula el estado actual
-          onChange={(event, newValue) => setSelectedItem(newValue)}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Buscar ítem por nombre o descripción"
-              variant="outlined"
-              fullWidth
-            />
-          )}
-          sx={{ flexGrow: 1, marginRight: 1 }}
-        />
-        <TextField
-          label="Cantidad"
-          type="number"
-          variant="outlined"
-          value={quantity}
-          onChange={(e) => setQuantity(Math.max(Number(e.target.value), 1))}
-          inputProps={{ min: 1 }}
-          sx={{ width: 100, marginRight: 1 }}
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleAddItemAndReset}
-          disabled={!selectedItem || quantity < 1}
-        >
-          Agregar Ítem
-        </Button>
-      </div>
+      {canEditOrder() && (
+        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
+          <Autocomplete
+            options={allItems}
+            getOptionLabel={(option) =>
+              `${option.id} - ${option.Category.name} - ${option.Category.description}`
+            }
+            value={selectedItem}
+            onChange={(event, newValue) => setSelectedItem(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Buscar ítem por nombre o descripción"
+                variant="outlined"
+                fullWidth
+              />
+            )}
+            sx={{ flexGrow: 1, marginRight: 1 }}
+          />
+          <TextField
+            label="Cantidad"
+            type="number"
+            variant="outlined"
+            value={quantity}
+            onChange={(e) => setQuantity(Math.max(Number(e.target.value), 1))}
+            inputProps={{ min: 1 }}
+            sx={{ width: 100, marginRight: 1 }}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleAddItemAndReset}
+            disabled={!selectedItem || quantity < 1}
+          >
+            Agregar Ítem
+          </Button>
+        </div>
+      )}
     </>
   );
 };

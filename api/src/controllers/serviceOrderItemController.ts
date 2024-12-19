@@ -181,64 +181,65 @@ export const deleteServiceOrderItems = async (req: Request, res: any) => {
   }
 };
 
-
 export const deleteServiceOrderItem = async (req: Request, res: any) => {
   const { serviceOrderId, itemId } = req.params;
 
   try {
+    // Validar que serviceOrderId sea válido
     if (!serviceOrderId) {
       return res.status(400).json({ message: 'Debe seleccionar una orden de servicio válida' });
     }
+
+    // Buscar ítems asociados a la orden
     const itemsToDelete = await ServiceOrderItem.findAll({ where: { serviceOrderId } });
 
     if (itemsToDelete.length === 0) {
-      return res.status(404).json({ message: `No se encontraron items para la orden de servicio con ID ${serviceOrderId}` });
+      return res.status(404).json({ message: `No se encontraron ítems para la orden de servicio con ID ${serviceOrderId}` });
     }
 
-    const itemToDeleteExist = itemsToDelete.some(item => (item.itemId === Number(itemId)))
-    
-    if (!itemToDeleteExist) {
-      return res.status(404).json({ message: `El item no se encuentra en la orden de servicio ${serviceOrderId}` });
-
+    // Verificar si el ítem especificado existe en la orden
+    const itemToDeleteExists = itemsToDelete.some(item => item.itemId === Number(itemId));
+    if (!itemToDeleteExists) {
+      return res.status(404).json({ message: `El ítem con ID ${itemId} no se encuentra en la orden de servicio ${serviceOrderId}` });
     }
-  
-    const iteToDeleteIds = itemsToDelete.map(item => item.itemId);
 
+    // Obtener los IDs de los ítems contenedores relacionados
     const containerItems = await Item.findAll({
-      where: { id: iteToDeleteIds },
+      where: { id: itemsToDelete.map(item => item.itemId) },
       include: [
         {
           model: Category,
-          where: { isContainer: true }, 
+          where: { isContainer: true },
         },
       ],
     });
 
     const containerItemIds = containerItems.map(item => item.id);
 
-    const deletedContainers = await ServiceOrderStoreItem.destroy({
+    // Eliminar relaciones de contenedores
+    if (containerItemIds.length > 0) {
+      await ServiceOrderStoreItem.destroy({
+        where: {
+          itemIdParent: containerItemIds,
+          serviceOrderId,
+        },
+      });
+    }
+
+    // Eliminar el ítem específico de la orden
+    await ServiceOrderItem.destroy({
       where: {
-        itemIdParent: containerItemIds,
         serviceOrderId,
+        itemId,
       },
     });
 
-
-    const deletedItems = await ServiceOrderItem.destroy({
-      where: { serviceOrderId },
-    });
-
-    // await ServiceOrderItem.destroy({
-    //   where: {
-    //     serviceOrderId,
-    //     itemId
-    //   }
-    // });
-
-    res.status(200).json({ message: 'Item de la orden de servicio eliminados exitosamente' });
-
+    res.status(200).json({ message: 'Ítem eliminado exitosamente de la orden de servicio' });
   } catch (error) {
-    console.error('Error al eliminar item de la orden de servicio:', error);
-    res.status(500).json({ message: 'Error al eliminar item de la orden de servicio', error });
+    console.error('Error al eliminar ítem de la orden de servicio:', error);
+    res.status(500).json({
+      message: 'Ocurrió un error al intentar eliminar el ítem de la orden de servicio',
+      error: error instanceof Error ? error.message : error,
+    });
   }
-}
+};
