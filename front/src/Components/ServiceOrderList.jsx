@@ -54,9 +54,9 @@ const ServiceOrderList = () => {
 
   const STATUS_FILTERS = [
     { value: '', label: 'Todos' },
-    { value: 'Created', label: 'Creada' },
-    { value: 'In Progress', label: 'En progreso' },
-    { value: 'Completed', label: 'Completada' },
+    { value: 'created', label: 'Creada' },
+    { value: 'approved', label: 'Aprobada' },
+    { value: 'rejected', label: 'Rechazada' },
   ];
 
   useEffect(() => {

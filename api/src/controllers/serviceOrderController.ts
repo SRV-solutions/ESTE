@@ -251,8 +251,10 @@ export const getServiceOrders = async (req: Request, res: any) => {
 
 export const updateStatusServiceOrderById = async (req: Request, res: any) => {
   try {
+    
     const { id } = req.params;
     const { status } = req.body;
+    
     if (!Object.values(ServiceOrderStatus).includes(status)) {
       return res.status(400).json({
         message: `Estado no permitido. Los estados válidos son: ${Object.values(ServiceOrderStatus).join(', ')}`,

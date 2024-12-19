@@ -13,6 +13,10 @@ import {
     DialogContent,
     DialogContentText,
     DialogActions,
+    MenuItem,
+    Select,
+    FormControl,
+    InputLabel
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useParams } from 'react-router-dom';
@@ -41,6 +45,7 @@ const AddItemsToServiceOrder = () => {
     const [quantityToStore, setQuantityToStore] = useState(1);
     const [quantity, setQuantity] = useState(1);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+    const [selectedStatus, setSelectedStatus] = useState(serviceOrder.status);
 
     useEffect(() => {
         fetchItems();
@@ -51,13 +56,16 @@ const AddItemsToServiceOrder = () => {
 
     const canEditOrder = () => {
         // El creador puede editar si el estado es 'created'
+        if (userData.isAdmin) {
+            return true
+        }
         if (
             userData.email === serviceOrder.OrderedBy.email &&
             serviceOrder.status === 'created'
         ) {
             return true;
         }
-        
+
         // El encargado del armado puede editar si el estado es 'approved' o 'in_process'
         if (
             userData.email === serviceOrder.DeployedBy.email &&
@@ -65,16 +73,19 @@ const AddItemsToServiceOrder = () => {
         ) {
             return true;
         }
-        
+
         // El chequeador nunca puede editar
+        if (userData.email === serviceOrder.CheckedBy.email && serviceOrder.status === 'in_review') {
+            return true;
+        }
         if (userData.email === serviceOrder.CheckedBy.email) {
             return false;
         }
-    
+
         // Por defecto, no puede editar
         return false;
     };
-    
+
 
     const handleConfirmDeleteAllItems = () => {
         setConfirmDialogOpen(true);
@@ -272,6 +283,81 @@ const AddItemsToServiceOrder = () => {
         </TableRow>
     );
 
+    const status = {
+        created: 'Creada',
+        in_review: 'En Revisión',
+        approved: 'Aprobada',
+        rejected: 'Rechazada',
+        in_process: 'En Proceso',
+        ready: 'Lista',
+        dispatched: 'Despachada',
+        delivered: 'En Viaje de ida',
+        returning: 'En Viaje de regreso',
+        received: 'Recibido',
+        under_review: 'Bajo Revisión',
+        disassembled: 'Desarmada',
+    };
+    const canChangeToStatus = (currentStatus, newStatus) => {
+        const statusFlow = [
+            'created',
+            'in_review',
+            'approved',
+            'rejected',
+            'in_process',
+            'ready',
+            'dispatched',
+            'delivered',
+            'returning',
+            'received',
+            'under_review',
+            'disassembled',
+        ];
+        // Verifica si es admin: puede cambiar a cualquier estado.
+        if (userData.isAdmin) {
+            return true;
+        }
+
+        // Si es usuario común, verifica el flujo.
+        const currentIndex = statusFlow.indexOf(currentStatus);
+        const nextIndex = statusFlow.indexOf(newStatus);
+
+        // Permite cambios solo al siguiente estado o desde 'rejected' a 'created' para reintentar.
+        return (
+            nextIndex === currentIndex + 1 ||
+            (currentStatus === 'rejected' && newStatus === 'created')
+        );
+    };
+
+    const handleChangeStatus = async (newStatus) => {
+        if (!canChangeToStatus(serviceOrder.status, newStatus)) {
+            showAlert(
+                'No tienes permiso para cambiar a este estado o el cambio no sigue el flujo permitido.',
+                'error'
+            );
+            return;
+        }
+
+        try {
+            const response = await axios.patch(
+                `http://localhost:3000/service-orders/${id}`,
+                { status: newStatus },
+                { headers: getAuthHeaders() }
+            );
+
+            if (response.status === 200) {
+                setServiceOrder((prev) => ({
+                    ...prev,
+                    status: newStatus,
+                }));
+                setSelectedStatus(newStatus);
+                showAlert('Estado de la orden cambiado correctamente', 'success');
+            }
+        } catch (error) {
+            console.error('Error al cambiar el estado de la orden:', error);
+            showAlert(error.response?.data?.message || 'Error al cambiar el estado', 'error');
+        }
+    };
+
     return (
         <div style={{ margin: '3%' }}>
             <TableContainer component={Paper} sx={{ padding: 2 }}>
@@ -297,16 +383,40 @@ const AddItemsToServiceOrder = () => {
                     renderTableRows={renderTableRows}
                     canEditOrder={canEditOrder}
                 />
-
                 {canEditOrder() && (
-                    <Button
-                        variant="outlined"
-                        color="error"
-                        onClick={handleConfirmDeleteAllItems}
-                        sx={{ mt: 2 }}
-                    >
-                        Eliminar todos los ítems
-                    </Button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px' }}>
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={handleConfirmDeleteAllItems}
+                            sx={{
+                                mt: 2,
+                                width: '250px', // Mismo ancho que el FormControl
+                                height: '56px', // Mismo alto que el Select
+                            }}
+                        >
+                            Eliminar todos los ítems
+                        </Button>
+                        <FormControl sx={{ minWidth: 200, width: '200px', mt: 2 }}>
+                            <InputLabel id="status-select-label">Estado</InputLabel>
+                            <Select
+                                labelId="status-select-label"
+                                value={selectedStatus}
+                                onChange={(e) => handleChangeStatus(e.target.value)}
+                            >
+                                {Object.entries(status).map(([key, label]) => (
+                                    <MenuItem
+                                        key={key}
+                                        value={key}
+                                        disabled={!canChangeToStatus(serviceOrder.status, key)}
+                                    >
+                                        {label}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                    </div>
                 )}
 
                 <Dialog open={confirmDialogOpen} onClose={handleCancelDelete}>

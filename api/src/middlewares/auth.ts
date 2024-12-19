@@ -11,7 +11,7 @@ interface JwtPayload {
 }
 
 // Middleware para verificar si el usuario está autenticado
-export const isAuth = (req: any, res: Response, next: NextFunction) => {
+export const isAuth = (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -38,7 +38,7 @@ export const isAuth = (req: any, res: Response, next: NextFunction) => {
 };
 
 // Middleware para verificar si el usuario es administrador
-export const isAdmin = (req: any, res: Response, next: NextFunction) => {
+export const isAdmin = (req: any, res: any, next: NextFunction) => {
   if (!req.user) {
     return res.status(401).json({ message: 'No autorizado.' });
   }

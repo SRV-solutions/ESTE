@@ -7,6 +7,6 @@ const router = Router();
 router.post('/', isAuth, createServiceOrder)
 router.get('/', isAuth, getServiceOrders)
 router.get('/:id', isAuth, getServiceOrderById)
-router.patch('/:id', updateStatusServiceOrderById)
+router.patch('/:id',isAuth, updateStatusServiceOrderById)
 
 export default router;
