@@ -65,7 +65,9 @@ const AddItemsToServiceOrder = () => {
         ) {
             return true;
         }
-
+        if (userData.email === serviceOrder.OrderedBy.email && serviceOrder.status === 'rejected') {
+            return true
+        }
         // El encargado del armado puede editar si el estado es 'approved' o 'in_process'
         if (
             userData.email === serviceOrder.DeployedBy.email &&
@@ -85,6 +87,28 @@ const AddItemsToServiceOrder = () => {
         // Por defecto, no puede editar
         return false;
     };
+
+
+    const canEditStatus = () => {
+        if (userData.isAdmin) {
+            return true;
+        }
+
+        const editableStatuses = [
+            'ready',
+            'dispatched',
+            'delivered',
+            'returning',
+            'received',
+            'under_review',
+        ];
+
+        return (
+            userData.email === serviceOrder.OrderedBy.email &&
+            editableStatuses.includes(serviceOrder.status)
+        );
+    };
+
 
 
     const handleConfirmDeleteAllItems = () => {
@@ -282,7 +306,6 @@ const AddItemsToServiceOrder = () => {
             )}
         </TableRow>
     );
-
     const status = {
         created: 'Creada',
         in_review: 'En Revisión',
@@ -312,23 +335,33 @@ const AddItemsToServiceOrder = () => {
             'under_review',
             'disassembled',
         ];
+
         // Verifica si es admin: puede cambiar a cualquier estado.
         if (userData.isAdmin) {
             return true;
         }
 
-        // Si es usuario común, verifica el flujo.
+        // Permitir `approved` y `rejected` solo desde `in_review`.
+        if (
+            currentStatus === 'in_review' &&
+            (newStatus === 'approved' || newStatus === 'rejected')
+        ) {
+            return true;
+        }
+
+        // Si es usuario común, verifica el flujo general.
         const currentIndex = statusFlow.indexOf(currentStatus);
         const nextIndex = statusFlow.indexOf(newStatus);
 
         // Permite cambios solo al siguiente estado o desde 'rejected' a 'created' para reintentar.
         return (
-            nextIndex === currentIndex + 1 ||
-            (currentStatus === 'rejected' && newStatus === 'created')
+            (currentStatus === 'rejected' && newStatus === 'in_review') ? true : currentStatus === 'approved' ? nextIndex === currentIndex + 2 : nextIndex === currentIndex + 1
         );
     };
 
+
     const handleChangeStatus = async (newStatus) => {
+        // Verifica si el cambio de estado está permitido
         if (!canChangeToStatus(serviceOrder.status, newStatus)) {
             showAlert(
                 'No tienes permiso para cambiar a este estado o el cambio no sigue el flujo permitido.',
@@ -337,7 +370,18 @@ const AddItemsToServiceOrder = () => {
             return;
         }
 
+        // Mensajes específicos para cambios críticos
+        if (newStatus === 'approved' || newStatus === 'rejected') {
+            const confirmation = window.confirm(
+                `¿Estás seguro de que quieres cambiar el estado a "${status[newStatus]}"?`
+            );
+            if (!confirmation) {
+                return;
+            }
+        }
+
         try {
+            // Actualiza el estado en el backend
             const response = await axios.patch(
                 `http://localhost:3000/service-orders/${id}`,
                 { status: newStatus },
@@ -345,6 +389,7 @@ const AddItemsToServiceOrder = () => {
             );
 
             if (response.status === 200) {
+                // Actualiza el estado localmente
                 setServiceOrder((prev) => ({
                     ...prev,
                     status: newStatus,
@@ -353,10 +398,13 @@ const AddItemsToServiceOrder = () => {
                 showAlert('Estado de la orden cambiado correctamente', 'success');
             }
         } catch (error) {
+            // Manejo de errores
             console.error('Error al cambiar el estado de la orden:', error);
             showAlert(error.response?.data?.message || 'Error al cambiar el estado', 'error');
         }
     };
+
+
 
     return (
         <div style={{ margin: '3%' }}>
@@ -383,20 +431,30 @@ const AddItemsToServiceOrder = () => {
                     renderTableRows={renderTableRows}
                     canEditOrder={canEditOrder}
                 />
-                {canEditOrder() && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px' }}>
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        marginTop: '16px',
+                    }}
+                >
+                    {canEditOrder() && (
                         <Button
                             variant="outlined"
                             color="error"
                             onClick={handleConfirmDeleteAllItems}
                             sx={{
                                 mt: 2,
-                                width: '250px', // Mismo ancho que el FormControl
-                                height: '56px', // Mismo alto que el Select
+                                width: '250px',
+                                height: '56px',
                             }}
                         >
                             Eliminar todos los ítems
                         </Button>
+                    )}
+
+                    {(canEditOrder() || canEditStatus()) && (
                         <FormControl sx={{ minWidth: 200, width: '200px', mt: 2 }}>
                             <InputLabel id="status-select-label">Estado</InputLabel>
                             <Select
@@ -409,15 +467,19 @@ const AddItemsToServiceOrder = () => {
                                         key={key}
                                         value={key}
                                         disabled={!canChangeToStatus(serviceOrder.status, key)}
+                                        title={
+                                            !canChangeToStatus(serviceOrder.status, key)
+                                                ? `No puedes cambiar a ${label} desde ${status[serviceOrder.status]}`
+                                                : ''
+                                        }
                                     >
                                         {label}
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
-
-                    </div>
-                )}
+                    )}
+                </div>
 
                 <Dialog open={confirmDialogOpen} onClose={handleCancelDelete}>
                     <DialogTitle>Confirmar eliminación</DialogTitle>
