@@ -78,7 +78,7 @@ const AddItemsToServiceOrder = () => {
 
         // El chequeador nunca puede editar
         if (userData.email === serviceOrder.CheckedBy.email && serviceOrder.status === 'in_review') {
-            return true;
+            return false;
         }
         if (userData.email === serviceOrder.CheckedBy.email) {
             return false;
@@ -93,7 +93,9 @@ const AddItemsToServiceOrder = () => {
         if (userData.isAdmin) {
             return true;
         }
-
+        if (userData.email === serviceOrder.CheckedBy.email && serviceOrder.status === 'in_review') {
+            return true;
+        }
         const editableStatuses = [
             'ready',
             'dispatched',
@@ -335,29 +337,34 @@ const AddItemsToServiceOrder = () => {
             'under_review',
             'disassembled',
         ];
-
+    
         // Verifica si es admin: puede cambiar a cualquier estado.
         if (userData.isAdmin) {
             return true;
         }
-
-        // Permitir `approved` y `rejected` solo desde `in_review`.
+    
+        // Caso especial: Si está en 'rejected', solo puede cambiar a 'in_review'.
+        if (currentStatus === 'rejected') {
+            return newStatus === 'in_review';
+        }
+        if (currentStatus === 'approved') {
+            return newStatus === 'in_process';
+        }
+        // Permitir cambios a 'approved' y 'rejected' solo desde 'in_review'.
         if (
             currentStatus === 'in_review' &&
             (newStatus === 'approved' || newStatus === 'rejected')
         ) {
             return true;
         }
-
-        // Si es usuario común, verifica el flujo general.
+    
+        // Flujo general: Cambiar solo al siguiente estado en el flujo.
         const currentIndex = statusFlow.indexOf(currentStatus);
         const nextIndex = statusFlow.indexOf(newStatus);
-
-        // Permite cambios solo al siguiente estado o desde 'rejected' a 'created' para reintentar.
-        return (
-            (currentStatus === 'rejected' && newStatus === 'in_review') ? true : currentStatus === 'approved' ? nextIndex === currentIndex + 2 : nextIndex === currentIndex + 1
-        );
+    
+        return nextIndex === currentIndex + 1;
     };
+    
 
 
     const handleChangeStatus = async (newStatus) => {

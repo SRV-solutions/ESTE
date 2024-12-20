@@ -101,6 +101,12 @@ export const createServiceOrderItems = async (req: Request, res: any) => {
     const storedItemIds = new Set(
       await ServiceOrderStoreItem.findAll({
         attributes: ['itemIdChild'],
+        include: {
+          model: ServiceOrder,
+          where: {
+            status: { [Op.ne]: ServiceOrderStatus.Disassembled },
+          },
+        },
       }).then((items) => items.map((item) => item.itemIdChild))
     );
 
@@ -149,7 +155,7 @@ export const deleteServiceOrderItems = async (req: Request, res: any) => {
       include: [
         {
           model: Category,
-          where: { isContainer: true }, 
+          where: { isContainer: true },
         },
       ],
     });

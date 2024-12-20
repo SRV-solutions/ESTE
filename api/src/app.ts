@@ -89,13 +89,13 @@ async function seeder(): Promise<void> {
       username: 'Marcos',
       password: await bcrypt.hash('1234', 10), // Hashear contraseña
       email: 'marcos.costa@wearesrv.com',
-      roleId: userRole.id 
+      roleId: adminRole.id 
     },
     {
       username: 'Facundo',
       password: await bcrypt.hash('1234', 10), // Hashear contraseña
       email: 'facundo.coto@esteeventos.com',
-      roleId: adminRole.id
+      roleId: userRole.id
     },
     {
       username: 'Eduardo',

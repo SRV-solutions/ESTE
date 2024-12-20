@@ -66,7 +66,9 @@ export const createServiceOrder = async (req: any, res: any) => {
 
 export const getServiceOrderById = async (req: Request, res: any) => {
   const { id } = req.params;
+
   try {
+    // Buscar la orden de servicio
     const searchedServiceOrder = await ServiceOrder.findByPk(id, {
       include: [
         {
@@ -101,17 +103,25 @@ export const getServiceOrderById = async (req: Request, res: any) => {
       return res.status(404).json({ message: 'Service Order not found' });
     }
 
-    // Obtener los items que son contenedores
-    const containerItems = searchedServiceOrder.ServiceOrderItems.filter(
+    // Obtener el estado actual de la orden
+    const { status } = searchedServiceOrder;
+
+    // Filtrar los ServiceOrderItems según el estado de la orden
+    const filteredServiceOrderItems =
+      status === 'disassembled'
+        ? searchedServiceOrder.ServiceOrderItems.filter((item) => !item.isActive) // Solo los desactivados
+        : searchedServiceOrder.ServiceOrderItems.filter((item) => item.isActive); // Solo los activos
+
+    // Separar contenedores y no contenedores
+    const containerItems = filteredServiceOrderItems.filter(
       (serviceOrderItem) => serviceOrderItem.Item.Category.isContainer
     );
 
-    // Obtener los items que no son contenedores
-    const nonContainerItems = searchedServiceOrder.ServiceOrderItems.filter(
+    const nonContainerItems = filteredServiceOrderItems.filter(
       (serviceOrderItem) => !serviceOrderItem.Item.Category.isContainer
     );
 
-    // Obtener los items que están dentro de los contenedores
+    // Obtener los items dentro de los contenedores
     let itemsInContainers: Array<any> = [];
     if (containerItems.length > 0) {
       const containerIds = containerItems.map((item) => item.itemId);
@@ -119,29 +129,30 @@ export const getServiceOrderById = async (req: Request, res: any) => {
       itemsInContainers = await ServiceOrderStoreItem.findAll({
         where: {
           itemIdParent: containerIds, // Buscar los items dentro de los contenedores
+          isActive: status === 'disassembled' ? false : true, // Filtrar según estado de la orden
         },
-        include: [{
-          model: Item,
-          as: 'ServiceOrderStoreItemChild',
-          include: [{
-            model: Category
-          }]
-        }],
+        include: [
+          {
+            model: Item,
+            as: 'ServiceOrderStoreItemChild',
+            include: [Category],
+          },
+        ],
       });
 
       const allStoreItems = await StoreItem.findAll({
         where: {
           itemIdParent: containerIds, // Buscar los items dentro de los contenedores
         },
-        include: [{
-          model: Item,
-          as: 'StoreItemChild',
-          include: [{
-            model: Category
-          }]
-        }],
+        include: [
+          {
+            model: Item,
+            as: 'StoreItemChild',
+            include: [Category],
+          },
+        ],
       });
-      itemsInContainers.push(...allStoreItems)
+      itemsInContainers.push(...allStoreItems);
     }
 
     // Preparar la respuesta con los items dentro de los contenedores
@@ -149,9 +160,13 @@ export const getServiceOrderById = async (req: Request, res: any) => {
       const containedItems = itemsInContainers.filter(
         (child) => child.itemIdParent === container.itemId
       );
-      const parsedJson = container.toJSON()
-      parsedJson.Item.StoreItemParentItem = containedItems.map((childItem) => childItem.ServiceOrderStoreItemChild ? childItem.ServiceOrderStoreItemChild.toJSON() : childItem.StoreItemChild.toJSON())
-      return parsedJson
+      const parsedJson = container.toJSON();
+      parsedJson.Item.StoreItemParentItem = containedItems.map((childItem) =>
+        childItem.ServiceOrderStoreItemChild
+          ? childItem.ServiceOrderStoreItemChild.toJSON()
+          : childItem.StoreItemChild.toJSON()
+      );
+      return parsedJson;
     });
 
     // Construir la nueva orden de servicio con todos los datos
@@ -163,7 +178,7 @@ export const getServiceOrderById = async (req: Request, res: any) => {
       Event: searchedServiceOrder.Event?.toJSON(),
       ServiceOrderItems: [
         ...nonContainerItems.map((item) => item.toJSON()),
-        ...responseItems
+        ...responseItems,
       ],
     };
 
@@ -173,6 +188,7 @@ export const getServiceOrderById = async (req: Request, res: any) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
 
 export const getServiceOrders = async (req: Request, res: any) => {
   try {
@@ -251,21 +267,37 @@ export const getServiceOrders = async (req: Request, res: any) => {
 
 export const updateStatusServiceOrderById = async (req: Request, res: any) => {
   try {
-    
     const { id } = req.params;
     const { status } = req.body;
-    
+
     if (!Object.values(ServiceOrderStatus).includes(status)) {
       return res.status(400).json({
         message: `Estado no permitido. Los estados válidos son: ${Object.values(ServiceOrderStatus).join(', ')}`,
       });
     }
+
     const serviceOrder = await ServiceOrder.findByPk(id);
 
     if (!serviceOrder) {
       return res.status(404).json({ message: 'Orden de servicio no encontrada.' });
     }
+
     serviceOrder.status = status;
+
+    if (status === 'disassembled') {
+      // Cambiar `isActive` a false para todos los `ServiceOrderItems` de la orden de servicio
+      await ServiceOrderItem.update(
+        { isActive: false }, // Cambiar isActive a false
+        { where: { serviceOrderId: id } } // Filtro: items de esta orden de servicio
+      );
+
+      // Cambiar `isActive` a false para todos los `ServiceOrderStoreItems` de la orden de servicio
+      await ServiceOrderStoreItem.update(
+        { isActive: false }, // Cambiar isActive a false
+        { where: { serviceOrderId: id } } // Filtro: items almacenados de esta orden de servicio
+      );
+    }
+
     await serviceOrder.save();
 
     return res.status(200).json({
