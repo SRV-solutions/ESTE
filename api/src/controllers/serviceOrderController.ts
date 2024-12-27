@@ -189,7 +189,6 @@ export const getServiceOrderById = async (req: Request, res: any) => {
   }
 };
 
-
 export const getServiceOrders = async (req: Request, res: any) => {
   try {
     // Obtener el token del encabezado Authorization

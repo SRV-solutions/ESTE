@@ -146,7 +146,7 @@ const ServiceOrderList = () => {
         </TextField>
         <TextField
           select
-          label="Filtrar por estado"
+          label="Filtrar X estado"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           fullWidth
