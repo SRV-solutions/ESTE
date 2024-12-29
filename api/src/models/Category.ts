@@ -8,7 +8,6 @@ class Category extends Model {
   public name!: string;
   public description!: string;
   public type!: string;
-  public quantity!: number;
   public unity!: string;
   public value!: number;
   public weight!: number;
@@ -37,10 +36,6 @@ Category.init({
   },
   type: {
     type: DataTypes.STRING,
-    allowNull: false,
-  },
-  quantity: {
-    type: DataTypes.INTEGER,
     allowNull: false,
   },
   unity: {

@@ -39,6 +39,9 @@ const NavBar = () => {
           <Button color="inherit" component={Link} to="/profile">
             Mi Perfil
           </Button>
+          <Button color="inherit" component={Link} to="/items">
+            Mis Items
+          </Button>
           <Button color="inherit" onClick={handleLogout}>
             Logout
           </Button>

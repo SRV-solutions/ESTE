@@ -5,8 +5,9 @@ import ServiceOrderForm from './Components/ServiceOrderForm';
 import AddItemsToServiceOrder from './Components/AddItemsToServiceOrder/Index';
 import PrivateRoute from './Components/PrivateRoute';
 import NavBar from './Components/NavBar';
-import ServiceOrderList from './Components/ServiceOrderList'
+import ServiceOrderList from './Components/ServiceOrderList';
 import Home from './Components/Home';
+import ItemTable from './Components/Items/ItemTable'; // Importa tu nuevo componente
 
 const App = () => {
   return (
@@ -19,48 +20,39 @@ const App = () => {
             <PrivateRoute>
               <Home />
             </PrivateRoute>
-          }
-          />
-
-          <Route
-            path="/service-orders/new"
-            element={
-              <PrivateRoute>
-                <ServiceOrderForm />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/service-orders/:id/items"
-            element={
-              <PrivateRoute>
-                <AddItemsToServiceOrder />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <PrivateRoute>
-                <div>Mi Perfil</div>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/service-orders"
-            element={
-              <PrivateRoute>
-                <ServiceOrderList />
-              </PrivateRoute>
-            }
-          />
+          }/>
+          <Route path="/service-orders/new" element={
+            <PrivateRoute>
+              <ServiceOrderForm />
+            </PrivateRoute>
+          }/>
+          <Route path="/service-orders/:id/items" element={
+            <PrivateRoute>
+              <AddItemsToServiceOrder />
+            </PrivateRoute>
+          }/>
+          <Route path="/profile" element={
+            <PrivateRoute>
+              <div>Mi Perfil</div>
+            </PrivateRoute>
+          }/>
+          <Route path="/service-orders" element={
+            <PrivateRoute>
+              <ServiceOrderList />
+            </PrivateRoute>
+          }/>
+          <Route path="/items" element={
+            <PrivateRoute>
+              <ItemTable />
+            </PrivateRoute>
+          }/>
         </Routes>
       </div>
     </Router>
   );
 };
 
-// Componente que renderiza NavBar solo si no estamos en el Home
+// Componente que renderiza NavBar solo si no estamos en el Login
 const ConditionalNavBar = () => {
   const location = useLocation(); // Obtener la ruta actual
   return location.pathname !== '/login' ? <NavBar /> : null; // Mostrar NavBar solo si no estamos en "/"

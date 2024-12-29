@@ -296,7 +296,19 @@ export const updateStatusServiceOrderById = async (req: Request, res: any) => {
         { isActive: false }, // Cambiar isActive a false
         { where: { serviceOrderId: id } } // Filtro: items almacenados de esta orden de servicio
       );
+    }else{
+      await ServiceOrderItem.update(
+        { isActive: true }, // Cambiar isActive a false
+        { where: { serviceOrderId: id } } // Filtro: items de esta orden de servicio
+      );
+
+      // Cambiar `isActive` a false para todos los `ServiceOrderStoreItems` de la orden de servicio
+      await ServiceOrderStoreItem.update(
+        { isActive: true }, // Cambiar isActive a false
+        { where: { serviceOrderId: id } } // Filtro: items almacenados de esta orden de servicio
+      );
     }
+    
 
     await serviceOrder.save();
 

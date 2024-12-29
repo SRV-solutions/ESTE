@@ -184,6 +184,7 @@ export const createServiceOrderStoreItems = async (req: Request, res: any) => {
 
 export const deleteServiceOrderStoreItem = async (req: Request, res: any) => {
   const { serviceOrderId, itemIdParent, itemIdChild } = req.params;
+  
   try {
     if (!serviceOrderId) {
       return res.status(400).json({ message: 'Debe seleccionar una orden de servicio válida' });
