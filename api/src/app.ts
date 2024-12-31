@@ -277,7 +277,7 @@ async function seeder(): Promise<void> {
 }
 
 sequelize.sync({ force: false }).then(() => {
-  // seeder()
+  //seeder()
   console.log('Database connected and synchronized');
 }).catch(err => {
   console.error('Unable to connect to the database:', err);

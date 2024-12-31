@@ -8,10 +8,9 @@ import {
     Typography,
     Button,
     IconButton,
-    Menu,
-    MenuItem,
+   
 } from '@mui/material';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import ItemModal from './ItemModal';
 
@@ -28,8 +27,6 @@ const ItemTable = () => {
     const [categories, setCategories] = useState([]);
     const [openDialog, setOpenDialog] = useState(false);
     const [newItem, setNewItem] = useState(initialNewItem);
-    const [menuAnchorEl, setMenuAnchorEl] = useState(null);
-    const [selectedItemId, setSelectedItemId] = useState(null);
 
     // 📥 Efecto para cargar los ítems al montar el componente
     useEffect(() => {
@@ -92,41 +89,20 @@ const ItemTable = () => {
         }
     };
 
-    // 🎯 Controlar menú desplegable
-    const handleMenuOpen = (event, itemId) => {
-        setMenuAnchorEl(event.currentTarget);
-        setSelectedItemId(itemId);
-    };
-
-    const handleMenuClose = () => {
-        setMenuAnchorEl(null);
-        setSelectedItemId(null);
-    };
-
     // 🗑️ Eliminar ítem
-    const handleDeleteItem = async () => {
+    const handleDeleteItem = async (selectedItemId) => {
         if (selectedItemId) {
             try {
                 await axios.delete(`http://localhost:3000/items/${selectedItemId}`, {
                     headers: getAuthHeaders(),
                 });
                 fetchItems();
-                handleMenuClose();
             } catch (error) {
                 console.error('Error deleting item:', error);
             }
         }
     };
 
-    // ✏️ Editar ítem
-    const handleEditItem = () => {
-        const itemToEdit = items.find((item) => item.id === selectedItemId);
-        if (itemToEdit) {
-            setNewItem(itemToEdit);
-            setOpenDialog(true);
-        }
-        handleMenuClose();
-    };
 
     return (
         <div style={{
@@ -170,19 +146,11 @@ const ItemTable = () => {
                             <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
                             <TableCell align="center">
                                 <IconButton
-                                    onClick={(e) => handleMenuOpen(e, item.id)}
+                                onClick={() => handleDeleteItem(item.id)}
                                 >
-                                    <MoreVertIcon />
+                                    <DeleteIcon />
                                 </IconButton>
-                                {/* 📌 Menú desplegable */}
-                                <Menu
-                                    anchorEl={menuAnchorEl}
-                                    open={Boolean(menuAnchorEl) && selectedItemId === item.id}
-                                    onClose={handleMenuClose}
-                                >
-                                    <MenuItem onClick={handleEditItem}>Editar</MenuItem>
-                                    <MenuItem onClick={handleDeleteItem}>Eliminar</MenuItem>
-                                </Menu>
+                               
                             </TableCell>
                         </TableRow>
                     ))}

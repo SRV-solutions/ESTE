@@ -8,6 +8,7 @@ import NavBar from './Components/NavBar';
 import ServiceOrderList from './Components/ServiceOrderList';
 import Home from './Components/Home';
 import ItemTable from './Components/Items/ItemTable'; // Importa tu nuevo componente
+import CategoryTable from './Components/Categories/CategoryTable';
 
 const App = () => {
   return (
@@ -44,6 +45,11 @@ const App = () => {
           <Route path="/items" element={
             <PrivateRoute>
               <ItemTable />
+            </PrivateRoute>
+          }/>
+          <Route path="/categories" element={
+            <PrivateRoute>
+              <CategoryTable />
             </PrivateRoute>
           }/>
         </Routes>
