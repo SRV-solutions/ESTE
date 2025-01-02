@@ -9,6 +9,7 @@ import ServiceOrderList from './Components/ServiceOrderList';
 import Home from './Components/Home';
 import ItemTable from './Components/Items/ItemTable'; // Importa tu nuevo componente
 import CategoryTable from './Components/Categories/CategoryTable';
+import Profile from './Components/Profile';
 
 const App = () => {
   return (
@@ -34,7 +35,7 @@ const App = () => {
           }/>
           <Route path="/profile" element={
             <PrivateRoute>
-              <div>Mi Perfil</div>
+              <Profile></Profile>
             </PrivateRoute>
           }/>
           <Route path="/service-orders" element={

@@ -140,3 +140,31 @@ export const login = async (req: Request, res: any) => {
     res.status(500).json({ message: 'Error al iniciar sesión', error });
   }
 };
+
+export const getMyOwnUser = async (req: any, res: any) => {
+  try {    
+    if (!req.user) {
+      return res.status(401).json({ message: 'No autorizado. Usuario no autenticado.' });
+    }
+
+    const user = await User.findByPk(req.user.id, {
+      include: [Role]
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    res.status(200).json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.Role ? user.Role.roleName : 'Sin rol asignado'
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error al obtener la información del perfil.',
+      error: error instanceof Error ? error.message : error
+    });
+  }
+};

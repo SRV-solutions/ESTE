@@ -10,8 +10,17 @@ interface JwtPayload {
   isAdmin: boolean;
 }
 
-// Middleware para verificar si el usuario está autenticado
-export const isAuth = (req: any, res: any, next: any) => {
+interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    email: string;
+    roleId: number;
+    isAdmin: boolean;
+  };
+}
+
+// 🛡️ Middleware para verificar si el usuario está autenticado
+export const isAuth = (req: AuthRequest, res: any, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -19,12 +28,11 @@ export const isAuth = (req: any, res: any, next: any) => {
     return res.status(401).json({ message: 'No autorizado. Token no proporcionado.' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err: any, decodedToken: any) => {
+  jwt.verify(token, JWT_SECRET, (err, decodedToken) => {
     if (err) {
       return res.status(403).json({ message: 'Token inválido o expirado.' });
     }
 
-    // Almacena los datos del usuario en req.user
     const user = decodedToken as JwtPayload;
     req.user = {
       id: parseInt(user.id, 10),
@@ -37,10 +45,10 @@ export const isAuth = (req: any, res: any, next: any) => {
   });
 };
 
-// Middleware para verificar si el usuario es administrador
-export const isAdmin = (req: any, res: any, next: NextFunction) => {
+// 🛡️ Middleware para verificar si el usuario es administrador
+export const isAdmin = (req: AuthRequest, res: any, next: NextFunction) => {
   if (!req.user) {
-    return res.status(401).json({ message: 'No autorizado.' });
+    return res.status(401).json({ message: 'No autorizado. Usuario no autenticado.' });
   }
 
   if (!req.user.isAdmin) {

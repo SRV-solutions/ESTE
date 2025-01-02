@@ -5,6 +5,7 @@ import {
   createUser,
   register,
   login,
+  getMyOwnUser
 } from '../controllers/userController';
 
 import { isAuth, isAdmin } from '../middlewares/auth';
@@ -12,6 +13,7 @@ import { isAuth, isAdmin } from '../middlewares/auth';
 const router = Router();
 
 // Rutas para usuarios
+router.get('/profile', isAuth, getMyOwnUser);
 router.post('/login', login);
 router.get('/', isAuth, getAllUsers);
 router.get('/:id', isAuth, getUser);
