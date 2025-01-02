@@ -19,7 +19,7 @@ const Home = () => {
       description: 'Agrega y administra ítems en tus órdenes de servicio fácilmente.',
       image: 'https://via.placeholder.com/800x300?text=Gestion+de+Items',
       route: '/items',
-      disabled: true
+      disabled: false
     },
     {
       title: 'Usuarios y Roles',
