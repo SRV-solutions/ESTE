@@ -7,7 +7,11 @@ const ServiceOrderForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     eventId: '',
-    createdDate: '',
+    createdDate: new Date().toISOString().split('T')[0],
+    incomeDate: '',
+    outcomeDate: '',
+    assemblyDate: '',
+    disassemblyDate: '',
     status: 'created',
     observations: '',
     checkedBy: '',
@@ -109,6 +113,61 @@ const ServiceOrderForm = () => {
               shrink: true,
             }}
             required
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Fecha de ingreso de material"
+            name="incomeDate"
+            type="datetime-local"
+
+            value={formData.incomeDate}
+            onChange={handleChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Fecha de egreso de material"
+            name="outcomeDate"
+            type="datetime-local"
+            value={formData.outcomeDate}
+            onChange={handleChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Fecha de armado"
+            name="assemblyDate"
+            type="datetime-local"
+            value={formData.assemblyDate}
+            onChange={handleChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Fecha de desarme"
+            name="disassemblyDate"
+            type="datetime-local"
+            value={formData.disassemblyDate}
+            onChange={handleChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
           />
         </Grid>
         <Grid item xs={12}>

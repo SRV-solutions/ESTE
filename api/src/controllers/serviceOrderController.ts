@@ -14,6 +14,10 @@ export const createServiceOrder = async (req: any, res: any) => {
   const {
     eventId,
     createdDate,
+    incomeDate,
+    outcomeDate,
+    disassemblyDate,
+    assemblyDate,
     status,
     observations,
     checkedBy,
@@ -33,8 +37,8 @@ export const createServiceOrder = async (req: any, res: any) => {
 
     // Validar si el usuario autenticado tiene permiso para asignar la orden
     if (!authenticatedUser.isAdmin && orderedBy !== authenticatedUser.id) {
-      return res.status(403).json({ 
-        message: 'No tienes permisos para asignar esta orden a otro usuario.' 
+      return res.status(403).json({
+        message: 'No tienes permisos para asignar esta orden a otro usuario.'
       });
     }
 
@@ -44,10 +48,14 @@ export const createServiceOrder = async (req: any, res: any) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Crear la orden de servicio
+    // Crear la orden de servicio    
     const serviceOrder = await ServiceOrder.create({
       eventId,
       createdDate,
+      incomeDate,
+      outcomeDate,
+      assemblyDate,
+      disassemblyDate,
       status,
       observations,
       checkedBy,
@@ -57,9 +65,9 @@ export const createServiceOrder = async (req: any, res: any) => {
 
     return res.status(201).json(serviceOrder);
   } catch (error: any) {
-    return res.status(500).json({ 
-      message: 'Error creating service order', 
-      error: error.message 
+    return res.status(500).json({
+      message: 'Error creating service order',
+      error: error.message
     });
   }
 };
@@ -296,7 +304,7 @@ export const updateStatusServiceOrderById = async (req: Request, res: any) => {
         { isActive: false }, // Cambiar isActive a false
         { where: { serviceOrderId: id } } // Filtro: items almacenados de esta orden de servicio
       );
-    }else{
+    } else {
       await ServiceOrderItem.update(
         { isActive: true }, // Cambiar isActive a false
         { where: { serviceOrderId: id } } // Filtro: items de esta orden de servicio
@@ -308,7 +316,7 @@ export const updateStatusServiceOrderById = async (req: Request, res: any) => {
         { where: { serviceOrderId: id } } // Filtro: items almacenados de esta orden de servicio
       );
     }
-    
+
 
     await serviceOrder.save();
 

@@ -282,7 +282,13 @@ const AddItemsToServiceOrder = () => {
         }
     };
 
-    const renderTableRows = (item, color, itemIdParent = NaN) => (
+    const renderTableRows = (item, color, itemIdParent = NaN) => 
+        {
+            console.log(item);
+            let a = []
+            
+            
+            return (
         <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
             <TableCell>{item.id}</TableCell>
             <TableCell align="center">{item.Category.name}</TableCell>
@@ -307,7 +313,7 @@ const AddItemsToServiceOrder = () => {
                 </TableCell>
             )}
         </TableRow>
-    );
+    )};
     const status = {
         created: 'Creada',
         in_review: 'En Revisión',

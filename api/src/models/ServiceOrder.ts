@@ -24,6 +24,10 @@ class ServiceOrder extends Model {
   public id!: number;
   public eventId!: number;
   public createdDate!: Date;
+  public incomeDate!: Date;
+  public outcomeDate!: Date;
+  public assemblyDate !: Date;
+  public disassemblyDate !: Date;
   public status!: ServiceOrderStatus;
   public observations!: string;
   public checkedBy!: number;
@@ -40,7 +44,7 @@ class ServiceOrder extends Model {
     ServiceOrder.belongsTo(User, { foreignKey: 'checkedBy', as: 'CheckedBy' });
     ServiceOrder.belongsTo(User, { foreignKey: 'orderedBy', as: 'OrderedBy' });
     ServiceOrder.belongsTo(Event, { foreignKey: 'eventId', as: 'Event' });
-    
+
 
     ServiceOrder.hasMany(ServiceOrderItem, { foreignKey: 'serviceOrderId' });
     ServiceOrder.hasOne(ServiceOrderStoreItem, { foreignKey: 'serviceOrderId' })
@@ -82,8 +86,24 @@ ServiceOrder.init({
     },
   },
   createdDate: {
-    type: DataTypes.DATE,
+    type: DataTypes.DATEONLY, // Solo la fecha sin hora
     allowNull: false,
+  },
+  incomeDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  outcomeDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  assemblyDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  disassemblyDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
   },
   status: {
     type: DataTypes.ENUM(...Object.values(ServiceOrderStatus)),

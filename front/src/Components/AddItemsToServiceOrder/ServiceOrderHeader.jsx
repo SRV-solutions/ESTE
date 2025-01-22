@@ -27,7 +27,7 @@ const ServiceOrderHeader = ({
     disassembled: 'Desarmada',
   };
 
-  
+
   const handleAddItemAndReset = () => {
     if (selectedItem && quantity > 0) {
       handleAddItem(); // Llama la función existente para agregar el ítem
@@ -43,6 +43,18 @@ const ServiceOrderHeader = ({
       <Typography>Creada por: {serviceOrder.OrderedBy.username}</Typography>
       <Typography>Encargado de Chequearla: {serviceOrder.CheckedBy.username}</Typography>
       <Typography>Encargado de Armarla: {serviceOrder.DeployedBy.username}</Typography>
+      <Typography>
+        Fecha de ingreso de material: {new Date(serviceOrder.incomeDate).toLocaleDateString()} - {new Date(serviceOrder.incomeDate).toLocaleTimeString()} hs
+      </Typography>
+      <Typography>
+        Fecha de egreso de material: {new Date(serviceOrder.outcomeDate).toLocaleDateString()} - {new Date(serviceOrder.outcomeDate).toLocaleTimeString()} hs
+      </Typography>
+      <Typography>
+        Fecha de armado: {new Date(serviceOrder.assemblyDate).toLocaleDateString()} - {new Date(serviceOrder.assemblyDate).toLocaleTimeString()} hs
+      </Typography>
+      <Typography>
+        Fecha de desarme: {new Date(serviceOrder.disassemblyDate).toLocaleDateString()} - {new Date(serviceOrder.disassemblyDate).toLocaleTimeString()} hs
+      </Typography>
       <Typography>Estado de la Orden de Servicio: {status[serviceOrder.status] || 'Estado desconocido'}</Typography>
 
       {canEditOrder() && (
