@@ -34,7 +34,6 @@ const ServiceOrderHeader = ({
       setSelectedItem(null); // Reinicia el valor del Autocomplete
     }
   };
-console.log(serviceOrder);
 
   return (
     <>

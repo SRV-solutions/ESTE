@@ -48,10 +48,7 @@ const ServiceOrderTable = ({
   let categorizedArray = Object.entries(categorizedItems).map(([category, items]) => ({
     category,
     items
-  }));
-  
-  console.log(categorizedArray);
-  
+  }));    
 
   return (
     <Table sx={{ minWidth: 650 }} aria-label="simple table">
@@ -61,12 +58,13 @@ const ServiceOrderTable = ({
             <TableCell colSpan={9}>
               <Accordion>
                 <AccordionSummary expandIcon={<ArrowDropDownIcon />} id={`panel-${category}`}>
-                  <Typography>Cantidad: {items.length} - {category}</Typography>
+                  <Typography>Cantidad: {items.length} - {items[0]?.Category?.code} - {category}</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Table sx={{ mt: 2 }}>
                       <TableHead>
                         <TableRow>
+                          <TableCell align="center">Codigo</TableCell>
                           <TableCell align="center">NOMBRE</TableCell>
                           <TableCell align="center">DESCRIPCIÓN</TableCell>
                           <TableCell align="center">TIPO</TableCell>
