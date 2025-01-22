@@ -20,9 +20,10 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import axios, { all } from 'axios';
 import ServiceOrderHeader from './ServiceOrderHeader';
 import ServiceOrderTable from './ServiceOrderTable';
+import { renderTableRows } from './TableRows.jsx';
 
 const AddItemsToServiceOrder = () => {
     const { id } = useParams();
@@ -282,35 +283,65 @@ const AddItemsToServiceOrder = () => {
         }
     };
 
-    const renderTableRows = (item, color, itemIdParent = NaN) => {
-        return (
-            <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
-                <TableCell align="center">{item.code}</TableCell>
-                <TableCell align="center">{item.Category.name}</TableCell>
-                <TableCell align="center">{item.Category.description}</TableCell>
-                <TableCell align="center">{item.Category.type}</TableCell>
-                <TableCell align="center">{item.Category.isStorable ? 'SI' : 'NO'}</TableCell>
-                <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
-                {canEditOrder() && (
-                    <TableCell align="center">
-                        <IconButton
-                            onClick={() => handleDeleteItem(item.id, itemIdParent)}
-                            sx={{
-                                color: '#757575',
-                                '&:hover': {
-                                    color: '#ff0000',
-                                    cursor: 'pointer',
-                                },
-                            }}
-                        >
-                            <DeleteIcon />
-                        </IconButton>
-                    </TableCell>
-                )}
-            </TableRow>
-        )
-    };
-    
+    // const [selectedCode, setSelectedCode] = useState("-");
+
+    // const handleCodeChange = (event) => {
+    //     setSelectedCode(event.target.value);
+    // };
+    // const renderTableRows = (item, color, allItems=[], itemIdParent = NaN) => {
+
+    //     const itemsInCategory = allItems.filter(filetrItem => filetrItem.categoryId === item.categoryId);
+    //     const availableCodes = itemsInCategory.map(item => item.code)
+
+    //     return (
+    //         <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
+    //             <TableCell align="center">
+    //                 {canEditOrder() ? (
+    //                     <FormControl fullWidth>
+    //                         <InputLabel>Seleccionar Código</InputLabel>
+    //                         <Select
+    //                             value={selectedCode}
+    //                             onChange={handleCodeChange}
+    //                             label="Seleccionar Código"
+    //                         >
+    //                             {/* Si no se selecciona ninguno, aparece "-" */}
+    //                             <MenuItem value="-">-</MenuItem>
+    //                             {/* Muestra los códigos disponibles, uno aleatorio o el código que el usuario elija */}
+    //                             {availableCodes.map((code, index) => (
+    //                                 <MenuItem key={index} value={code}>
+    //                                     {code}
+    //                                 </MenuItem>
+    //                             ))}
+    //                         </Select>
+    //                     </FormControl>
+    //                 ) : selectedCode}
+    //             </TableCell>
+    //             <TableCell align="center">{item.Category.name}</TableCell>
+    //             <TableCell align="center">{item.Category.description}</TableCell>
+    //             <TableCell align="center">{item.Category.type}</TableCell>
+    //             <TableCell align="center">{item.Category.isStorable ? 'SI' : 'NO'}</TableCell>
+    //             <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
+    //             {canEditOrder() && (
+    //                 <TableCell align="center">
+    //                     <IconButton
+    //                         onClick={() => handleDeleteItem(item.id, itemIdParent)}
+    //                         sx={{
+    //                             color: '#757575',
+    //                             '&:hover': {
+    //                                 color: '#ff0000',
+    //                                 cursor: 'pointer',
+    //                             },
+    //                         }}
+    //                     >
+    //                         <DeleteIcon />
+    //                     </IconButton>
+    //                 </TableCell>
+    //             )}
+    //         </TableRow>
+    //     );
+    // };
+
+
     const status = {
         created: 'Creada',
         in_review: 'En Revisión',
@@ -439,6 +470,7 @@ const AddItemsToServiceOrder = () => {
                     quantityToStore={quantityToStore}
                     handleAddItemToStore={handleAddItemToStore}
                     renderTableRows={renderTableRows}
+                    handleDeleteItem={handleDeleteItem}
                     canEditOrder={canEditOrder}
                 />
                 <div

@@ -24,6 +24,7 @@ const ServiceOrderTable = ({
   quantityToStore,
   handleAddItemToStore,
   renderTableRows,
+  handleDeleteItem,
   canEditOrder
 }) => {
 
@@ -74,7 +75,7 @@ const ServiceOrderTable = ({
                         </TableRow>
                       </TableHead>
                     <TableBody>
-                      {items.map((item) => renderTableRows(item, 'white'))}
+                      {items.map((item) => renderTableRows(item, 'white', allItems, handleDeleteItem, canEditOrder))}
                     </TableBody>
                   </Table>
                 </AccordionDetails>
@@ -92,7 +93,7 @@ const ServiceOrderTable = ({
                     aria-controls={`panel${Item.id}-content`}
                     id={`panel${Item.id}-header`}
                   >
-                    <Typography>Items guardados: {Item.StoreItemParentItem.length} - {Item.Category.name}</Typography>
+                    <Typography>Items guardados: {Item?.StoreItemParentItem?.length} - {Item?.Category?.name}</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
                     <Table sx={{ mt: 2 }}>
@@ -106,11 +107,11 @@ const ServiceOrderTable = ({
                           {canEditOrder() && <TableCell align="center">ACCIONES</TableCell>}
                         </TableRow>
                       </TableHead>
-                      {renderTableRows(Item, '#add')}
+                      {renderTableRows(Item, '#add', allItems, handleDeleteItem, canEditOrder)}
                       {Item.StoreItemParentItem?.length > 0 && (
                         <TableBody>
                           {Item.StoreItemParentItem.map((containedItem) =>
-                            renderTableRows(containedItem.StoreItemChildItem || containedItem, 'white', Item.id)
+                            renderTableRows(containedItem.StoreItemChildItem || containedItem, 'white', allItems, handleDeleteItem, canEditOrder, Item.id)
                           )}
                         </TableBody>
                       )}
