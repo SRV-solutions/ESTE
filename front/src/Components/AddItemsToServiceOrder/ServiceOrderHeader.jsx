@@ -34,6 +34,7 @@ const ServiceOrderHeader = ({
       setSelectedItem(null); // Reinicia el valor del Autocomplete
     }
   };
+console.log(serviceOrder);
 
   return (
     <>
@@ -44,16 +45,16 @@ const ServiceOrderHeader = ({
       <Typography>Encargado de Chequearla: {serviceOrder.CheckedBy.username}</Typography>
       <Typography>Encargado de Armarla: {serviceOrder.DeployedBy.username}</Typography>
       <Typography>
-        Fecha de ingreso de material: {new Date(serviceOrder.incomeDate).toLocaleDateString()} - {new Date(serviceOrder.incomeDate).toLocaleTimeString()} hs
+        Fecha de ingreso de material: {serviceOrder.incomeDate ? new Date(serviceOrder.incomeDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.incomeDate ? `${new Date(serviceOrder.incomeDate).toLocaleTimeString()} hs` : 'Sin Hora'}
       </Typography>
       <Typography>
-        Fecha de egreso de material: {new Date(serviceOrder.outcomeDate).toLocaleDateString()} - {new Date(serviceOrder.outcomeDate).toLocaleTimeString()} hs
+        Fecha de egreso de material: {serviceOrder.outcomeDate ? new Date(serviceOrder.outcomeDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.outcomeDate ? `${new Date(serviceOrder.outcomeDate).toLocaleTimeString()} hs` : 'Sin Hora'}
       </Typography>
       <Typography>
-        Fecha de armado: {new Date(serviceOrder.assemblyDate).toLocaleDateString()} - {new Date(serviceOrder.assemblyDate).toLocaleTimeString()} hs
+        Fecha de armado: {serviceOrder.assemblyDate ? new Date(serviceOrder.assemblyDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.assemblyDate ? `${new Date(serviceOrder.assemblyDate).toLocaleTimeString()} hs` : 'Sin Hora'}
       </Typography>
       <Typography>
-        Fecha de desarme: {new Date(serviceOrder.disassemblyDate).toLocaleDateString()} - {new Date(serviceOrder.disassemblyDate).toLocaleTimeString()} hs
+        Fecha de desarme: {serviceOrder.disassemblyDate ? new Date(serviceOrder.disassemblyDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.disassemblyDate ? `${new Date(serviceOrder.disassemblyDate).toLocaleTimeString()} hs` : 'Sin Hora'}
       </Typography>
       <Typography>Estado de la Orden de Servicio: {status[serviceOrder.status] || 'Estado desconocido'}</Typography>
 

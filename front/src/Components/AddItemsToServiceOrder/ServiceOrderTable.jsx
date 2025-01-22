@@ -31,43 +31,80 @@ const ServiceOrderTable = ({
     handleAddItemToStore(itemId); // Llama la función existente para agregar el ítem
     setSelectedStoreItem(null); // Reinicia el valor del Autocomplete
   };
+  let categorizedItems = {};
+
+  serviceOrder.ServiceOrderItems.forEach(({ Item }) => {
+    if (!Item.Category.isContainer) {
+      const categoryName = Item.Category.name;
+  
+      if (!categorizedItems[categoryName]) {
+        categorizedItems[categoryName] = [];
+      }
+  
+      categorizedItems[categoryName].push(Item);
+    }
+  });
+  
+  let categorizedArray = Object.entries(categorizedItems).map(([category, items]) => ({
+    category,
+    items
+  }));
+  
+  console.log(categorizedArray);
+  
 
   return (
     <Table sx={{ minWidth: 650 }} aria-label="simple table">
-      <TableHead>
-        <TableRow>
-          <TableCell>ID</TableCell>
-          <TableCell align="center">NOMBRE</TableCell>
-          <TableCell align="center">DESCRIPCIÓN</TableCell>
-          <TableCell align="center">TIPO</TableCell>
-          <TableCell align="center">ES ALMACENABLE</TableCell>
-          <TableCell align="center">ES CONTENEDOR</TableCell>
-          {canEditOrder() && <TableCell align="center">ACCIONES</TableCell>}
-        </TableRow>
-      </TableHead>
       <TableBody>
+      {categorizedArray.map(({ category, items }) => (
+          <TableRow key={category}>
+            <TableCell colSpan={9}>
+              <Accordion>
+                <AccordionSummary expandIcon={<ArrowDropDownIcon />} id={`panel-${category}`}>
+                  <Typography>Cantidad: {items.length} - {category}</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Table sx={{ mt: 2 }}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell align="center">NOMBRE</TableCell>
+                          <TableCell align="center">DESCRIPCIÓN</TableCell>
+                          <TableCell align="center">TIPO</TableCell>
+                          <TableCell align="center">E.A</TableCell>
+                          <TableCell align="center">E.C</TableCell>
+                          {canEditOrder() && <TableCell align="center">ACCIONES</TableCell>}
+                        </TableRow>
+                      </TableHead>
+                    <TableBody>
+                      {items.map((item) => renderTableRows(item, 'white'))}
+                    </TableBody>
+                  </Table>
+                </AccordionDetails>
+              </Accordion>
+            </TableCell>
+          </TableRow>
+        ))}
         {serviceOrder.ServiceOrderItems.map(({ Item }) =>
-          Item.Category.isContainer ? (
+          Item.Category.isContainer && (
             <TableRow key={Item.id}>
-              <TableCell colSpan={6}>
+              <TableCell colSpan={9}>
                 <Accordion>
                   <AccordionSummary
                     expandIcon={<ArrowDropDownIcon />}
                     aria-controls={`panel${Item.id}-content`}
                     id={`panel${Item.id}-header`}
                   >
-                    <Typography>{Item.id} - {Item.Category.name}</Typography>
+                    <Typography>Items guardados: {Item.StoreItemParentItem.length} - {Item.Category.name}</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
                     <Table sx={{ mt: 2 }}>
                       <TableHead>
                         <TableRow>
-                          <TableCell>ID</TableCell>
                           <TableCell align="center">NOMBRE</TableCell>
                           <TableCell align="center">DESCRIPCIÓN</TableCell>
                           <TableCell align="center">TIPO</TableCell>
-                          <TableCell align="center">ES ALMACENABLE</TableCell>
-                          <TableCell align="center">ES CONTENEDOR</TableCell>
+                          <TableCell align="center">E.A</TableCell>
+                          <TableCell align="center">E.C</TableCell>
                           {canEditOrder() && <TableCell align="center">ACCIONES</TableCell>}
                         </TableRow>
                       </TableHead>
@@ -117,8 +154,6 @@ const ServiceOrderTable = ({
                 </Accordion>
               </TableCell>
             </TableRow>
-          ) : (
-            renderTableRows(Item)
           )
         )}
       </TableBody>

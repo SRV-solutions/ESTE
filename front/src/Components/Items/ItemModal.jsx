@@ -39,9 +39,6 @@ const ItemModal = ({
                 [name]: type === 'checkbox' ? checked : value,
             }));
         }
-
-        console.log(itemData);
-        console.log(mode);
     };
 
     // 🛠️ Manejar cambio de categoría existente
@@ -113,6 +110,15 @@ const ItemModal = ({
                             margin="dense"
                             value={itemData.name || ''}
                             onChange={handleChange}
+                        />
+                        <TextField
+                            label="Codigo"
+                            name="code"
+                            fullWidth
+                            margin="dense"
+                            value={itemData.code || ''}
+                            onChange={handleChange}
+                            required
                         />
                         <TextField
                             label="Descripción"

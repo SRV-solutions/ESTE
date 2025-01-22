@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createServiceOrderStoreItem, createServiceOrderStoreItems, deleteServiceOrderStoreItem } from '../controllers/serviceOrderStoreItemController';
-import { isAuth, isAdmin } from '../middlewares/auth';
+import { isAuth } from '../middlewares/auth';
 
 const router = Router();
 

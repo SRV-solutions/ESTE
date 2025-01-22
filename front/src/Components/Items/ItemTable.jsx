@@ -8,7 +8,7 @@ import {
     Typography,
     Button,
     IconButton,
-   
+
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
@@ -19,29 +19,27 @@ const initialNewItem = {
     name: '',
     description: '',
     type: '',
+    isStorable: false,
+    isContainer: false
 };
 
 const ItemTable = () => {
-    // 📊 Estados
     const [items, setItems] = useState([]);
     const [categories, setCategories] = useState([]);
     const [openDialog, setOpenDialog] = useState(false);
     const [newItem, setNewItem] = useState(initialNewItem);
 
-    // 📥 Efecto para cargar los ítems al montar el componente
     useEffect(() => {
         fetchItems();
         fetchCategories();
     }, []);
 
-    // 🔑 Obtener headers de autenticación
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
         return { Authorization: `Bearer ${token}` };
     };
 
-    // 📤 Fetch de ítems
     const fetchItems = async () => {
         try {
             const { data } = await axios.get('http://localhost:3000/items', {
@@ -64,18 +62,15 @@ const ItemTable = () => {
         }
     };
 
-    // 🟢 Abrir el modal
     const handleOpenDialog = () => {
         setOpenDialog(true);
     };
 
-    // 🔴 Cerrar el modal
     const handleCloseDialog = () => {
         setOpenDialog(false);
         setNewItem(initialNewItem);
     };
 
-    // 📝 Crear nuevo ítem
     const handleCreateItem = async () => {
         try {
             await axios.post('http://localhost:3000/items', newItem, {
@@ -126,19 +121,19 @@ const ItemTable = () => {
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell>ID</TableCell>
+                        <TableCell align="center">Codigo</TableCell>
                         <TableCell align="center">NOMBRE</TableCell>
                         <TableCell align="center">DESCRIPCIÓN</TableCell>
                         <TableCell align="center">TIPO</TableCell>
-                        <TableCell align="center">ES ALMACENABLE</TableCell>
-                        <TableCell align="center">ES CONTENEDOR</TableCell>
+                        <TableCell align="center">E.A</TableCell>
+                        <TableCell align="center">E.C</TableCell>
                         <TableCell align="center">ACCIONES</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
                     {items.map((item) => (
                         <TableRow key={item.id}>
-                            <TableCell>{item.id}</TableCell>
+                            <TableCell align="center">{item.code}</TableCell>
                             <TableCell align="center">{item.Category.name}</TableCell>
                             <TableCell align="center">{item.Category.description}</TableCell>
                             <TableCell align="center">{item.Category.type}</TableCell>
@@ -146,11 +141,11 @@ const ItemTable = () => {
                             <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
                             <TableCell align="center">
                                 <IconButton
-                                onClick={() => handleDeleteItem(item.id)}
+                                    onClick={() => handleDeleteItem(item.id)}
                                 >
                                     <DeleteIcon />
                                 </IconButton>
-                               
+
                             </TableCell>
                         </TableRow>
                     ))}

@@ -1,10 +1,10 @@
 import { Model, DataTypes } from 'sequelize';
-import { sequelize } from '../config/database'; // Asegúrate de tener la configuración de Sequelize
+import { sequelize } from '../config/database';
 import Item from './Item';
-
 
 class Category extends Model {
   public id!: number;
+  public code!: string;
   public name!: string;
   public description!: string;
   public type!: string;
@@ -16,7 +16,7 @@ class Category extends Model {
   public isActive!: boolean;
 
   public static associate() {
-    Category.hasMany(Item, { foreignKey: 'categoryId'})
+    Category.hasMany(Item, { foreignKey: 'categoryId' });
   }
 }
 
@@ -25,6 +25,11 @@ Category.init({
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+  },
+  code: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true, // Aseguramos que cada categoría tenga un código único
   },
   name: {
     type: DataTypes.STRING,
@@ -65,9 +70,8 @@ Category.init({
 }, {
   sequelize,
   modelName: 'Category',
-  tableName: 'Category', // Cambié a 'items' para seguir la convención de nombres
-  timestamps: false, // Si no tienes createdAt y updatedAt
+  tableName: 'Category',
+  timestamps: false,
 });
 
-// Exportar el modelo
 export default Category;

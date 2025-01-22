@@ -47,6 +47,8 @@ const CategoryTable = () => {
     // 📝 Crear o editar una categoría
     const handleSaveCategory = async () => {
         try {
+            console.log(selectedCategory);
+            
             if (selectedCategory.id) {
                 await axios.put(`http://localhost:3000/categories/${selectedCategory.id}`, selectedCategory, {
                     headers: getAuthHeaders(),
@@ -102,19 +104,19 @@ const CategoryTable = () => {
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell>ID</TableCell>
+                        <TableCell align="center">Codigo</TableCell>
                         <TableCell align="center">NOMBRE</TableCell>
                         <TableCell align="center">DESCRIPCIÓN</TableCell>
                         <TableCell align="center">TIPO</TableCell>
-                        <TableCell align="center">ES ALMACENABLE</TableCell>
-                        <TableCell align="center">ES CONTENEDOR</TableCell>
+                        <TableCell align="center">E.A</TableCell>
+                        <TableCell align="center">E.C</TableCell>
                         <TableCell align="center">ACCIONES</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
                     {categories.map((category) => (
                         <TableRow key={category.id}>
-                            <TableCell>{category.id}</TableCell>
+                            <TableCell align="center">{category.code}</TableCell>
                             <TableCell align="center">{category.name}</TableCell>
                             <TableCell align="center">{category.description}</TableCell>
                             <TableCell align="center">{category.type}</TableCell>

@@ -109,6 +109,7 @@ async function seeder(): Promise<void> {
   await User.bulkCreate(users);
   const categories = [
     {
+      code: "CAB-HDMI-15-MTS",
       name: "HDMI",
       description: "HDMI para videos y LCD",
       type: "cable",
@@ -121,6 +122,7 @@ async function seeder(): Promise<void> {
       isActive: true,
     },
     {
+      code: "BAUL-AZUL-2-MTS3",
       name: "Baul Azul",
       description: "Baul Azul para cables",
       type: "baul",
@@ -132,6 +134,7 @@ async function seeder(): Promise<void> {
       isContainer: true,
       isActive: true,
     }, {
+      code: "PANEL-SONY-30-PX",
       name: "Panel 20x20",
       description: "Paneles de marca sony de 20px X 20px",
       type: "panel",
@@ -143,6 +146,7 @@ async function seeder(): Promise<void> {
       isContainer: false,
       isActive: true,
     }, {
+      code: "BAUL-PANELES-5-MTS3",
       name: "Baul de Paneles",
       description: "Baul rojo para paneles",
       type: "baul",
@@ -154,6 +158,7 @@ async function seeder(): Promise<void> {
       isContainer: true,
       isActive: true,
     }, {
+      code: "TOT-TV50P-5-MTS",
       name: "Totem para tele",
       description: "Totem para tele 50 Pulgadas",
       type: "totem",
@@ -165,6 +170,7 @@ async function seeder(): Promise<void> {
       isContainer: false,
       isActive: true,
     }, {
+      code: "CAB-TEN-6-V",
       name: "Cable de tension",
       description: "Cable de tension",
       type: "cable",
@@ -208,42 +214,50 @@ async function seeder(): Promise<void> {
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[4].id// Totem TV
-    }, {
+    }, 
+    {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[5].id// Cable tension
-    }, {
+    }, 
+    {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[3].id// Baul Paneles
-    }, {
+    }, 
+    {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[2].id// Panel
-    }, {
+    }, 
+    {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[2].id// Panel
-    }, {
+    }, 
+    {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[2].id// Panel
-    }, {
+    }, 
+    {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[2].id// Panel
-    }, {
+    }, 
+    {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[2].id// Panel
-    }, {
+    }, 
+    {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
@@ -277,7 +291,7 @@ async function seeder(): Promise<void> {
 }
 
 sequelize.sync({ force: false }).then(() => {
-  //seeder()
+  //      seeder()
   console.log('Database connected and synchronized');
 }).catch(err => {
   console.error('Unable to connect to the database:', err);

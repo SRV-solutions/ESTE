@@ -45,6 +45,15 @@ const CategoryModal = ({
                     onChange={handleChange}
                 />
                 <TextField
+                    label="Codigo"
+                    name="code"
+                    fullWidth
+                    margin="dense"
+                    value={itemData.code}
+                    onChange={handleChange}
+                    required
+                />
+                <TextField
                     label="Descripción"
                     name="description"
                     fullWidth

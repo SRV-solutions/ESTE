@@ -282,38 +282,33 @@ const AddItemsToServiceOrder = () => {
         }
     };
 
-    const renderTableRows = (item, color, itemIdParent = NaN) => 
-        {
-            console.log(item);
-            let a = []
-            
-            
-            return (
-        <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
-            <TableCell>{item.id}</TableCell>
-            <TableCell align="center">{item.Category.name}</TableCell>
-            <TableCell align="center">{item.Category.description}</TableCell>
-            <TableCell align="center">{item.Category.type}</TableCell>
-            <TableCell align="center">{item.Category.isStorable ? 'SI' : 'NO'}</TableCell>
-            <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
-            {canEditOrder() && (
-                <TableCell align="center">
-                    <IconButton
-                        onClick={() => handleDeleteItem(item.id, itemIdParent)}
-                        sx={{
-                            color: '#757575',
-                            '&:hover': {
-                                color: '#ff0000',
-                                cursor: 'pointer',
-                            },
-                        }}
-                    >
-                        <DeleteIcon />
-                    </IconButton>
-                </TableCell>
-            )}
-        </TableRow>
-    )};
+    const renderTableRows = (item, color, itemIdParent = NaN) => {
+        return (
+            <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
+                <TableCell align="center">{item.Category.name}</TableCell>
+                <TableCell align="center">{item.Category.description}</TableCell>
+                <TableCell align="center">{item.Category.type}</TableCell>
+                <TableCell align="center">{item.Category.isStorable ? 'SI' : 'NO'}</TableCell>
+                <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
+                {canEditOrder() && (
+                    <TableCell align="center">
+                        <IconButton
+                            onClick={() => handleDeleteItem(item.id, itemIdParent)}
+                            sx={{
+                                color: '#757575',
+                                '&:hover': {
+                                    color: '#ff0000',
+                                    cursor: 'pointer',
+                                },
+                            }}
+                        >
+                            <DeleteIcon />
+                        </IconButton>
+                    </TableCell>
+                )}
+            </TableRow>
+        )
+    };
     const status = {
         created: 'Creada',
         in_review: 'En Revisión',
@@ -343,12 +338,12 @@ const AddItemsToServiceOrder = () => {
             'under_review',
             'disassembled',
         ];
-    
+
         // Verifica si es admin: puede cambiar a cualquier estado.
         if (userData.isAdmin) {
             return true;
         }
-    
+
         // Caso especial: Si está en 'rejected', solo puede cambiar a 'in_review'.
         if (currentStatus === 'rejected') {
             return newStatus === 'in_review';
@@ -363,14 +358,14 @@ const AddItemsToServiceOrder = () => {
         ) {
             return true;
         }
-    
+
         // Flujo general: Cambiar solo al siguiente estado en el flujo.
         const currentIndex = statusFlow.indexOf(currentStatus);
         const nextIndex = statusFlow.indexOf(newStatus);
-    
+
         return nextIndex === currentIndex + 1;
     };
-    
+
 
 
     const handleChangeStatus = async (newStatus) => {

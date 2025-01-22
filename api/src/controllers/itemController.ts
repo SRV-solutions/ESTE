@@ -8,7 +8,6 @@ import StoreItem from '../models/StoreItem';
 
 export const getItems = async (req: Request, res: any) => {
   try {
-    // Consulta para obtener solo los items que tienen hijos almacenados dentro de ellos
     const itemsWithChildren = await Item.findAll({
       include: [
         {
@@ -35,22 +34,21 @@ export const getItems = async (req: Request, res: any) => {
       ],
     });
 
-    // Filtramos los items que son hijos para que no aparezcan en el listado general
     const filteredItemsWithChildren = itemsWithChildren.filter(item => {
       if (item.StoreItemParent.length !== 0) {
         return item
       }
     })
     const childItemIds = filteredItemsWithChildren.flatMap((item: any) => {
-      const parentId = item.id; // ID del item padre
-      const childIds = item.StoreItemParent.map((storeItem: any) => storeItem.StoreItemChild.id); // IDs de los items hijos
+      const parentId = item.id; 
+      const childIds = item.StoreItemParent.map((storeItem: any) => storeItem.StoreItemChild.id);
 
-      return [parentId, ...childIds]; // Devuelve un array con el ID del padre y los hijos
+      return [parentId, ...childIds];
     });
 
     const itemsWithoutChildren = await Item.findAll({
       where: {
-        id: { [Op.notIn]: childItemIds }, // Excluir items que son hijos
+        id: { [Op.notIn]: childItemIds },
       },
       include: [{ model: Category }],
     });
@@ -72,21 +70,20 @@ export const createItem = async (req: Request, res: any) => {
     quantity = 1, 
     unity, 
     value, 
+    code,
     weight, 
     isStorable, 
     isContainer,
   } = req.body;
 
   try {
-    // Validar existencia del usuario propietario
     const searchedUserOwner = await User.findByPk(ownerId);
     if (!searchedUserOwner) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
     let finalCategoryId = categoryId;
-
-    // Crear categoría si no se proporciona un categoryId
+    
     if (!categoryId) {
       if (!name || !type || !unity || value === undefined || weight === undefined || isStorable === undefined || isContainer === undefined) {
         return res.status(400).json({ message: 'Faltan datos obligatorios para crear una categoría.' });
@@ -95,6 +92,7 @@ export const createItem = async (req: Request, res: any) => {
       const newCategory = await Category.create({
         name,
         description,
+        code,
         type,
         unity,
         value,
@@ -125,9 +123,25 @@ export const createItem = async (req: Request, res: any) => {
 
     return res.status(201).json({ message: `${quantity} ítem(s) creado(s) con éxito` });
   } catch (error) {
-    console.error('Error al crear ítem(s):', error);
+    console.log(error);
     return res.status(500).json({ message: 'Error interno del servidor', error });
   }
 };
 
+export const deleteItem = async (req: Request, res: any) => {
+  const { id } = req.params;
+
+  try {
+    const item = await Item.findByPk(id);
+
+    if (!item) {
+      return res.status(404).json({ message: 'Ítem no encontrado' });
+    }
+
+    await item.destroy();
+    return res.json({ message: 'Ítem eliminado con éxito' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error eliminando el ítem', error });
+  }
+};
 

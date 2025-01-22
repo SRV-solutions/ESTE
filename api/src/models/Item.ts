@@ -1,13 +1,14 @@
 import { Model, DataTypes } from 'sequelize';
-import { sequelize } from '../config/database'; // Asegúrate de tener la configuración de Sequelize
-import User from './User'; // Asegúrate de importar el modelo User
-import ServiceOrderItem from './ServiceOrderItem'; // Asegúrate de importar el modelo OrderItem
-import ServiceOrderStoreItem from './ServiceOrderStoreItem'; // Asegúrate de importar el modelo ServiceOrderStoreItem
+import { sequelize } from '../config/database';
+import User from './User';
+import ServiceOrderItem from './ServiceOrderItem';
+import ServiceOrderStoreItem from './ServiceOrderStoreItem';
 import StoreItem from './StoreItem';
 import Category from './Category';
 
 class Item extends Model {
   public id!: number;
+  public code!: string;
   public isActive!: boolean;
   public uses!: number;
   public ownerId!: number;
@@ -23,7 +24,6 @@ class Item extends Model {
     Item.hasMany(ServiceOrderStoreItem, { foreignKey: 'itemIdChild', as: 'ServiceOrderStoreItemChild' });
     Item.hasMany(StoreItem, { foreignKey: 'itemIdParent', as: 'StoreItemParent' });
     Item.hasMany(StoreItem, { foreignKey: 'itemIdChild', as: 'StoreItemChild' });
-
   }
 }
 
@@ -32,6 +32,11 @@ Item.init({
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+  },
+  code: {
+    type: DataTypes.STRING,
+    allowNull: true, // Se generará después de la inserción
+    unique: true, // Asegura que no haya códigos duplicados
   },
   isActive: {
     type: DataTypes.BOOLEAN,
@@ -44,23 +49,53 @@ Item.init({
   ownerId: {
     type: DataTypes.INTEGER,
     references: {
-      model: 'User', // Nombre de la tabla referenciada
-      key: 'id',     // Clave primaria de la tabla referenciada
+      model: 'User',
+      key: 'id',
     },
-  }, 
+  },
   categoryId: {
     type: DataTypes.INTEGER,
     references: {
-      model: 'Category', // Nombre de la tabla referenciada
-      key: 'id',     // Clave primaria de la tabla referenciada
+      model: 'Category',
+      key: 'id',
     },
   },
 }, {
   sequelize,
   modelName: 'Item',
-  tableName: 'Item', // Cambié a 'items' para seguir la convención de nombres
-  timestamps: false, // Si no tienes createdAt y updatedAt
+  tableName: 'Item',
+  timestamps: false,
 });
 
-// Exportar el modelo
+Item.afterBulkCreate(async (items) => {
+  const categories = await Category.findAll({
+    where: { id: items.map((item) => item.categoryId) },
+  });
+
+  const categoryMap = new Map(categories.map((c) => [c.id, c.code]));
+
+  const updates = items.map((item) => ({
+    id: item.id,
+    code: `${categoryMap.get(item.categoryId)}-${item.id}`,
+  }));
+
+  await Promise.all(
+    updates.map(({ id, code }) =>
+      Item.update({ code }, { where: { id } })
+    )
+  );
+});
+
+
+
+Item.afterCreate(async (item) => {
+  console.log(item);
+
+  const category = await Category.findByPk(item.categoryId);
+  if (category) {
+    item.code = `${category.code}-${item.id}`;
+    await item.save(); // Guardamos el código actualizado
+  }
+});
+
 export default Item;

@@ -14,10 +14,10 @@ export const createServiceOrder = async (req: any, res: any) => {
   const {
     eventId,
     createdDate,
-    incomeDate,
-    outcomeDate,
-    disassemblyDate,
-    assemblyDate,
+    incomeDate = null,
+    outcomeDate = null,
+    assemblyDate = null,
+    disassemblyDate = null,
     status,
     observations,
     checkedBy,
@@ -62,6 +62,9 @@ export const createServiceOrder = async (req: any, res: any) => {
       orderedBy,
       deployedBy,
     });
+
+    console.log(serviceOrder);
+
 
     return res.status(201).json(serviceOrder);
   } catch (error: any) {
