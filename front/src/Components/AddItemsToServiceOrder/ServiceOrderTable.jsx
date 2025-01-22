@@ -92,7 +92,7 @@ const ServiceOrderTable = ({
                     aria-controls={`panel${Item.id}-content`}
                     id={`panel${Item.id}-header`}
                   >
-                    <Typography>Items guardados: {Item.StoreItemParentItem.length} - {Item.Category.name}</Typography>
+                    <Typography>Items guardados: {Item?.StoreItemParentItem?.length} - {Item.Category.name}</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
                     <Table sx={{ mt: 2 }}>
