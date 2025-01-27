@@ -18,7 +18,12 @@ const ServiceOrderForm = () => {
     orderedBy: '',
     deployedBy: '',
   });
-
+  const [errors, setErrors] = useState({
+    incomeDate: "",
+    assemblyDate: "",
+    disassemblyDate: "",
+    outcomeDate: "",
+  });
   const [users, setUsers] = useState([]);
   const [events, setEvents] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -64,7 +69,12 @@ const ServiceOrderForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+
+    validateDates(name, value); // Validar antes de actualizar
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -81,10 +91,60 @@ const ServiceOrderForm = () => {
     }
   };
 
+  const validateDates = (name, value) => {
+    const newErrors = { ...errors };
+
+    // Convertir a objeto Date para comparar
+    const incomeDate = formData.incomeDate ? new Date(formData.incomeDate) : null;
+    const assemblyDate = formData.assemblyDate ? new Date(formData.assemblyDate) : null;
+    const disassemblyDate = formData.disassemblyDate ? new Date(formData.disassemblyDate) : null;
+    const outcomeDate = formData.outcomeDate ? new Date(formData.outcomeDate) : null;
+    const newDate = new Date(value);
+
+    // Verificaciones según la fecha modificada
+    if (name === "incomeDate") {
+      if (assemblyDate && newDate >= assemblyDate) {
+        newErrors.incomeDate = "Debe ser menor que la fecha de armado";
+      } else {
+        newErrors.incomeDate = "";
+      }
+    }
+
+    if (name === "assemblyDate") {
+      if (incomeDate && newDate <= incomeDate) {
+        newErrors.assemblyDate = "Debe ser mayor que la fecha de ingreso";
+      } else if (disassemblyDate && newDate >= disassemblyDate) {
+        newErrors.assemblyDate = "Debe ser menor que la fecha de desarme";
+      } else {
+        newErrors.assemblyDate = "";
+      }
+    }
+
+    if (name === "disassemblyDate") {
+      if (assemblyDate && newDate <= assemblyDate) {
+        newErrors.disassemblyDate = "Debe ser mayor que la fecha de armado";
+      } else if (outcomeDate && newDate >= outcomeDate) {
+        newErrors.disassemblyDate = "Debe ser menor que la fecha de egreso";
+      } else {
+        newErrors.disassemblyDate = "";
+      }
+    }
+
+    if (name === "outcomeDate") {
+      if (disassemblyDate && newDate <= disassemblyDate) {
+        newErrors.outcomeDate = "Debe ser mayor que la fecha de desarme";
+      } else {
+        newErrors.outcomeDate = "";
+      }
+    }
+
+    setErrors(newErrors);
+  };
+
   return (
     <form onSubmit={handleSubmit} style={{ margin: '3%' }}>
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={12}>
           <TextField
             select
             fullWidth
@@ -101,7 +161,8 @@ const ServiceOrderForm = () => {
             ))}
           </TextField>
         </Grid>
-        <Grid item xs={12} sm={6}>
+
+        <Grid item xs={12} sm={4}>
           <TextField
             fullWidth
             label="Fecha de creación"
@@ -115,61 +176,58 @@ const ServiceOrderForm = () => {
             required
           />
         </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Fecha de ingreso de material"
-            name="incomeDate"
-            type="datetime-local"
-
-            value={formData.incomeDate}
-            onChange={handleChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
-
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Fecha de egreso de material"
-            name="outcomeDate"
-            type="datetime-local"
-            value={formData.outcomeDate}
-            onChange={handleChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
-
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Fecha de armado"
-            name="assemblyDate"
-            type="datetime-local"
-            value={formData.assemblyDate}
-            onChange={handleChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Fecha de desarme"
-            name="disassemblyDate"
-            type="datetime-local"
-            value={formData.disassemblyDate}
-            onChange={handleChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-        </Grid>
+        <Grid item xs={12} sm={2}>
+        <TextField
+          fullWidth
+          label="Fecha de ingreso de material"
+          name="incomeDate"
+          type="datetime-local"
+          value={formData.incomeDate}
+          onChange={handleChange}
+          InputLabelProps={{ shrink: true }}
+          error={!!errors.incomeDate}
+          helperText={errors.incomeDate}
+        />
+      </Grid>
+      <Grid item xs={12} sm={2}>
+        <TextField
+          fullWidth
+          label="Fecha de armado"
+          name="assemblyDate"
+          type="datetime-local"
+          value={formData.assemblyDate}
+          onChange={handleChange}
+          InputLabelProps={{ shrink: true }}
+          error={!!errors.assemblyDate}
+          helperText={errors.assemblyDate}
+        />
+      </Grid>
+      <Grid item xs={12} sm={2}>
+        <TextField
+          fullWidth
+          label="Fecha de desarme"
+          name="disassemblyDate"
+          type="datetime-local"
+          value={formData.disassemblyDate}
+          onChange={handleChange}
+          InputLabelProps={{ shrink: true }}
+          error={!!errors.disassemblyDate}
+          helperText={errors.disassemblyDate}
+        />
+      </Grid>
+      <Grid item xs={12} sm={2}>
+        <TextField
+          fullWidth
+          label="Fecha de egreso de material"
+          name="outcomeDate"
+          type="datetime-local"
+          value={formData.outcomeDate}
+          onChange={handleChange}
+          InputLabelProps={{ shrink: true }}
+          error={!!errors.outcomeDate}
+          helperText={errors.outcomeDate}
+        />
+      </Grid>
         <Grid item xs={12}>
           <TextField
             fullWidth
