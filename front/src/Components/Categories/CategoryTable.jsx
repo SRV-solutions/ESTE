@@ -47,7 +47,6 @@ const CategoryTable = () => {
     // 📝 Crear o editar una categoría
     const handleSaveCategory = async () => {
         try {
-            console.log(selectedCategory);
             
             if (selectedCategory.id) {
                 await axios.put(`http://localhost:3000/categories/${selectedCategory.id}`, selectedCategory, {

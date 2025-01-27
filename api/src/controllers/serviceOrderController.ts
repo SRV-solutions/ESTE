@@ -63,7 +63,6 @@ export const createServiceOrder = async (req: any, res: any) => {
       deployedBy,
     });
 
-    console.log(serviceOrder);
 
 
     return res.status(201).json(serviceOrder);

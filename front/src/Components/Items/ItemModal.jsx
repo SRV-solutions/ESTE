@@ -51,12 +51,6 @@ const ItemModal = ({
                 uses: selectedCategory.uses || 0,
                 quantity: selectedCategory.quantity || 1,
             });
-            console.log('Datos enviados en modo existente:', {
-                ownerId: 1,
-                categoryId: selectedCategory.id,
-                uses: selectedCategory.uses || 0,
-                quantity: selectedCategory.quantity || 1,
-            });
         }
     };
 

@@ -13,7 +13,6 @@ export const getCategories = async (req: Request, res: any) => {
 
 export const createCategory = async (req: Request, res: any) => {
   try {
-    console.log(req.body);
     
     const { code, name, description, type, unity, value, weight, isStorable, isContainer, isActive } = req.body;
 

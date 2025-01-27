@@ -123,7 +123,6 @@ export const createItem = async (req: Request, res: any) => {
 
     return res.status(201).json({ message: `${quantity} ítem(s) creado(s) con éxito` });
   } catch (error) {
-    console.log(error);
     return res.status(500).json({ message: 'Error interno del servidor', error });
   }
 };

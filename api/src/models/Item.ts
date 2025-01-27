@@ -89,7 +89,6 @@ Item.afterBulkCreate(async (items) => {
 
 
 Item.afterCreate(async (item) => {
-  console.log(item);
 
   const category = await Category.findByPk(item.categoryId);
   if (category) {
