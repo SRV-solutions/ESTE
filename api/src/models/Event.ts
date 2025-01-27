@@ -1,5 +1,5 @@
 import { Model, DataTypes } from 'sequelize';
-import { sequelize } from '../config/database'; // Asegúrate de tener la configuración de Sequelize
+import { sequelize } from '../config/database';
 import Location from './Location';
 import ServiceOrder from './ServiceOrder';
 
@@ -8,10 +8,13 @@ class Event extends Model {
   public eventName!: string;
   public dateEvent!: Date;
   public locationId!: number;
+  public organizer!: string;
+  public producer!: string;
+  public finalClient!: string;
 
   public static associate() {
-    Event.belongsTo(Location, { foreignKey: 'locationId'});
-    Event.hasOne(ServiceOrder, { foreignKey: 'eventId', as: 'Event' })
+    Event.belongsTo(Location, { foreignKey: 'locationId' });
+    Event.hasOne(ServiceOrder, { foreignKey: 'eventId', as: 'Event' });
   }
 }
 
@@ -32,16 +35,27 @@ Event.init({
   locationId: {
     type: DataTypes.INTEGER,
     references: {
-      model: 'Location', // Nombre de la tabla referenciada
-      key: 'id',         // Clave primaria de la tabla referenciada
+      model: 'Location',
+      key: 'id',
     },
+  },
+  organizer: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  producer: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  finalClient: {
+    type: DataTypes.STRING,
+    allowNull: false,
   },
 }, {
   sequelize,
   modelName: 'Event',
-  tableName: 'Event', // Cambia a 'events' para seguir la convención de nombres
-  timestamps: false,    // Si no tienes createdAt y updatedAt
+  tableName: 'Event',
+  timestamps: false,
 });
 
-// Exportar el modelo
 export default Event;

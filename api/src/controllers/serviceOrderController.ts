@@ -9,6 +9,7 @@ import Item from '../models/Item';
 import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
 import Category from '../models/Category';
 import StoreItem from '../models/StoreItem';
+import Location from '../models/Location';
 
 export const createServiceOrder = async (req: any, res: any) => {
   const {
@@ -105,6 +106,7 @@ export const getServiceOrderById = async (req: Request, res: any) => {
         {
           model: Event,
           as: 'Event', // Incluyendo la información del evento
+          include: [Location]
         },
       ],
     });
@@ -247,6 +249,7 @@ export const getServiceOrders = async (req: Request, res: any) => {
         {
           model: Event,
           as: 'Event',
+          include:[Location]
         },
       ],
     });

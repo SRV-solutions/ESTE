@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TextField, Button, Grid, MenuItem } from '@mui/material';
+import { TextField, Button, Grid, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import axios from 'axios';
 
 const ServiceOrderForm = () => {
@@ -26,70 +26,15 @@ const ServiceOrderForm = () => {
   });
   const [users, setUsers] = useState([]);
   const [events, setEvents] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const headers = getAuthHeaders();
-        const [usersResponse, eventsResponse] = await Promise.all([
-          axios.get('http://localhost:3000/users', { headers }),
-          axios.get('http://localhost:3000/events', { headers }),
-        ]);
-
-        setUsers(usersResponse.data);
-        setEvents(eventsResponse.data);
-
-        // Obtener el usuario actual desde localStorage
-        const userData = JSON.parse(localStorage.getItem('userData'));
-        if (userData) {
-          setCurrentUser(userData);
-
-          // Si el usuario no es admin, asignar automáticamente como creador
-          if (!userData.isAdmin) {
-            setFormData((prevData) => ({
-              ...prevData,
-              orderedBy: userData.id,
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Error al obtener datos:', error);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('No token found');
-    return { Authorization: `Bearer ${token}` };
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    validateDates(name, value); // Validar antes de actualizar
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await axios.post(
-        'http://localhost:3000/service-orders',
-        formData,
-        { headers: getAuthHeaders() }
-      );
-      navigate(`/service-orders/${response.data.id}/items`);
-    } catch (error) {
-      console.error('Error al crear la orden de servicio:', error);
-    }
-  };
+  const [openEventModal, setOpenEventModal] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    locationId: '',
+    organizer: '',
+    producer: '',
+    finalClient: '',
+  });
 
   const validateDates = (name, value) => {
     const newErrors = { ...errors };
@@ -141,6 +86,88 @@ const ServiceOrderForm = () => {
     setErrors(newErrors);
   };
 
+  const fetchData = async () => {
+    try {
+      const headers = getAuthHeaders();
+      const [usersResponse, eventsResponse, locationsResponse] = await Promise.all([
+        axios.get('http://localhost:3000/users', { headers }),
+        axios.get('http://localhost:3000/events', { headers }),
+        axios.get('http://localhost:3000/locations', { headers }),
+      ]);
+
+      setUsers(usersResponse.data);
+      setEvents(eventsResponse.data);
+      setLocations(locationsResponse.data);
+
+      const userData = JSON.parse(localStorage.getItem('userData'));
+      if (userData) {
+        setCurrentUser(userData);
+        if (!userData.isAdmin) {
+          setFormData((prev) => ({ ...prev, orderedBy: userData.id }));
+        }
+      }
+    } catch (error) {
+      console.error('Error al obtener datos:', error);
+    }
+  };
+  useEffect(() => {
+
+    fetchData();
+  }, []);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+    return { Authorization: `Bearer ${token}` };
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    validateDates(name, value)
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === 'eventId' && value === 'new') {
+      setOpenEventModal(true);
+    }
+    fetchData()
+  };
+
+  const handleEventChange = (e) => {
+    const { name, value } = e.target;
+    setNewEvent((prev) => ({ ...prev, [name]: value }));
+    fetchData()
+  };
+
+  const handleCreateEvent = async () => {
+    try {
+      const headers = getAuthHeaders();
+      const response = await axios.post('http://localhost:3000/events', newEvent, { headers });
+      const createdEvent = response.data;
+      
+      setEvents((prevEvents) => [...prevEvents, createdEvent]);
+      setFormData((prev) => ({ ...prev, eventId: createdEvent.id }));
+      setOpenEventModal(false);
+      setNewEvent({ dateEvent: '', locationId: 0, organizer: '', producer: '', finalClient: '' });
+      fetchData()
+    } catch (error) {
+      console.error('Error al crear evento:', error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(
+        'http://localhost:3000/service-orders',
+        formData,
+        { headers: getAuthHeaders() }
+      );
+      navigate(`/service-orders/${response.data.id}/items`);
+    } catch (error) {
+      console.error('Error al crear la orden de servicio:', error);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} style={{ margin: '3%' }}>
       <Grid container spacing={2}>
@@ -156,12 +183,12 @@ const ServiceOrderForm = () => {
           >
             {events.map((event) => (
               <MenuItem key={event.id} value={event.id}>
-                {event.id} - {event.eventName}
+                {event.Location.locationName} - {event.organizer} - {event.producer} - {event.finalClient}
               </MenuItem>
             ))}
+            <MenuItem value="new">+ Crear nuevo evento</MenuItem>
           </TextField>
         </Grid>
-
         <Grid item xs={12} sm={4}>
           <TextField
             fullWidth
@@ -177,57 +204,57 @@ const ServiceOrderForm = () => {
           />
         </Grid>
         <Grid item xs={12} sm={2}>
-        <TextField
-          fullWidth
-          label="Fecha de ingreso de material"
-          name="incomeDate"
-          type="datetime-local"
-          value={formData.incomeDate}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-          error={!!errors.incomeDate}
-          helperText={errors.incomeDate}
-        />
-      </Grid>
-      <Grid item xs={12} sm={2}>
-        <TextField
-          fullWidth
-          label="Fecha de armado"
-          name="assemblyDate"
-          type="datetime-local"
-          value={formData.assemblyDate}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-          error={!!errors.assemblyDate}
-          helperText={errors.assemblyDate}
-        />
-      </Grid>
-      <Grid item xs={12} sm={2}>
-        <TextField
-          fullWidth
-          label="Fecha de desarme"
-          name="disassemblyDate"
-          type="datetime-local"
-          value={formData.disassemblyDate}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-          error={!!errors.disassemblyDate}
-          helperText={errors.disassemblyDate}
-        />
-      </Grid>
-      <Grid item xs={12} sm={2}>
-        <TextField
-          fullWidth
-          label="Fecha de egreso de material"
-          name="outcomeDate"
-          type="datetime-local"
-          value={formData.outcomeDate}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-          error={!!errors.outcomeDate}
-          helperText={errors.outcomeDate}
-        />
-      </Grid>
+          <TextField
+            fullWidth
+            label="Fecha de ingreso de material"
+            name="incomeDate"
+            type="datetime-local"
+            value={formData.incomeDate}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            error={!!errors.incomeDate}
+            helperText={errors.incomeDate}
+          />
+        </Grid>
+        <Grid item xs={12} sm={2}>
+          <TextField
+            fullWidth
+            label="Fecha de armado"
+            name="assemblyDate"
+            type="datetime-local"
+            value={formData.assemblyDate}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            error={!!errors.assemblyDate}
+            helperText={errors.assemblyDate}
+          />
+        </Grid>
+        <Grid item xs={12} sm={2}>
+          <TextField
+            fullWidth
+            label="Fecha de desarme"
+            name="disassemblyDate"
+            type="datetime-local"
+            value={formData.disassemblyDate}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            error={!!errors.disassemblyDate}
+            helperText={errors.disassemblyDate}
+          />
+        </Grid>
+        <Grid item xs={12} sm={2}>
+          <TextField
+            fullWidth
+            label="Fecha de egreso de material"
+            name="outcomeDate"
+            type="datetime-local"
+            value={formData.outcomeDate}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            error={!!errors.outcomeDate}
+            helperText={errors.outcomeDate}
+          />
+        </Grid>
         <Grid item xs={12}>
           <TextField
             fullWidth
@@ -281,6 +308,48 @@ const ServiceOrderForm = () => {
           </Button>
         </Grid>
       </Grid>
+      <Dialog open={openEventModal} onClose={() => setOpenEventModal(false)}>
+        <DialogTitle>Crear Nuevo Evento</DialogTitle>
+        <DialogContent>
+          <TextField
+            select
+            fullWidth
+            label="Nombre del lugar"
+            name="locationId"
+            value={newEvent.locationId}
+            onChange={handleEventChange}
+            required
+            margin="dense"
+          >
+            {locations.map((location) => (
+              <MenuItem key={location.id} value={location.id}>
+                {location.locationName} - {location.address} - {location.city} - {location.country}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            fullWidth
+            label="Fecha del evento"
+            name="dateEvent"
+            type="datetime-local"
+            value={newEvent.dateEvent}
+            onChange={handleEventChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            required
+            margin="dense"
+          />
+          <TextField fullWidth label="Nombre del evento" name="eventName" value={newEvent.eventName} onChange={handleEventChange} margin="dense" required />
+          <TextField fullWidth label="Organizador" name="organizer" value={newEvent.organizer} onChange={handleEventChange} margin="dense" required />
+          <TextField fullWidth label="Productor" name="producer" value={newEvent.producer} onChange={handleEventChange} margin="dense" required />
+          <TextField fullWidth label="Cliente Final" name="finalClient" value={newEvent.finalClient} onChange={handleEventChange} margin="dense" required />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEventModal(false)} color="secondary">Cancelar</Button>
+          <Button onClick={handleCreateEvent} color="primary">Crear Evento</Button>
+        </DialogActions>
+      </Dialog>
     </form>
   );
 };

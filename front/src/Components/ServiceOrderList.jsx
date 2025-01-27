@@ -163,38 +163,38 @@ const ServiceOrderList = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Cliente</TableCell>
-              <TableCell>Fecha</TableCell>
-              <TableCell>Estado</TableCell>
-              <TableCell>Creada por</TableCell>
-              <TableCell>Chequeada por</TableCell>
-              <TableCell>Armada por</TableCell>
-              <TableCell>Acciones</TableCell>
+              <TableCell align='center'>Identificador</TableCell>
+              <TableCell align='center'>Evento</TableCell>
+              <TableCell align='center'>Fecha</TableCell>
+              <TableCell align='center'>Estado</TableCell>
+              <TableCell align='center'>Creada por</TableCell>
+              <TableCell align='center'>Chequeada por</TableCell>
+              <TableCell align='center'>Armada por</TableCell>
+              <TableCell align='center'>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredOrders.length > 0 ? (
               filteredOrders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell>{order.id}</TableCell>
-                  <TableCell>{order.Event?.eventName || 'No especificado'}</TableCell>
-                  <TableCell>
+                  <TableCell align='center'>{order.id}</TableCell>
+                  <TableCell align='center' >{order.Event.Location.locationName} - {order.Event.organizer} - {order.Event.producer} - {order.Event.finalClient}</TableCell>
+                  <TableCell align='center'>
                     {order.Event?.dateEvent
                       ? new Date(order.Event.dateEvent).toLocaleDateString()
                       : 'Desconocido'}
                   </TableCell>
-                  <TableCell>{status[order.status] || 'Desconocido'}</TableCell>
-                  <TableCell style={getCellStyle(order.OrderedBy)}>
+                  <TableCell align='center'>{status[order.status] || 'Desconocido'}</TableCell>
+                  <TableCell align='center' style={getCellStyle(order.OrderedBy)}>
                     {order.OrderedBy?.username || 'Desconocido'}
                   </TableCell>
-                  <TableCell style={getCellStyle(order.CheckedBy)}>
+                  <TableCell align='center' style={getCellStyle(order.CheckedBy)}>
                     {order.CheckedBy?.username || 'Desconocido'}
                   </TableCell>
-                  <TableCell style={getCellStyle(order.DeployedBy)}>
+                  <TableCell align='center' style={getCellStyle(order.DeployedBy)}>
                     {order.DeployedBy?.username || 'Desconocido'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell align='center'>
                     <Button
                       variant="contained"
                       color="primary"

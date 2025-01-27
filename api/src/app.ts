@@ -10,7 +10,7 @@ import serviceOrderItemRoutes from './routes/serviceOrderItemRoutes';
 import serviceOrderStoreItemRoutes from './routes/serviceOrderStoreItemRoutes';
 import eventRoutes from './routes/eventRoutes';
 import categoryRoutes from './routes/categoryRoutes';
-// import locationRoutes from './routes/locationRoutes';
+import locationRoutes from './routes/locationRoutes';
 // import orderItemRoutes from './routes/orderItemRoutes';
 // import itemRoutes from './routes/itemRoutes';
 // import storeItemRoutes from './routes/storeItemRoutes';
@@ -61,6 +61,7 @@ app.use('/service-order-items', serviceOrderItemRoutes);//items para eventos
 app.use('/service-order-store-items', serviceOrderStoreItemRoutes);//baules de cables para eventos
 app.use('/events', eventRoutes);
 app.use('/categories', categoryRoutes);
+app.use('/locations', locationRoutes);
 // app.use('/order-items', orderItemRoutes);
 // app.use('/items', itemRoutes);
 // app.use('/store-items', storeItemRoutes);
@@ -73,12 +74,16 @@ async function seeder(): Promise<void> {
     city: 'CABA',
     country: 'BSAS'
   })
+
   await Event.create({
     eventName: "Faena Arts - Google",
-    dateEvent: '06/10/2024',
-    locationId: newLocation.id
-  })
-
+    dateEvent: '2024-10-06', // Formato YYYY-MM-DD
+    locationId: newLocation.id,
+    organizer: "Google Inc.",
+    producer: "Faena Arts",
+    finalClient: "Google Marketing Team"
+  });
+  
   const userRole = await Role.create({
     roleName: "User"
   })
@@ -291,7 +296,7 @@ async function seeder(): Promise<void> {
 }
 
 sequelize.sync({ force: false }).then(() => {
-  //      seeder()
+  // seeder()
   console.log('Database connected and synchronized');
 }).catch(err => {
   console.error('Unable to connect to the database:', err);

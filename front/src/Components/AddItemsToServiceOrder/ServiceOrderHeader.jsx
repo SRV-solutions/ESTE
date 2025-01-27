@@ -38,7 +38,7 @@ const ServiceOrderHeader = ({
   return (
     <>
       <Typography variant="h6">Orden de Servicio N°: {serviceOrder.id}</Typography>
-      <Typography>Evento: {serviceOrder.Event.eventName}</Typography>
+      <Typography>Evento: {serviceOrder?.Event?.Location?.locationName} - {serviceOrder.Event.organizer} - {serviceOrder.Event.producer} - {serviceOrder.Event.finalClient}</Typography>
       <Typography>Observaciones: {serviceOrder.observations}</Typography>
       <Typography>Creada por: {serviceOrder.OrderedBy.username}</Typography>
       <Typography>Encargado de Chequearla: {serviceOrder.CheckedBy.username}</Typography>
