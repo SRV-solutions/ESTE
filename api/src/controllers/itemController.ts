@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
-import { Op } from 'sequelize';
+import { Model, Op } from 'sequelize';
 
 import Category from '../models/Category';
 import Item from '../models/Item';
 import User from '../models/User';
 import StoreItem from '../models/StoreItem';
+import ServiceOrderItem from '../models/ServiceOrderItem';
+import ServiceOrder, { ServiceOrderStatus } from '../models/ServiceOrder';
 
 export const getItems = async (req: Request, res: any) => {
   try {
@@ -40,7 +42,7 @@ export const getItems = async (req: Request, res: any) => {
       }
     })
     const childItemIds = filteredItemsWithChildren.flatMap((item: any) => {
-      const parentId = item.id; 
+      const parentId = item.id;
       const childIds = item.StoreItemParent.map((storeItem: any) => storeItem.StoreItemChild.id);
 
       return [parentId, ...childIds];
@@ -60,19 +62,19 @@ export const getItems = async (req: Request, res: any) => {
 };
 
 export const createItem = async (req: Request, res: any) => {
-  const { 
-    uses = 0, 
-    ownerId = 1, 
-    categoryId, 
-    name, 
-    description, 
-    type, 
-    quantity = 1, 
-    unity, 
-    value, 
+  const {
+    uses = 0,
+    ownerId = 1,
+    categoryId,
+    name,
+    description,
+    type,
+    quantity = 1,
+    unity,
+    value,
     code,
-    weight, 
-    isStorable, 
+    weight,
+    isStorable,
     isContainer,
   } = req.body;
 
@@ -83,7 +85,7 @@ export const createItem = async (req: Request, res: any) => {
     }
 
     let finalCategoryId = categoryId;
-    
+
     if (!categoryId) {
       if (!name || !type || !unity || value === undefined || weight === undefined || isStorable === undefined || isContainer === undefined) {
         return res.status(400).json({ message: 'Faltan datos obligatorios para crear una categoría.' });
@@ -144,3 +146,59 @@ export const deleteItem = async (req: Request, res: any) => {
   }
 };
 
+
+export const getAvalibleItemsByCategory = async (req: Request, res: any) => {
+  const { categoryId } = req.body
+  const items = await Item.findAll({
+    include: [
+      {
+        model: ServiceOrderItem,
+        required: false, // LEFT OUTER JOIN para incluir también los que no tienen órdenes
+        include: [
+          {
+            model: ServiceOrder,
+            required: false, // LEFT OUTER JOIN en ServiceOrder
+            where: {
+              status: { [Op.ne]: ServiceOrderStatus.Disassembled },
+            },
+          },
+        ],
+      },
+      Category
+    ],
+    where: {
+      // Filtra los items que no tienen órdenes activas
+      '$ServiceOrderItems.ServiceOrder.id$': null,
+      categoryId
+    },
+  });
+  
+  return res.status(201).json(items);
+}
+
+export const getAvalibleItems = async (req: Request, res: any) => {
+  const items = await Item.findAll({
+    include: [
+      {
+        model: ServiceOrderItem,
+        required: false, // LEFT OUTER JOIN para incluir también los que no tienen órdenes
+        include: [
+          {
+            model: ServiceOrder,
+            required: false, // LEFT OUTER JOIN en ServiceOrder
+            where: {
+              status: { [Op.ne]: ServiceOrderStatus.Disassembled },
+            },
+          },
+        ],
+      },
+      Category
+    ],
+    where: {
+      // Filtra los items que no tienen órdenes activas
+      '$ServiceOrderItems.ServiceOrder.id$': null,
+    },
+  });
+
+  return res.status(201).json(items);
+}

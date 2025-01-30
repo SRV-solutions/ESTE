@@ -19,11 +19,12 @@ import {
     InputLabel
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CachedIcon from '@mui/icons-material/Cached';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import ServiceOrderHeader from './ServiceOrderHeader';
 import ServiceOrderTable from './ServiceOrderTable';
-
+import ItemChangeModal from './ItemChangeModal'
 const AddItemsToServiceOrder = () => {
     const { id } = useParams();
 
@@ -39,7 +40,9 @@ const AddItemsToServiceOrder = () => {
         message: '',
         severity: 'info',
     });
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [allItems, setAllItems] = useState([]);
+    const [changeItem, setChangeItem] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
     const [selectedStoreItem, setSelectedStoreItem] = useState(null);
     const [quantityToStore, setQuantityToStore] = useState(1);
@@ -138,7 +141,7 @@ const AddItemsToServiceOrder = () => {
 
     const fetchItems = async () => {
         try {
-            const { data } = await axios.get('http://localhost:3000/items', {
+            const { data } = await axios.get('http://localhost:3000/items/avalible', {
                 headers: getAuthHeaders(),
             });
             setAllItems(data);
@@ -152,7 +155,8 @@ const AddItemsToServiceOrder = () => {
             const { data } = await axios.get(`http://localhost:3000/service-orders/${id}`, {
                 headers: getAuthHeaders(),
             });
-
+            fetchItems()
+            
             setServiceOrder(data);
         } catch (error) {
             console.error('Error al cargar la orden de servicio:', error);
@@ -282,9 +286,44 @@ const AddItemsToServiceOrder = () => {
         }
     };
 
+
+    const handleOpenModal = (item) => {
+        setIsModalOpen(true);
+        setChangeItem(item)
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+    };
+
+    const handleChangeItem = (newItem) => {
+        console.log("Item cambiado:", newItem);
+    };
+
     const renderTableRows = (item, color, itemIdParent = NaN) => {
         return (
             <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
+                <ItemChangeModal
+                    open={isModalOpen}
+                    onClose={handleCloseModal}
+                    onChangeItem={handleChangeItem}
+                    selectedItem={changeItem}
+                    allItems={allItems}
+                    getAuthHeaders={getAuthHeaders}
+                    serviceOrder={serviceOrder}
+                />
+                <TableCell align="center"><IconButton
+                    onClick={() => handleOpenModal(item)}
+                    sx={{
+                        color: '#757575',
+                        '&:hover': {
+                            color: 'blue',
+                            cursor: 'pointer',
+                        },
+                    }}
+                >
+                    <CachedIcon />
+                </IconButton></TableCell>
                 <TableCell align="center">{item.code}</TableCell>
                 <TableCell align="center">{item.Category.name}</TableCell>
                 <TableCell align="center">{item.Category.description}</TableCell>
@@ -310,7 +349,7 @@ const AddItemsToServiceOrder = () => {
             </TableRow>
         )
     };
-    
+
     const status = {
         created: 'Creada',
         in_review: 'En Revisión',

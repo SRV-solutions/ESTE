@@ -1,0 +1,23 @@
+/* ItemChangeModal.module.css */
+.modalOverlay {
+    background-color: #ffffff32;
+    display: flex;
+    align-items: center;
+}
+
+.modalContent {
+    background-color: rgb(255, 255, 255);
+    /* Fondo blanco para el contenido del modal */
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 400px;
+    margin: 50px auto;
+    min-height: 30vh;
+    min-width: 50vh;
+}
+
+.buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

@@ -64,6 +64,7 @@ const ServiceOrderTable = ({
                   <Table sx={{ mt: 2 }}>
                       <TableHead>
                         <TableRow>
+                          <TableCell align="center">Cambiar</TableCell>
                           <TableCell align="center">Codigo</TableCell>
                           <TableCell align="center">NOMBRE</TableCell>
                           <TableCell align="center">DESCRIPCIÓN</TableCell>
@@ -121,7 +122,7 @@ const ServiceOrderTable = ({
                           <Autocomplete
                             style={{ width: '50vh' }}
                             options={allItems}
-                            getOptionLabel={(option) => `${option.id} - ${option.Category.name} - ${option.Category.description}`}
+                            getOptionLabel={(option) => `${option.code} - ${option.Category.name}`}
                             value={selectedStoreItem}
                             onChange={(event, newValue) => setSelectedStoreItem(newValue)}
                             renderInput={(params) => (
