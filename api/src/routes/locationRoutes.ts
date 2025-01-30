@@ -7,6 +7,6 @@ const router = Router();
 
 router.get('/', isAuth, getLocations);
 router.post('/', isAuth, createLocation);
-router.put('/events/:id', updateLocation); // Ruta para actualizar
+router.put('/events/:id', isAuth, updateLocation); // Ruta para actualizar
 
 export default router;

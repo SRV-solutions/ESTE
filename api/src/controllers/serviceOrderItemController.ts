@@ -200,7 +200,7 @@ export const deleteServiceOrderItem = async (req: Request, res: any) => {
         include: [{
           model: Item,
           include: [Category]
-        }] 
+        }]
 
       });
 
@@ -209,11 +209,11 @@ export const deleteServiceOrderItem = async (req: Request, res: any) => {
     }
 
     const itemToDeleteExist = itemsToDelete.find(item => item.itemId === Number(itemId));
-    
+
     if (!itemToDeleteExist) {
       return res.status(404).json({ message: `El ítem con ID ${itemId} no se encuentra en la orden de servicio ${serviceOrderId}` });
     }
-    
+
     if (itemToDeleteExist?.Item.Category.isContainer) {
       const containerItemsToDelete = await ServiceOrderStoreItem.findAll({
         where: {
@@ -221,7 +221,7 @@ export const deleteServiceOrderItem = async (req: Request, res: any) => {
           itemIdParent: itemId
         }
       })
-      
+
       if (containerItemsToDelete.length > 0) {
         await ServiceOrderStoreItem.destroy({
           where: {
@@ -247,3 +247,14 @@ export const deleteServiceOrderItem = async (req: Request, res: any) => {
     });
   }
 };
+
+export const changeItemsByServiceOrderId = async (req: Request, res: any) => {
+
+  const { oldItemId, newItemId, serviceOrderId } = req.params
+  console.log(req.params);
+  const oldItem = Item.findByPk(oldItemId)
+  const newItem = Item.findByPk(newItemId)
+  
+
+  res.send('si')
+}

@@ -286,7 +286,6 @@ const AddItemsToServiceOrder = () => {
         }
     };
 
-
     const handleOpenModal = (item) => {
         setIsModalOpen(true);
         setChangeItem(item)
@@ -296,21 +295,16 @@ const AddItemsToServiceOrder = () => {
         setIsModalOpen(false);
     };
 
-    const handleChangeItem = (newItem) => {
-        console.log("Item cambiado:", newItem);
-    };
-
     const renderTableRows = (item, color, itemIdParent = NaN) => {
         return (
             <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
                 <ItemChangeModal
                     open={isModalOpen}
                     onClose={handleCloseModal}
-                    onChangeItem={handleChangeItem}
                     selectedItem={changeItem}
                     allItems={allItems}
-                    getAuthHeaders={getAuthHeaders}
                     serviceOrder={serviceOrder}
+                    getAuthHeaders={getAuthHeaders}
                 />
                 <TableCell align="center"><IconButton
                     onClick={() => handleOpenModal(item)}

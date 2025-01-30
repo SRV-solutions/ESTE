@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Button, TextField, Box, Typography, Autocomplete } from '@mui/material';
 import styles from './style.module.css';
+import axios from 'axios'
 
-const ItemChangeModal = ({ open, onClose, onChangeItem, selectedItem, allItems, serviceOrder }) => {
+const ItemChangeModal = ({ open, onClose, selectedItem, allItems, serviceOrder, getAuthHeaders }) => {
   const [itemName, setItemName] = useState('');
   const [categoryItems, setCategoryItems] = useState([])
-  const handleSave = () => {
-    onChangeItem(itemName);
-    setItemName('');
-    onClose(); 
-  };
-  
-console.log(serviceOrder);
 
-  
+  const handleSave = async () => {
+    const searchedItem = categoryItems.find(item => item.code === itemName)
+    const response = await axios.put(
+      `http://localhost:3000/service-order-items/${serviceOrder.id}/${selectedItem.id}/${searchedItem.id}`,
+      {}, // Debes incluir un cuerpo vacío si no envías datos en el body
+      { headers: getAuthHeaders() } // Aquí pasas correctamente los headers
+    );
+    console.log(response);
+    
+    setItemName('');
+    onClose();
+  };
+
 
   const fetchItems = async () => {
     const filteredItems = allItems.filter((item) => item.Category.id === selectedItem.Category.id)
