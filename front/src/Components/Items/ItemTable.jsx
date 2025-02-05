@@ -36,9 +36,7 @@ const ItemTable = () => {
 
     useEffect(() => {
         items.forEach((item) => {
-            if (item.code) {
-                console.log(item.code);
-                
+            if (item.code) {                
                 JsBarcode(`#barcode-${item.id}`, item.code, {
                     format: 'CODE128',
                     displayValue: false,

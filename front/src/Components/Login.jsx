@@ -31,9 +31,7 @@ const Login = () => {
       localStorage.setItem('token', data.token); // Guarda el token
       localStorage.setItem('userData', JSON.stringify(data.userData)); // Guarda el token
       navigate('/'); // Redirige a una ruta protegida
-    } catch (error) {
-      console.log(error);
-      
+    } catch (error) {      
       setError(error.message);
     }
   };
