@@ -22,7 +22,7 @@ router.get('/:id', isAuth, getUser);
 router.post('/', isAuth, isAdmin, createUser);
 router.post('/register', register);
 router.patch('/update/:id', isAuth, updateUser)
-router.put('/:id/change-password', changePassword);
+router.put('/:id/change-password',isAuth, changePassword);
 
 
 export default router;
