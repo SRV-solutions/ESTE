@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "build": "npx tsc",
     "start": "ls -a && node dist/server.js",
-    "dev": "ts-node-dev --respawn src/server.ts",
-    "build": "npx tsc"
+    "dev": "ts-node-dev --respawn src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -30,6 +30,6 @@
     "sequelize-typescript": "^2.1.6",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.6.2"
+    "typescript": "^5.7.3"
   }
 }
