@@ -8,8 +8,8 @@ const router = Router();
 
 router.post('/', isAuth, createServiceOrderItem)
 router.post('/bulk', isAuth, createServiceOrderItems)
-router.put('/:serviceOrderId/:oldItemId/:newItemId', changeItemsByServiceOrderId)
-router.put('/container/:serviceOrderId/:oldItemId/:newItemId', changeContainerItemsByServiceOrderId)
+router.put('/:serviceOrderId/:oldItemId/:newItemId', isAuth, changeItemsByServiceOrderId)
+router.put('/container/:serviceOrderId/:oldItemId/:newItemId', isAuth, changeContainerItemsByServiceOrderId)
 router.delete('/:serviceOrderId/:itemId', isAuth, deleteServiceOrderItem)
 router.delete('/:serviceOrderId', isAuth, deleteServiceOrderItems)
 
