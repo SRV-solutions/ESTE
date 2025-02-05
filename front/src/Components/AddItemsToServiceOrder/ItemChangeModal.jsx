@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Button, TextField, Box, Typography, Autocomplete } from '@mui/material';
 import styles from './style.module.css';
 import axios from 'axios'
-const apiUrl = process.env.VITE_API_URL;
+const apiUrl = import.meta.env.VITE_API_URL;
 
 
 const ItemChangeModal = ({ open, onClose, selectedItem, allItems, serviceOrder, getAuthHeaders, fetchServiceOrder }) => {
