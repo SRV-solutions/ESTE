@@ -5,7 +5,7 @@
   "scripts": {
     "start": "ls -a && node dist/server.js",
     "dev": "ts-node-dev --respawn src/server.ts",
-    "build": "tsc"
+    "build": "npx tsc"
   },
   "keywords": [],
   "author": "",
