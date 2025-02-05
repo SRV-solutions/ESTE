@@ -53,20 +53,6 @@ User.init(
     modelName: 'User',
     tableName: 'User',
     timestamps: false,
-    hooks: {
-      // Hashear la contraseña antes de crear un usuario
-      beforeCreate: async (user) => {
-        if (user.password) {
-          user.password = await bcrypt.hash(user.password, 10);
-        }
-      },
-      // Hashear la contraseña si se actualiza
-      beforeUpdate: async (user) => {
-        if (user.password) {
-          user.password = await bcrypt.hash(user.password, 10);
-        }
-      },
-    },
   }
 );
 
