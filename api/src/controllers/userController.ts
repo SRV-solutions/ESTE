@@ -3,9 +3,14 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import Role from '../models/Role';
 import User from '../models/User';
+import { IsEmail } from 'sequelize-typescript';
 
 // Clave secreta para JWT (colócala en un archivo .env)
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+interface ValidationErrors {
+  newEmail?: string;
+  newUsername?: string;
+}
 
 export const getAllUsers = async (req: Request, res: any) => {
   try {
@@ -136,7 +141,7 @@ export const login = async (req: Request, res: any) => {
         isAdmin 
       }
     });
-  } catch (error) {    
+  } catch (error) {        
     res.status(500).json({ message: 'Error al iniciar sesión', error });
   }
 };
@@ -166,5 +171,56 @@ export const getMyOwnUser = async (req: any, res: any) => {
       message: 'Error al obtener la información del perfil.',
       error: error instanceof Error ? error.message : error
     });
+  }
+};
+
+export const updateUser = async (req: any, res: any) => {
+  const errors: ValidationErrors = {};  // Tipo explícito para los errores
+
+  try {
+    const { id } = req.params;
+    const { newEmail, newUsername } = req.body;
+
+    if (!id) {
+      return res.status(404).json({ message: 'Id invalido' });
+    }
+
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User invalido' });
+    }
+    
+    if (!newEmail && !newUsername) {
+      return res.status(400).json({ message: 'Debe proporcionar al menos un campo para actualizar (email o nombre de usuario)' });
+    }
+
+    // Validación para el email
+    if (newEmail && !/\S+@\S+\.\S+/.test(newEmail)) {
+      errors.newEmail = 'Email inválido';  // Guarda el error para el email
+    }
+
+    // Validación para el nombre de usuario
+    if (newUsername && !/^[a-zA-Z0-9_-]+$/.test(newUsername)) {
+      errors.newUsername = 'El nombre de usuario solo puede contener letras, números, guiones y guiones bajos';  // Guarda el error para el nombre de usuario
+    }
+
+    // Si hay errores, devuelve el objeto con los errores
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({ errors });
+    }
+
+    // Si no hay errores, actualiza el usuario
+    user.username = newUsername ? newUsername : user.username;
+    user.email = newEmail ? newEmail : user.email;
+
+    // Buscar el usuario actualizado e incluir su rol
+    await user.save(); // Esperar a que se guarde antes de buscarlo nuevamente
+    const updatedUser = await User.findByPk(id, { include: Role });
+    
+    res.status(200).json(updatedUser);
+    
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar el usuario' });
   }
 };

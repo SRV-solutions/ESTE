@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, Typography, Avatar, Box, CircularProgress } from '@mui/material';
+import EditProfileModal from './EditProfileModal'
 import axios from 'axios';
 
 
@@ -16,10 +17,12 @@ const Profile = () => {
 
     // 📥 Fetch Perfil del Usuario
     const fetchUserProfile = async () => {
+        
         try {
             const { data } = await axios.get('http://localhost:3000/users/profile', {
                 headers: getAuthHeaders(),
             });
+            console.log(data);
             
             setUser(data);
         } catch (error) {            
@@ -49,25 +52,33 @@ const Profile = () => {
         );
     }
 
+    const handleProfileUpdate = (updatedUser) => {
+        setUser(updatedUser);
+    };
+    
     return (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
             <Card sx={{ maxWidth: 400, textAlign: 'center', padding: 2 }}>
-                <Avatar
-                    src={user.avatarUrl || 'https://via.placeholder.com/150'}
-                    alt={user.username}
-                    sx={{ width: 100, height: 100, margin: 'auto' }}
-                />
-                <CardContent>
-                    <Typography variant="h5" gutterBottom>
-                        {user.username}
-                    </Typography>
-                    <Typography variant="body1" color="textSecondary">
-                        📧 {user.email}
-                    </Typography>
-                    <Typography variant="body1" color="textSecondary">
-                        🛡️ Rol: {user.role}
-                    </Typography>
-                </CardContent>
+                <div style={{"display": "flex", "justifyContent": "right"}}>
+                    <EditProfileModal user={user} onUpdate={handleProfileUpdate}  fetchUserProfile={fetchUserProfile}/>
+
+                </div>
+                    <Avatar
+                        src={user.avatarUrl || 'https://via.placeholder.com/150'}
+                        alt={user.username}
+                        sx={{ width: 100, height: 100, margin: 'auto' }}
+                    />
+                    <CardContent>
+                        <Typography variant="h5" gutterBottom>
+                            {user.username}
+                        </Typography>
+                        <Typography variant="body1" color="textSecondary">
+                            📧 {user.email}
+                        </Typography>
+                        <Typography variant="body1" color="textSecondary">
+                            🛡️ Rol: {user.role}
+                        </Typography>
+                    </CardContent>
             </Card>
         </Box>
     );
