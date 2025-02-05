@@ -2,23 +2,51 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Button, TextField, Box, Typography, Autocomplete } from '@mui/material';
 import styles from './style.module.css';
 import axios from 'axios'
+const apiUrl = import.meta.env.VITE_API_URL;
 
-const ItemChangeModal = ({ open, onClose, selectedItem, allItems, serviceOrder, getAuthHeaders }) => {
+
+const ItemChangeModal = ({ open, onClose, selectedItem, allItems, serviceOrder, getAuthHeaders, fetchServiceOrder }) => {
   const [itemName, setItemName] = useState('');
   const [categoryItems, setCategoryItems] = useState([])
 
   const handleSave = async () => {
-    const searchedItem = categoryItems.find(item => item.code === itemName)
-    const response = await axios.put(
-      `http://localhost:3000/service-order-items/${serviceOrder.id}/${selectedItem.id}/${searchedItem.id}`,
-      {}, // Debes incluir un cuerpo vacío si no envías datos en el body
-      { headers: getAuthHeaders() } // Aquí pasas correctamente los headers
-    );
-    console.log(response);
-    
-    setItemName('');
-    onClose();
+    try {
+      if (!serviceOrder?.id || !selectedItem?.id) {
+        console.error("Error: La orden de servicio o el ítem seleccionado no están definidos.");
+        return;
+      }
+
+      const searchedItem = categoryItems.find(item => item.code === itemName);
+      if (!searchedItem?.id) {
+        console.error("Error: El ítem ingresado no existe en la categoría.");
+        return;
+      }      
+
+      // Verificar si el item seleccionado es un contenedor
+      if (selectedItem?.Category?.isContainer && selectedItem?.StoreItemParentItem?.length > 0 && selectedItem?.isTemporalContainer) {
+        await axios.put(
+          `${apiUrl}/service-order-items/container/${serviceOrder.id}/${selectedItem.id}/${searchedItem.id}`,
+          {},
+          { headers: getAuthHeaders() }
+        );
+
+      } else {
+        await axios.put(
+          `${apiUrl}/service-order-items/${serviceOrder.id}/${selectedItem.id}/${searchedItem.id}`,
+          {},
+          { headers: getAuthHeaders() }
+        );
+      }
+
+      setItemName("");
+      await onClose();
+      await fetchServiceOrder();
+    } catch (error) {
+      console.error("Error al actualizar el ítem:", error);
+    }
   };
+
+
 
 
   const fetchItems = async () => {
@@ -43,7 +71,7 @@ const ItemChangeModal = ({ open, onClose, selectedItem, allItems, serviceOrder, 
         )}
         <Typography variant="h6">Busque el nuevo Item a Cargar</Typography>
         <Autocomplete
-          value={itemName}
+          value={itemName || "-"}
           onChange={(event, newValue) => setItemName(newValue)}
           inputValue={itemName}
           onInputChange={(event, newInputValue) => setItemName(newInputValue)}

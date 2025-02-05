@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import JsBarcode from 'jsbarcode';
 import {
     Table,
     TableHead,
@@ -8,13 +9,12 @@ import {
     Typography,
     Button,
     IconButton,
-
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import ItemModal from './ItemModal';
+const apiUrl = import.meta.env.VITE_API_URL;
 
-// ✅ Estados iniciales para nuevos ítems
 const initialNewItem = {
     name: '',
     description: '',
@@ -34,6 +34,19 @@ const ItemTable = () => {
         fetchCategories();
     }, []);
 
+    useEffect(() => {
+        items.forEach((item) => {
+            if (item.code) {                
+                JsBarcode(`#barcode-${item.id}`, item.code, {
+                    format: 'CODE128',
+                    displayValue: false,
+                    height: 40,
+                    width: 1.5
+                });
+            }
+        });
+    }, [items]);
+
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
@@ -42,7 +55,7 @@ const ItemTable = () => {
 
     const fetchItems = async () => {
         try {
-            const { data } = await axios.get('http://localhost:3000/items', {
+            const { data } = await axios.get(`${apiUrl}/items`, {
                 headers: getAuthHeaders(),
             });
             setItems(data);
@@ -53,7 +66,7 @@ const ItemTable = () => {
 
     const fetchCategories = async () => {
         try {
-            const { data } = await axios.get('http://localhost:3000/categories', {
+            const { data } = await axios.get(`${apiUrl}/categories`, {
                 headers: getAuthHeaders(),
             });
             setCategories(data);
@@ -62,10 +75,7 @@ const ItemTable = () => {
         }
     };
 
-    const handleOpenDialog = () => {
-        setOpenDialog(true);
-    };
-
+    const handleOpenDialog = () => setOpenDialog(true);
     const handleCloseDialog = () => {
         setOpenDialog(false);
         setNewItem(initialNewItem);
@@ -73,7 +83,7 @@ const ItemTable = () => {
 
     const handleCreateItem = async () => {
         try {
-            await axios.post('http://localhost:3000/items', newItem, {
+            await axios.post(`${apiUrl}/items`, newItem, {
                 headers: getAuthHeaders(),
             });
             fetchItems();
@@ -84,11 +94,10 @@ const ItemTable = () => {
         }
     };
 
-    // 🗑️ Eliminar ítem
     const handleDeleteItem = async (selectedItemId) => {
         if (selectedItemId) {
             try {
-                await axios.delete(`http://localhost:3000/items/${selectedItemId}`, {
+                await axios.delete(`${apiUrl}/items/${selectedItemId}`, {
                     headers: getAuthHeaders(),
                 });
                 fetchItems();
@@ -98,61 +107,53 @@ const ItemTable = () => {
         }
     };
 
-
     return (
-        <div style={{
-            margin: '3rem'
-        }}>
-            {/* 📝 Título */}
+        <div style={{ margin: '3rem' }}>
             <Typography variant="h4" gutterBottom>
                 Gestión de Ítems
             </Typography>
 
-            {/* ➕ Botón para crear un nuevo ítem */}
-            <Button
-                variant="contained"
-                color="primary"
-                onClick={handleOpenDialog}
-            >
+            <Button variant="contained" color="primary" onClick={handleOpenDialog}>
                 Crear Nuevo Ítem
             </Button>
 
-            {/* 📊 Tabla de ítems */}
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell align="center">Codigo</TableCell>
-                        <TableCell align="center">NOMBRE</TableCell>
-                        <TableCell align="center">DESCRIPCIÓN</TableCell>
-                        <TableCell align="center">TIPO</TableCell>
+                        <TableCell align="center">Código de barras</TableCell>
+                        <TableCell align="center">Código</TableCell>
+                        <TableCell align="center">Nombre</TableCell>
+                        <TableCell align="center">Descripción</TableCell>
+                        <TableCell align="center">Tipo</TableCell>
                         <TableCell align="center">E.A</TableCell>
                         <TableCell align="center">E.C</TableCell>
-                        <TableCell align="center">ACCIONES</TableCell>
+                        <TableCell align="center">Acciones</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
                     {items.map((item) => (
                         <TableRow key={item.id}>
-                            <TableCell align="center">{item.code}</TableCell>
+                            <TableCell align="center">
+                                <svg id={`barcode-${item.id}`}></svg>
+                            </TableCell>
+                            <TableCell align="center">
+                               {item.code}
+                            </TableCell>
                             <TableCell align="center">{item.Category.name}</TableCell>
                             <TableCell align="center">{item.Category.description}</TableCell>
                             <TableCell align="center">{item.Category.type}</TableCell>
                             <TableCell align="center">{item.Category.isStorable ? 'SI' : 'NO'}</TableCell>
                             <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
                             <TableCell align="center">
-                                <IconButton
-                                    onClick={() => handleDeleteItem(item.id)}
-                                >
+                                <IconButton onClick={() => handleDeleteItem(item.id)}>
                                     <DeleteIcon />
                                 </IconButton>
-
                             </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
             </Table>
 
-            {/* 📦 Modal */}
             <ItemModal
                 open={openDialog}
                 onClose={handleCloseDialog}

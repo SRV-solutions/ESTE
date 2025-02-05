@@ -7,6 +7,7 @@ import User from '../models/User';
 import StoreItem from '../models/StoreItem';
 import ServiceOrderItem from '../models/ServiceOrderItem';
 import ServiceOrder, { ServiceOrderStatus } from '../models/ServiceOrder';
+import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
 
 export const getItems = async (req: Request, res: any) => {
   try {
@@ -146,7 +147,6 @@ export const deleteItem = async (req: Request, res: any) => {
   }
 };
 
-
 export const getAvalibleItemsByCategory = async (req: Request, res: any) => {
   const { categoryId } = req.body
   const items = await Item.findAll({
@@ -177,28 +177,63 @@ export const getAvalibleItemsByCategory = async (req: Request, res: any) => {
 }
 
 export const getAvalibleItems = async (req: Request, res: any) => {
-  const items = await Item.findAll({
-    include: [
-      {
-        model: ServiceOrderItem,
-        required: false, // LEFT OUTER JOIN para incluir también los que no tienen órdenes
-        include: [
-          {
-            model: ServiceOrder,
-            required: false, // LEFT OUTER JOIN en ServiceOrder
-            where: {
-              status: { [Op.ne]: ServiceOrderStatus.Disassembled },
+  try {
+    const items = await Item.findAll({
+      include: [
+        {
+          model: ServiceOrderItem,
+          required: false, // LEFT OUTER JOIN para incluir también los que no tienen órdenes
+          include: [
+            {
+              model: ServiceOrder,
+              required: false, // LEFT OUTER JOIN en ServiceOrder
+              where: {
+                status: { [Op.ne]: ServiceOrderStatus.Disassembled }, // Solo ordenes que no están desarmadas
+              },
             },
-          },
-        ],
+          ],
+        },
+        {
+          model: ServiceOrderStoreItem,
+          required: false, // LEFT OUTER JOIN para verificar si está en algún ServiceOrderStoreItem
+          as: 'ServiceOrderStoreItemParent', // Usamos el alias para la relación 'itemIdParent'
+          include: [
+            {
+              model: ServiceOrder,
+              where: {
+                status: { [Op.ne]: ServiceOrderStatus.Disassembled }, // Asegura que esté en una orden no desarmada
+              },
+            },
+          ],
+        },
+        {
+          model: ServiceOrderStoreItem,
+          required: false, // LEFT OUTER JOIN para verificar si está en algún ServiceOrderStoreItem
+          as: 'ServiceOrderStoreItemChild', // Usamos el alias para la relación 'itemIdChild'
+          include: [
+            {
+              model: ServiceOrder,
+              where: {
+                status: { [Op.ne]: ServiceOrderStatus.Disassembled }, // Asegura que esté en una orden no desarmada
+              },
+            },
+          ],
+        },
+        Category,
+      ],
+      where: {
+        // Filtra los items que no están en ninguna orden de servicio activa
+        '$ServiceOrderItems.ServiceOrder.id$': null,
+        // Filtra los ítems que no están dentro de ningún baúl que esté relacionado con una orden de servicio no desarmada
+        '$ServiceOrderStoreItemParent.id$': null,
+        '$ServiceOrderStoreItemChild.id$': null,
       },
-      Category
-    ],
-    where: {
-      // Filtra los items que no tienen órdenes activas
-      '$ServiceOrderItems.ServiceOrder.id$': null,
-    },
-  });
+    });
 
-  return res.status(201).json(items);
-}
+
+    return res.status(200).json(items);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Error al obtener los ítems disponibles.' });
+  }
+};

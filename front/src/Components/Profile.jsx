@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, Typography, Avatar, Box, CircularProgress } from '@mui/material';
 import EditProfileModal from './EditProfileModal'
 import axios from 'axios';
+const apiUrl = import.meta.env.VITE_API_URL;
 
 
 const Profile = () => {
@@ -19,7 +20,7 @@ const Profile = () => {
     const fetchUserProfile = async () => {
         
         try {
-            const { data } = await axios.get('http://localhost:3000/users/profile', {
+            const { data } = await axios.get(`${apiUrl}/users/profile`, {
                 headers: getAuthHeaders(),
             });
             console.log(data);

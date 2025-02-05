@@ -42,9 +42,15 @@ const app = express();
 app.use(express.json());
 
 app.use((req: Request, res: any, next: NextFunction) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const allowedOrigins = ['http://localhost:5173', 'https://este.wearesrv.com'];
+  const origin: any = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');  
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -52,6 +58,10 @@ app.use((req: Request, res: any, next: NextFunction) => {
   next();
 });
 
+
+app.get('/hola', (_req, res) => {
+  res.send('Hola Mundo')
+});
 
 app.use('/users', userRoutes);
 app.use('/roles', roleRoutes);
@@ -83,7 +93,7 @@ async function seeder(): Promise<void> {
     producer: "Faena Arts",
     finalClient: "Google Marketing Team"
   });
-  
+
   const userRole = await Role.create({
     roleName: "User"
   })
@@ -95,7 +105,7 @@ async function seeder(): Promise<void> {
       username: 'Marcos',
       password: await bcrypt.hash('1234', 10), // Hashear contraseña
       email: 'marcos.costa@wearesrv.com',
-      roleId: adminRole.id 
+      roleId: adminRole.id
     },
     {
       username: 'Facundo',
@@ -219,49 +229,49 @@ async function seeder(): Promise<void> {
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[4].id// Totem TV
-    }, 
+    },
     {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[5].id// Cable tension
-    }, 
+    },
     {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[3].id// Baul Paneles
-    }, 
+    },
     {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[2].id// Panel
-    }, 
+    },
     {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[2].id// Panel
-    }, 
+    },
     {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[2].id// Panel
-    }, 
+    },
     {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[2].id// Panel
-    }, 
+    },
     {
       isActive: true,
       uses: 2,
       ownerId: userRole.id,
       categoryId: newCategories[2].id// Panel
-    }, 
+    },
     {
       isActive: true,
       uses: 2,
@@ -296,7 +306,7 @@ async function seeder(): Promise<void> {
 }
 
 sequelize.sync({ force: false }).then(() => {
-  // seeder()
+  //seeder()
   console.log('Database connected and synchronized');
 }).catch(err => {
   console.error('Unable to connect to the database:', err);
