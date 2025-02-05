@@ -224,3 +224,38 @@ export const updateUser = async (req: any, res: any) => {
     res.status(500).json({ message: 'Error al actualizar el usuario' });
   }
 };
+
+export const changePassword = async (req: Request, res: any) => {
+  const { currentPassword, newPassword } = req.body;
+  const { id } = req.params;
+
+  try {
+    // Verificar si el usuario existe
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Contraseña actual incorrecta' });
+    }
+
+    // Validar que la nueva contraseña cumpla con los criterios (mínimo 6 caracteres, por ejemplo)
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres' });
+    }
+
+    // Encriptar la nueva contraseña    
+    const hashedNewPassword:string = await bcrypt.hash(newPassword, 10)
+    
+    // Actualizar la contraseña en la base de datos
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.status(200).json({ message: 'Contraseña cambiada con éxito' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al cambiar la contraseña', error });
+  }
+};

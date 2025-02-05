@@ -3,6 +3,8 @@ import { Modal, Box, TextField, Button, IconButton, Typography, Snackbar } from 
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close'; // Icono para el botón de cerrar
 import axios from 'axios';
+const apiUrl = import.meta.env.VITE_API_URL;
+
 
 const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
     const [open, setOpen] = useState(false);
@@ -20,13 +22,12 @@ const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
         setErrors({ newUsername: '', newEmail: '' }); // Limpiar errores antes de intentar enviar el formulario
     
         try {
-            const { data } = await axios.patch(`http://localhost:3000/users/update/${user.id}`, formData, {
+            const { data } = await axios.patch(`${apiUrl}/users/update/${user.id}`, formData, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
             });
             fetchUserProfile()
-            console.log(data);
             
             //onUpdate(data); // Actualizar el estado en Profile con los nuevos datos
             setOpen(false);
