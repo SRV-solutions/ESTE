@@ -42,15 +42,22 @@ const app = express();
 app.use(express.json());
 
 app.use((req: Request, res: any, next: NextFunction) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const allowedOrigins = ['http://localhost:5173', 'https://este.wearesrv.com'];
+  const origin: any = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
 
   next();
 });
+
 
 app.get('/hola', (_req, res) => {
   res.send('Hola Mundo')
