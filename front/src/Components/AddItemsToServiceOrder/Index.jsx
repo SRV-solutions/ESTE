@@ -114,8 +114,6 @@ const AddItemsToServiceOrder = () => {
         );
     };
 
-
-
     const handleConfirmDeleteAllItems = () => {
         setConfirmDialogOpen(true);
     };
@@ -156,7 +154,7 @@ const AddItemsToServiceOrder = () => {
                 headers: getAuthHeaders(),
             });
             fetchItems()
-            
+
             setServiceOrder(data);
         } catch (error) {
             console.error('Error al cargar la orden de servicio:', error);
@@ -295,7 +293,7 @@ const AddItemsToServiceOrder = () => {
         setIsModalOpen(false);
     };
 
-    const renderTableRows = (item, color, itemIdParent = NaN) => {
+    const renderTableRows = (item, color, itemParent = NaN, isTemporalContainer = true) => {
         return (
             <TableRow key={item.id} sx={{ backgroundColor: color || '' }}>
                 <ItemChangeModal
@@ -305,8 +303,10 @@ const AddItemsToServiceOrder = () => {
                     allItems={allItems}
                     serviceOrder={serviceOrder}
                     getAuthHeaders={getAuthHeaders}
+                    fetchServiceOrder={fetchServiceOrder}
                 />
                 <TableCell align="center"><IconButton
+                    disabled={!isTemporalContainer}
                     onClick={() => handleOpenModal(item)}
                     sx={{
                         color: '#757575',
@@ -327,7 +327,7 @@ const AddItemsToServiceOrder = () => {
                 {canEditOrder() && (
                     <TableCell align="center">
                         <IconButton
-                            onClick={() => handleDeleteItem(item.id, itemIdParent)}
+                            onClick={() => handleDeleteItem(item.id, itemParent.id)}
                             sx={{
                                 color: '#757575',
                                 '&:hover': {

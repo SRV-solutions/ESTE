@@ -6,6 +6,7 @@ import ServiceOrderItem from '../models/ServiceOrderItem';
 import Item from '../models/Item';
 import Category from '../models/Category';
 import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
+import { sequelize } from '../config/database';
 
 export const createServiceOrderItem = async (req: Request, res: Response) => {
   const { serviceOrderId, itemId } = req.body;
@@ -249,12 +250,156 @@ export const deleteServiceOrderItem = async (req: Request, res: any) => {
 };
 
 export const changeItemsByServiceOrderId = async (req: Request, res: any) => {
+  try {
+    const { oldItemId, newItemId, serviceOrderId } = req.params;
 
-  const { oldItemId, newItemId, serviceOrderId } = req.params
-  console.log(req.params);
-  const oldItem = Item.findByPk(oldItemId)
-  const newItem = Item.findByPk(newItemId)
-  
+    // Validar que los parámetros sean numéricos
+    if (isNaN(Number(oldItemId)) || isNaN(Number(newItemId)) || isNaN(Number(serviceOrderId))) {
+      return res.status(400).json({ error: "Parámetros inválidos" });
+    }
 
-  res.send('si')
-}
+    // Buscar los registros
+    const [oldItem, newItem, serviceOrder] = await Promise.all([
+      Item.findByPk(oldItemId),
+      Item.findByPk(newItemId),
+      ServiceOrder.findByPk(serviceOrderId, {
+        include: [{ model: ServiceOrderItem }],
+      }),
+    ]);
+
+    // Validar existencia de registros
+    if (!oldItem || !newItem || !serviceOrder) {
+      return res.status(404).json({ error: "Orden de servicio o ítems no encontrados" });
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      const serviceOrderItem = await ServiceOrderItem.findOne({
+        where: { serviceOrderId, itemId: oldItem.id },
+        transaction
+      });
+
+      const serviceOrderStoreItem = await ServiceOrderStoreItem.findOne({
+        where: { serviceOrderId, itemIdChild: oldItem.id },
+        transaction
+      });
+
+      if (serviceOrderStoreItem) {
+        await ServiceOrderStoreItem.create(
+          {
+            serviceOrderId: serviceOrderStoreItem.serviceOrderId,
+            itemIdParent: serviceOrderStoreItem.itemIdParent,
+            itemIdChild: newItem.id,
+          },
+          { transaction }
+        );
+
+        await serviceOrderStoreItem.destroy({ transaction });
+      }
+
+      if (serviceOrderItem) {
+        await ServiceOrderItem.create(
+          { serviceOrderId, itemId: newItem.id },
+          { transaction }
+        );
+
+        await serviceOrderItem.destroy({ transaction });
+      }
+
+      await transaction.commit();
+
+      return res.status(200).json({
+        message: "Ítem actualizado correctamente",
+        oldItemId: oldItem.id,
+        newItemId: newItem.id,
+        serviceOrderId,
+      });
+
+    } catch (error) {
+      await transaction.rollback();
+      console.error("Error al actualizar ítem en la orden de servicio:", error);
+      return res.status(500).json({ error: "Error al actualizar ítem en la orden de servicio" });
+    }
+
+  } catch (error) {
+    console.error("Error en changeItemsByServiceOrderId:", error);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
+export const changeContainerItemsByServiceOrderId = async (req: Request, res: any) => {
+  const transaction = await sequelize.transaction(); // Iniciar transacción
+  try {
+    const { oldItemId, newItemId, serviceOrderId } = req.params;
+
+    // Validar que los parámetros sean números
+    if (isNaN(Number(oldItemId)) || isNaN(Number(newItemId)) || isNaN(Number(serviceOrderId))) {
+      return res.status(400).json({ error: "Parámetros inválidos" });
+    }
+
+    // Buscar registros en paralelo
+    const [oldItem, newItem, serviceOrder] = await Promise.all([
+      Item.findByPk(oldItemId, { transaction }),
+      Item.findByPk(newItemId, { transaction }),
+      ServiceOrder.findByPk(serviceOrderId, {
+        include: [{ model: ServiceOrderStoreItem }],
+        transaction,
+      }),
+    ]);
+
+    // Validar existencia de registros
+    if (!oldItem || !newItem || !serviceOrder) {
+      return res.status(404).json({ error: "Orden de servicio o ítems no encontrados" });
+    }
+
+    // Buscar los items hijos del ítem antiguo en la orden de servicio
+    const serviceOrderStoreItems = await ServiceOrderStoreItem.findAll({
+      where: { serviceOrderId, itemIdParent: oldItem.id },
+      transaction,
+    });
+
+    if (!serviceOrderStoreItems.length) {
+      return res.status(404).json({ error: "El ítem antiguo no está en la orden de servicio" });
+    }
+
+    // Crear los nuevos registros para el ítem nuevo con los hijos del ítem antiguo
+    const newStoreItems = serviceOrderStoreItems.map(storeItem => ({
+      serviceOrderId: storeItem.serviceOrderId,
+      itemIdParent: newItem.id,
+      itemIdChild: storeItem.itemIdChild,
+    }));
+
+    await ServiceOrderStoreItem.bulkCreate(newStoreItems, { transaction });
+
+    // Eliminar los registros antiguos
+    await ServiceOrderStoreItem.destroy({
+      where: { serviceOrderId, itemIdParent: oldItem.id },
+      transaction,
+    });
+
+    // Agregar el nuevo ítem a ServiceOrderItem
+    await ServiceOrderItem.create({ serviceOrderId, itemId: newItem.id }, { transaction });
+
+    // Eliminar el antiguo ítem de ServiceOrderItem
+    await ServiceOrderItem.destroy({
+      where: { serviceOrderId, itemId: oldItem.id },
+      transaction,
+    });
+
+    // Confirmar transacción
+    await transaction.commit();
+
+    return res.status(200).json({
+      message: "Ítem actualizado correctamente",
+      oldItemId: oldItem.id,
+      newItemId: newItem.id,
+      serviceOrderId,
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error en changeContainerItemsByServiceOrderId:", error);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+};

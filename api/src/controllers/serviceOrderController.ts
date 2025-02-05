@@ -172,12 +172,18 @@ export const getServiceOrderById = async (req: Request, res: any) => {
       const containedItems = itemsInContainers.filter(
         (child) => child.itemIdParent === container.itemId
       );
+
       const parsedJson = container.toJSON();
       parsedJson.Item.StoreItemParentItem = containedItems.map((childItem) =>
         childItem.ServiceOrderStoreItemChild
           ? childItem.ServiceOrderStoreItemChild.toJSON()
           : childItem.StoreItemChild.toJSON()
       );
+
+      parsedJson.Item.isTemporalContainer = containedItems.some(
+        (childItem) => "ServiceOrderStoreItemChild" in childItem
+      );
+
       return parsedJson;
     });
 
@@ -200,7 +206,6 @@ export const getServiceOrderById = async (req: Request, res: any) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-
 
 export const getServiceOrders = async (req: Request, res: any) => {
   try {
@@ -249,7 +254,7 @@ export const getServiceOrders = async (req: Request, res: any) => {
         {
           model: Event,
           as: 'Event',
-          include:[Location]
+          include: [Location]
         },
       ],
     });

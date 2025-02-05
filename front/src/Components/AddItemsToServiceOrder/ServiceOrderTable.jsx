@@ -36,24 +36,24 @@ const ServiceOrderTable = ({
   serviceOrder.ServiceOrderItems.forEach(({ Item }) => {
     if (!Item.Category.isContainer) {
       const categoryName = Item.Category.name;
-  
+
       if (!categorizedItems[categoryName]) {
         categorizedItems[categoryName] = [];
       }
-  
+
       categorizedItems[categoryName].push(Item);
     }
   });
-  
+
   let categorizedArray = Object.entries(categorizedItems).map(([category, items]) => ({
     category,
     items
-  }));    
+  }));
 
   return (
     <Table sx={{ minWidth: 650 }} aria-label="simple table">
       <TableBody>
-      {categorizedArray.map(({ category, items }) => (
+        {categorizedArray.map(({ category, items }) => (
           <TableRow key={category}>
             <TableCell colSpan={9}>
               <Accordion>
@@ -62,18 +62,18 @@ const ServiceOrderTable = ({
                 </AccordionSummary>
                 <AccordionDetails>
                   <Table sx={{ mt: 2 }}>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell align="center">Cambiar</TableCell>
-                          <TableCell align="center">Codigo</TableCell>
-                          <TableCell align="center">NOMBRE</TableCell>
-                          <TableCell align="center">DESCRIPCIÓN</TableCell>
-                          <TableCell align="center">TIPO</TableCell>
-                          <TableCell align="center">E.A</TableCell>
-                          <TableCell align="center">E.C</TableCell>
-                          {canEditOrder() && <TableCell align="center">ACCIONES</TableCell>}
-                        </TableRow>
-                      </TableHead>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell align="center">Cambiar</TableCell>
+                        <TableCell align="center">Codigo</TableCell>
+                        <TableCell align="center">NOMBRE</TableCell>
+                        <TableCell align="center">DESCRIPCIÓN</TableCell>
+                        <TableCell align="center">TIPO</TableCell>
+                        <TableCell align="center">E.A</TableCell>
+                        <TableCell align="center">E.C</TableCell>
+                        {canEditOrder() && <TableCell align="center">ACCIONES</TableCell>}
+                      </TableRow>
+                    </TableHead>
                     <TableBody>
                       {items.map((item) => renderTableRows(item, 'white'))}
                     </TableBody>
@@ -111,7 +111,7 @@ const ServiceOrderTable = ({
                       {Item.StoreItemParentItem?.length > 0 && (
                         <TableBody>
                           {Item.StoreItemParentItem.map((containedItem) =>
-                            renderTableRows(containedItem.StoreItemChildItem || containedItem, 'white', Item.id)
+                            renderTableRows(containedItem.StoreItemChildItem || containedItem, 'white', Item, Item.isTemporalContainer)
                           )}
                         </TableBody>
                       )}
