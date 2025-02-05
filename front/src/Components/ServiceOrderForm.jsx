@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TextField, Button, Grid, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import axios from 'axios';
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const ServiceOrderForm = () => {
   const navigate = useNavigate();
@@ -90,9 +91,9 @@ const ServiceOrderForm = () => {
     try {
       const headers = getAuthHeaders();
       const [usersResponse, eventsResponse, locationsResponse] = await Promise.all([
-        axios.get('http://localhost:3000/users', { headers }),
-        axios.get('http://localhost:3000/events', { headers }),
-        axios.get('http://localhost:3000/locations', { headers }),
+        axios.get(`${apiUrl}/users`, { headers }),
+        axios.get(`${apiUrl}/events`, { headers }),
+        axios.get(`${apiUrl}/locations`, { headers }),
       ]);
 
       setUsers(usersResponse.data);
@@ -141,7 +142,7 @@ const ServiceOrderForm = () => {
   const handleCreateEvent = async () => {
     try {
       const headers = getAuthHeaders();
-      const response = await axios.post('http://localhost:3000/events', newEvent, { headers });
+      const response = await axios.post(`${apiUrl}/events`, newEvent, { headers });
       const createdEvent = response.data;
       
       setEvents((prevEvents) => [...prevEvents, createdEvent]);
@@ -158,7 +159,7 @@ const ServiceOrderForm = () => {
     e.preventDefault();
     try {
       const response = await axios.post(
-        'http://localhost:3000/service-orders',
+        `${apiUrl}/service-orders`,
         formData,
         { headers: getAuthHeaders() }
       );

@@ -16,6 +16,7 @@ import {
   CircularProgress,
   Typography,
 } from '@mui/material';
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const ServiceOrderList = () => {
   const navigate = useNavigate();
@@ -68,7 +69,7 @@ const ServiceOrderList = () => {
         const userData = JSON.parse(localStorage.getItem('userData'));
         setCurrentUserId(userData?.id);
         setIsAdmin(userData?.isAdmin);
-        const response = await axios.get('http://localhost:3000/service-orders', {
+        const response = await axios.get(`${apiUrl}/service-orders`, {
           headers: { Authorization: `Bearer ${token}` },
         });        
         setServiceOrders(response.data);

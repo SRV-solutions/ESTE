@@ -13,6 +13,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import axios from 'axios';
 import CategoryModal from './CatgoryModal';
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const CategoryTable = () => {
     // 📊 Estados
@@ -35,7 +36,7 @@ const CategoryTable = () => {
     // 📤 Fetch de categorías
     const fetchCategories = async () => {
         try {
-            const { data } = await axios.get('http://localhost:3000/categories', {
+            const { data } = await axios.get(`${apiUrl}/categories`, {
                 headers: getAuthHeaders(),
             });
             setCategories(data);
@@ -49,11 +50,11 @@ const CategoryTable = () => {
         try {
             
             if (selectedCategory.id) {
-                await axios.put(`http://localhost:3000/categories/${selectedCategory.id}`, selectedCategory, {
+                await axios.put(`${apiUrl}/categories/${selectedCategory.id}`, selectedCategory, {
                     headers: getAuthHeaders(),
                 });
             } else {
-                await axios.post('http://localhost:3000/categories', selectedCategory, {
+                await axios.post(`${apiUrl}/categories`, selectedCategory, {
                     headers: getAuthHeaders(),
                 });
             }
@@ -68,7 +69,7 @@ const CategoryTable = () => {
     // 🗑️ Eliminar categoría
     const handleDeleteCategory = async (id) => {
         try {
-            await axios.delete(`http://localhost:3000/categories/${id}`, {
+            await axios.delete(`${apiUrl}/categories/${id}`, {
                 headers: getAuthHeaders(),
             });
             fetchCategories();

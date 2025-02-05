@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, Typography, Avatar, Box, CircularProgress } from '@mui/material';
 import axios from 'axios';
+const apiUrl = import.meta.env.VITE_API_URL;
 
 
 const Profile = () => {
@@ -17,7 +18,7 @@ const Profile = () => {
     // 📥 Fetch Perfil del Usuario
     const fetchUserProfile = async () => {
         try {
-            const { data } = await axios.get('http://localhost:3000/users/profile', {
+            const { data } = await axios.get(`${apiUrl}/users/profile`, {
                 headers: getAuthHeaders(),
             });
             

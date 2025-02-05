@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, TextField, Typography, Alert } from '@mui/material';
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -17,7 +18,7 @@ const Login = () => {
 
     try {
       // Simulación de petición al backend (reemplaza con tu API real)
-      const response = await fetch('http://localhost:3000/users/login', {
+      const response = await fetch(`${apiUrl}/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -31,6 +32,8 @@ const Login = () => {
       localStorage.setItem('userData', JSON.stringify(data.userData)); // Guarda el token
       navigate('/'); // Redirige a una ruta protegida
     } catch (error) {
+      console.log(error);
+      
       setError(error.message);
     }
   };

@@ -13,6 +13,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import ItemModal from './ItemModal';
+const apiUrl = process.env.VITE_API_URL;
 
 const initialNewItem = {
     name: '',
@@ -54,7 +55,7 @@ const ItemTable = () => {
 
     const fetchItems = async () => {
         try {
-            const { data } = await axios.get('http://localhost:3000/items', {
+            const { data } = await axios.get(`${apiUrl}/items`, {
                 headers: getAuthHeaders(),
             });
             setItems(data);
@@ -65,7 +66,7 @@ const ItemTable = () => {
 
     const fetchCategories = async () => {
         try {
-            const { data } = await axios.get('http://localhost:3000/categories', {
+            const { data } = await axios.get(`${apiUrl}/categories`, {
                 headers: getAuthHeaders(),
             });
             setCategories(data);
@@ -82,7 +83,7 @@ const ItemTable = () => {
 
     const handleCreateItem = async () => {
         try {
-            await axios.post('http://localhost:3000/items', newItem, {
+            await axios.post(`${apiUrl}/items`, newItem, {
                 headers: getAuthHeaders(),
             });
             fetchItems();
@@ -96,7 +97,7 @@ const ItemTable = () => {
     const handleDeleteItem = async (selectedItemId) => {
         if (selectedItemId) {
             try {
-                await axios.delete(`http://localhost:3000/items/${selectedItemId}`, {
+                await axios.delete(`${apiUrl}/items/${selectedItemId}`, {
                     headers: getAuthHeaders(),
                 });
                 fetchItems();

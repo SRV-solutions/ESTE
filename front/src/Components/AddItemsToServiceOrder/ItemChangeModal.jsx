@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Button, TextField, Box, Typography, Autocomplete } from '@mui/material';
 import styles from './style.module.css';
 import axios from 'axios'
+const apiUrl = process.env.VITE_API_URL;
+
 
 const ItemChangeModal = ({ open, onClose, selectedItem, allItems, serviceOrder, getAuthHeaders, fetchServiceOrder }) => {
   const [itemName, setItemName] = useState('');
@@ -23,14 +25,14 @@ const ItemChangeModal = ({ open, onClose, selectedItem, allItems, serviceOrder, 
       // Verificar si el item seleccionado es un contenedor
       if (selectedItem?.Category?.isContainer && selectedItem?.StoreItemParentItem?.length > 0 && selectedItem?.isTemporalContainer) {
         await axios.put(
-          `http://localhost:3000/service-order-items/container/${serviceOrder.id}/${selectedItem.id}/${searchedItem.id}`,
+          `${apiUrl}/service-order-items/container/${serviceOrder.id}/${selectedItem.id}/${searchedItem.id}`,
           {},
           { headers: getAuthHeaders() }
         );
 
       } else {
         await axios.put(
-          `http://localhost:3000/service-order-items/${serviceOrder.id}/${selectedItem.id}/${searchedItem.id}`,
+          `${apiUrl}/service-order-items/${serviceOrder.id}/${selectedItem.id}/${searchedItem.id}`,
           {},
           { headers: getAuthHeaders() }
         );
