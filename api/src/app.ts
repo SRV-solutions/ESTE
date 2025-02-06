@@ -306,9 +306,10 @@ async function seeder(): Promise<void> {
   ]
   await StoreItem.bulkCreate(newStoreItems)
 }
-const force = false
-sequelize.sync({ force }).then(() => {
-  force && seeder()
+
+const forceSync = process.env.FORCE_SYNC === "true";
+sequelize.sync({ force:forceSync }).then(() => {
+  forceSync && seeder()
   console.log('Database connected and synchronized');
 }).catch(err => {
   console.error('Unable to connect to the database:', err);
