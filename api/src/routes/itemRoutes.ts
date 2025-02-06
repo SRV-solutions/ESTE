@@ -9,7 +9,7 @@ router.get('/', isAuth, getItems);
 router.get('/avalible', isAuth, getAvalibleItems);
 router.get('/avalible/store', isAuth, getAvailableStoreItems);
 router.get('/avalible/category', isAuth, getAvalibleItemsByCategory);
-router.post('/', isAuth, createItem);
-router.delete('/:id', isAuth, deleteItem);
+router.post('/', isAuth, isAdmin, createItem);
+router.delete('/:id', isAuth, isAdmin, deleteItem);
 
 export default router;
