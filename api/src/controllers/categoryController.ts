@@ -14,7 +14,7 @@ export const getCategories = async (req: Request, res: any) => {
 export const createCategory = async (req: Request, res: any) => {
   try {
     
-    const { code, name, description, type, unity, value, weight, isStorable, isContainer, isActive } = req.body;
+    const { code, name, description, type, unity, value, weight, isStorable = false, isContainer = false, isActive } = req.body;
 
     if (!code || !name || !type || !unity || value == null || weight == null) {
       return res.status(400).json({ message: 'Missing required fields' });
