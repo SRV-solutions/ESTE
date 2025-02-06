@@ -31,7 +31,7 @@ const CategoryModal = ({
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
             {/* 📝 Título del Modal */}
             <DialogTitle>
-                {itemData?.name ? 'Editar Ítem' : 'Crear Nuevo Ítem'}
+                {itemData?.name ? 'Editar Categoria' : 'Crear Nueva Categoria'}
             </DialogTitle>
 
             {/* 📋 Campos del formulario */}
