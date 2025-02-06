@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import { Model, Op } from 'sequelize';
+import { Request } from 'express';
+import { Op } from 'sequelize';
 
 import Category from '../models/Category';
 import Item from '../models/Item';
@@ -172,7 +172,7 @@ export const getAvalibleItemsByCategory = async (req: Request, res: any) => {
       categoryId
     },
   });
-  
+
   return res.status(201).json(items);
 }
 
@@ -235,5 +235,82 @@ export const getAvalibleItems = async (req: Request, res: any) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Error al obtener los ítems disponibles.' });
+  }
+};
+
+export const getAvailableStoreItems = async (req: Request, res: any) => {
+  try {
+    const items = await Item.findAll({
+      include: [
+        {
+          model: ServiceOrderItem,
+          required: false,
+          include: [
+            {
+              model: ServiceOrder,
+              required: false,
+              where: {
+                status: { [Op.ne]: ServiceOrderStatus.Disassembled },
+              },
+            },
+          ],
+        },
+        {
+          model: ServiceOrderStoreItem,
+          required: false,
+          as: "ServiceOrderStoreItemParent",
+          include: [
+            {
+              model: ServiceOrder,
+              where: {
+                status: { [Op.ne]: ServiceOrderStatus.Disassembled },
+              },
+            },
+          ],
+        },
+        {
+          model: ServiceOrderStoreItem,
+          required: false,
+          as: "ServiceOrderStoreItemChild",
+          include: [
+            {
+              model: ServiceOrder,
+              where: {
+                status: { [Op.ne]: ServiceOrderStatus.Disassembled },
+              },
+            },
+          ],
+        },
+        {
+          model: StoreItem,
+          required: false,
+          as: "StoreItemParent",
+        },
+        {
+          model: StoreItem,
+          required: false,
+          as: "StoreItemChild",
+        },
+        {
+          model: Category,
+          required: true,
+          where: {
+            isStorable: true,
+          }
+        }
+      ],
+      where: {
+        "$ServiceOrderItems.ServiceOrder.id$": null,
+        "$StoreItemParent.id$": null,
+        "$StoreItemChild.id$": null,
+        "$ServiceOrderStoreItemParent.id$": null,
+        "$ServiceOrderStoreItemChild.id$": null,
+      },
+    });
+
+    return res.status(200).json(items);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Error al obtener los ítems disponibles." });
   }
 };

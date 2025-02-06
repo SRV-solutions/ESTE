@@ -11,6 +11,7 @@ import serviceOrderStoreItemRoutes from './routes/serviceOrderStoreItemRoutes';
 import eventRoutes from './routes/eventRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import locationRoutes from './routes/locationRoutes';
+import storeItemRoutes from './routes/storeItemRoutes';
 // import orderItemRoutes from './routes/orderItemRoutes';
 // import itemRoutes from './routes/itemRoutes';
 // import storeItemRoutes from './routes/storeItemRoutes';
@@ -66,6 +67,7 @@ app.get('/hola', (_req, res) => {
 app.use('/users', userRoutes);
 app.use('/roles', roleRoutes);
 app.use('/items', itemRoutes);
+app.use('/store-items', storeItemRoutes);
 app.use('/service-orders', serviceOrderRoutes);//orden de servicios para eventos
 app.use('/service-order-items', serviceOrderItemRoutes);//items para eventos
 app.use('/service-order-store-items', serviceOrderStoreItemRoutes);//baules de cables para eventos

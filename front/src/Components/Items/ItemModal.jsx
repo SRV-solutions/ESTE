@@ -1,28 +1,30 @@
 import React, { useState } from 'react';
-import { 
-    Dialog, 
-    DialogTitle, 
-    DialogContent, 
-    DialogActions, 
-    TextField, 
-    Button, 
-    Checkbox, 
-    FormControlLabel, 
-    Select, 
-    MenuItem, 
-    InputLabel 
+import {
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    Button,
+    Checkbox,
+    FormControlLabel,
+    Select,
+    MenuItem,
+    InputLabel
 } from '@mui/material';
 
-const ItemModal = ({ 
-    open, 
-    onClose, 
-    onSave, 
-    itemData, 
-    setItemData, 
+const ItemModal = ({
+    open,
+    setOpenDialog,
+    onSave,
+    itemData,
+    setItemData,
     categories = [] // Lista de categorías existentes
 }) => {
     const [mode, setMode] = useState('new'); // 'new' o 'existing'
-
+    const onClose = () => {
+        setOpenDialog(false)
+    }
     // 🛠️ Manejar cambios en los campos
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -31,7 +33,7 @@ const ItemModal = ({
             setItemData((prev) => ({
                 ...prev,
                 [name]: type === 'checkbox' ? checked : value,
-                ownerId: 1, 
+                ownerId: 1,
             }));
         } else {
             setItemData((prev) => ({
@@ -205,9 +207,9 @@ const ItemModal = ({
                 <Button onClick={onClose} color="secondary">
                     Cancelar
                 </Button>
-                <Button 
-                    onClick={onSave} 
-                    color="primary" 
+                <Button
+                    onClick={onSave}
+                    color="primary"
                     variant="contained"
                 >
                     {itemData?.id ? 'Guardar Cambios' : 'Crear'}
