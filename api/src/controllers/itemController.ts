@@ -13,6 +13,7 @@ export const getItems = async (req: Request, res: any) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const category = req.query.category || '';  // Recibir categoría desde la query
     const offset = (page - 1) * limit;
     const search = req.query.search || ''; // ← Agregar el término de búsqueda
 
@@ -20,8 +21,9 @@ export const getItems = async (req: Request, res: any) => {
     const itemsWithChildren = await Item.findAll({
       where: {
         code: {
-          [Op.iLike]: `%${search}%`, // Filtrar por nombre, puedes cambiar esto si deseas filtrar por otras propiedades
+          [Op.iLike]: `%${search}%`, // Filtrar por código (puedes agregar más filtros si es necesario)
         },
+        ...(category && { categoryId: category }), // Filtrar por categoría si está presente
       },
       include: [
         {
@@ -41,7 +43,6 @@ export const getItems = async (req: Request, res: any) => {
         },
       ],
     });
-
     const filteredItemsWithChildren = itemsWithChildren.filter(item => item.StoreItemParent.length !== 0);
     
     const childItemIds = filteredItemsWithChildren.flatMap((item: any) => {
@@ -50,13 +51,13 @@ export const getItems = async (req: Request, res: any) => {
       return [parentId, ...childIds];
     });
 
-    // Obtener items sin hijos, aplicando el filtro de búsqueda
     const itemsWithoutChildren = await Item.findAll({
       where: {
         id: { [Op.notIn]: childItemIds },
         code: {
-          [Op.iLike]: `%${search}%`, // ← Filtro para items sin hijos
+          [Op.iLike]: `%${search}%`, // Filtro por código
         },
+        ...(category && { categoryId: category }), // Filtrar por categoría si está presente
       },
       include: [{ model: Category }],
     });

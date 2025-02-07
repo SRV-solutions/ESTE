@@ -11,10 +11,6 @@ import {
     IconButton,
     Menu,
     MenuItem,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import axios from 'axios';
@@ -27,7 +23,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
 const ItemTable = () => {
     const [items, setItems] = useState([]);
     const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(10);
+    const [limit, _setLimit] = useState(10);
     const [search, setSearch] = useState('');
     const [totalPages, setTotalPages] = useState(1);
     const [categories, setCategories] = useState([]);
@@ -39,6 +35,7 @@ const ItemTable = () => {
     const [openAssignedItemsDialog, setOpenAssignedItemsDialog] = useState(false); // Estado para mostrar el modal de ítems asignados
     const [openAssignModal, setOpenAssignModal] = useState(false);
     const [avalibleStoreItems, setAvalibleStoreItems] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState('');
 
     useEffect(() => {
         fetchItems();
@@ -47,7 +44,7 @@ const ItemTable = () => {
 
     useEffect(() => {
         fetchItems();
-    }, [page, limit, search]); // ← Ahora también escucha cambios en `search`
+    }, [page, limit, search, selectedCategory]); // ← Ahora también escucha cambios en `search`
 
     useEffect(() => {
         items.forEach((item) => {
@@ -70,9 +67,13 @@ const ItemTable = () => {
 
     const fetchItems = async () => {
         try {
+            const params = { page, limit, search };
+            if (selectedCategory) {
+                params.category = selectedCategory;  // Agrega el filtro por categoría
+            }
             const { data } = await axios.get(`${apiUrl}/items`, {
                 headers: getAuthHeaders(),
-                params: { page, limit, search }, // ← Agregamos el término de búsqueda
+                params,
             });
             setItems(data.items);
             setTotalPages(data.totalPages);
@@ -80,7 +81,6 @@ const ItemTable = () => {
             console.error('Error fetching items:', error);
         }
     };
-
 
 
     const fetchCategories = async () => {
@@ -99,7 +99,6 @@ const ItemTable = () => {
         setSelectedItem(item);
     };
 
-
     const handleCreateItem = async () => {
         try {
             await axios.post(`${apiUrl}/items`, newItem, {
@@ -112,9 +111,9 @@ const ItemTable = () => {
             console.error('Error creating item:', error);
         }
     };
+
     const handleMenuClose = () => {
         setMenuAnchor(null);
-        //setSelectedItem(null);
     };
 
     const handleDeleteItem = async () => {
@@ -177,7 +176,10 @@ const ItemTable = () => {
                 Gestión de Ítems
             </Typography>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div>
+
                 <input
+                
                     type="text"
                     placeholder="Buscar ítem..."
                     value={search}
@@ -187,12 +189,35 @@ const ItemTable = () => {
                         borderRadius: '5px',
                         border: '1px solid #ccc',
                         width: '300px',
+                        margin: '0 2rem 0 0'
                     }}
                 />
+
+                {/* Filtro por categoría */}
+                <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    style={{
+                        padding: '10px',
+                        borderRadius: '5px',
+                        border: '1px solid #ccc',
+                        width: '200px',
+                    }}
+                >
+                    <option value="">Seleccionar Categoría</option>
+                    {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                            {category.name}
+                        </option>
+                    ))}
+                </select>
+                </div>
+
                 <Button variant="contained" color="primary" onClick={() => setOpenDialog(true)}>
                     Crear Nuevo Ítem
                 </Button>
             </div>
+
 
 
             <Table>
