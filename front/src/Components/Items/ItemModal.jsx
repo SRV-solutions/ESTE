@@ -15,16 +15,13 @@ import {
 
 const ItemModal = ({
     open,
-    setOpenDialog,
+    onClose,
     onSave,
     itemData,
     setItemData,
     categories = [] // Lista de categorías existentes
 }) => {
     const [mode, setMode] = useState('new'); // 'new' o 'existing'
-    const onClose = () => {
-        setOpenDialog(false)
-    }
     // 🛠️ Manejar cambios en los campos
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -57,7 +54,7 @@ const ItemModal = ({
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <Dialog open={open} onClose={() => onClose(false)} maxWidth="sm" fullWidth>
             {/* 📝 Título del Modal */}
             <DialogTitle>
                 {itemData?.id ? 'Editar Ítem' : 'Crear Nuevo Ítem'}
@@ -204,7 +201,7 @@ const ItemModal = ({
 
             {/* ⚙️ Acciones */}
             <DialogActions>
-                <Button onClick={onClose} color="secondary">
+                <Button onClick={() => onClose(false)} color="secondary">
                     Cancelar
                 </Button>
                 <Button

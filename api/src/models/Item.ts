@@ -1,4 +1,4 @@
-import { Model, DataTypes } from 'sequelize';
+import { Model, DataTypes, Op } from 'sequelize';
 import { sequelize } from '../config/database';
 import User from './User';
 import ServiceOrderItem from './ServiceOrderItem';
@@ -68,32 +68,75 @@ Item.init({
 });
 
 Item.afterBulkCreate(async (items) => {
-  const categories = await Category.findAll({
-    where: { id: items.map((item) => item.categoryId) },
-  });
+  try {
+    if (!items.length) return; // Si no hay ítems, salir
 
-  const categoryMap = new Map(categories.map((c) => [c.id, c.code]));
+    const categoryId = items[0].categoryId;
 
-  const updates = items.map((item) => ({
-    id: item.id,
-    code: `${categoryMap.get(item.categoryId)}-${item.id}`,
-  }));
+    // Obtener la categoría
+    const category = await Category.findOne({ where: { id: categoryId } });
+    if (!category) {
+      console.error(`❌ Categoría con ID ${categoryId} no encontrada.`);
+      return;
+    }
 
-  await Promise.all(
-    updates.map(({ id, code }) =>
-      Item.update({ code }, { where: { id } })
-    )
-  );
+    const lastItem = await Item.findOne({
+      where: { categoryId, code: { [Op.ne]: null } },
+      order: [['id', 'DESC']],
+      attributes: ['code'],
+    });
+
+    let highestCode = 0;
+    if (lastItem && lastItem.code) {
+      const parts = lastItem.code.split('-');
+      const lastNumber = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(lastNumber)) highestCode = lastNumber;
+    }
+
+    const updates = items.map((item, i) => ({
+      id: item.id,
+      code: `${category.code}-${highestCode + i + 1}`,
+    }));
+
+    await Promise.all(
+      updates.map(({ id, code }) =>
+        Item.update({ code }, { where: { id } })
+      )
+    );
+
+    console.log(`✅ Se actualizaron ${items.length} ítems con sus códigos.`);
+  } catch (error) {
+    console.error("🚨 Error en afterBulkCreate:", error);
+  }
 });
 
-
-
 Item.afterCreate(async (item) => {
+  try {
+    const category = await Category.findByPk(item.categoryId);
+    if (!category) {
+      console.error(`❌ Categoría con ID ${item.categoryId} no encontrada.`);
+      return;
+    }
 
-  const category = await Category.findByPk(item.categoryId);
-  if (category) {
-    item.code = `${category.code}-${item.id}`;
-    await item.save(); // Guardamos el código actualizado
+    // Obtener el código más alto en la categoría
+    const lastItem = await Item.findOne({
+      where: { categoryId: item.categoryId, code: { [Op.ne]: null } },
+      order: [['id', 'DESC']], // Ordenar por ID descendente para obtener el último creado
+      attributes: ['code'],
+    });
+
+    let highestCode = 0;
+    if (lastItem && lastItem.code) {
+      const parts = lastItem.code.split('-');
+      const lastNumber = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(lastNumber)) highestCode = lastNumber;
+    }
+
+    // Asignar el nuevo código y guardar
+    item.code = `${category.code}-${highestCode + 1}`;
+    await item.save();
+  } catch (error) {
+    console.error("🚨 Error en afterCreate:", error);
   }
 });
 
