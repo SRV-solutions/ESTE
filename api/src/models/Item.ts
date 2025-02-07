@@ -103,8 +103,6 @@ Item.afterBulkCreate(async (items) => {
         Item.update({ code }, { where: { id } })
       )
     );
-
-    console.log(`✅ Se actualizaron ${items.length} ítems con sus códigos.`);
   } catch (error) {
     console.error("🚨 Error en afterBulkCreate:", error);
   }

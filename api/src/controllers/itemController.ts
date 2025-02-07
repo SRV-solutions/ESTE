@@ -110,12 +110,10 @@ export const getItems = async (req: Request, res: any) => {
     });
 
   } catch (error) {
-    console.log(error);
     
     res.status(500).json({ message: "Error fetching items", error });
   }
 };
-
 
 export const createItem = async (req: Request, res: any) => {
   const {
