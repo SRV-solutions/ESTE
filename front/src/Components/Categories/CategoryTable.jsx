@@ -139,7 +139,7 @@ const CategoryTable = () => {
             {/* 📦 Modal */}
             <CategoryModal
                 open={openDialog}
-                onClose={() => setOpenDialog(false)}
+                onClose={setOpenDialog}
                 onSave={handleSaveCategory}
                 itemData={selectedCategory}
                 setItemData={setSelectedCategory}
