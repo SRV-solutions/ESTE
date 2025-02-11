@@ -117,7 +117,7 @@ const ServiceOrderTable = ({
                       )}
                     </Table>
                     <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', justifyContent: 'space-between' }}>
-                      {canEditOrder() && (
+                      {canEditOrder() && (Item.isTemporalContainer && (
                         <>
                           <Autocomplete
                             style={{ width: '50vh' }}
@@ -147,7 +147,7 @@ const ServiceOrderTable = ({
                             Agregar ítem al almacén
                           </Button>
                         </>
-                      )}
+                      ))}
                     </div>
                   </AccordionDetails>
                 </Accordion>

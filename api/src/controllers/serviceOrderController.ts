@@ -178,11 +178,11 @@ export const getServiceOrderById = async (req: Request, res: any) => {
         childItem.ServiceOrderStoreItemChild
           ? childItem.ServiceOrderStoreItemChild.toJSON()
           : childItem.StoreItemChild.toJSON()
-      );
+      );      
 
       parsedJson.Item.isTemporalContainer = containedItems.some(
         (childItem) => "ServiceOrderStoreItemChild" in childItem
-      );
+      ) || containedItems.length === 0;
 
       return parsedJson;
     });
