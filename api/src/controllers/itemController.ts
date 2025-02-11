@@ -11,54 +11,107 @@ import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
 
 export const getItems = async (req: Request, res: any) => {
   try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const category = req.query.category || '';  // Recibir categoría desde la query
+    const offset = (page - 1) * limit;
+    const search = req.query.search || ''; // ← Agregar el término de búsqueda
+
+    // Obtener items con hijos, aplicando el filtro de búsqueda
     const itemsWithChildren = await Item.findAll({
+      where: {
+        code: {
+          [Op.iLike]: `%${search}%`, // Filtrar por código (puedes agregar más filtros si es necesario)
+        },
+        ...(category && { categoryId: category }), // Filtrar por categoría si está presente
+      },
       include: [
         {
-          model: Category, // Incluyendo la categoría del item padre
-          where: {
-            isContainer: true
-          }
+          model: Category,
+          where: { isContainer: true }
         },
         {
           model: StoreItem,
-          as: 'StoreItemParent', // Relación para items contenedores
+          as: "StoreItemParent",
           include: [
             {
               model: Item,
-              as: 'StoreItemChild', // Items hijos (almacenados dentro del item padre)
-              include: [
-                {
-                  model: Category, // Incluyendo la categoría del item hijo
-                },
-              ],
+              as: "StoreItemChild",
+              include: [{ model: Category }],
             },
           ],
-        }
+        },
       ],
     });
-
-    const filteredItemsWithChildren = itemsWithChildren.filter(item => {
-      if (item.StoreItemParent.length !== 0) {
-        return item
-      }
-    })
+    const filteredItemsWithChildren = itemsWithChildren.filter(item => item.StoreItemParent.length !== 0);
+    
     const childItemIds = filteredItemsWithChildren.flatMap((item: any) => {
       const parentId = item.id;
       const childIds = item.StoreItemParent.map((storeItem: any) => storeItem.StoreItemChild.id);
-
       return [parentId, ...childIds];
     });
 
     const itemsWithoutChildren = await Item.findAll({
       where: {
         id: { [Op.notIn]: childItemIds },
+        code: {
+          [Op.iLike]: `%${search}%`, // Filtro por código
+        },
+        ...(category && { categoryId: category }), // Filtrar por categoría si está presente
       },
       include: [{ model: Category }],
     });
 
-    return res.json([...filteredItemsWithChildren, ...itemsWithoutChildren]);
+    // Combinar resultados y paginar
+    const cleanItems = [...filteredItemsWithChildren, ...itemsWithoutChildren];
+    const allItems = cleanItems.sort((a, b) => {
+      const codeA = a.code;
+      const codeB = b.code;
+    
+      // Función para dividir el código en partes numéricas y alfabéticas
+      const alphanumericCompare = (strA:any, strB:any) => {
+        const regex = /(\D+|\d+)/g; // Captura las secuencias alfabéticas y numéricas
+        const partsA = strA.match(regex);
+        const partsB = strB.match(regex);
+    
+        // Comparar parte por parte
+        for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+          const partA = partsA[i] || '';
+          const partB = partsB[i] || '';
+    
+          // Si ambas partes son numéricas, compararlas como números
+          if (!isNaN(partA) && !isNaN(partB)) {
+            const numA = parseInt(partA, 10);
+            const numB = parseInt(partB, 10);
+            if (numA !== numB) {
+              return numA - numB;
+            }
+          } else {
+            // Si son alfabéticas, compararlas alfabéticamente
+            if (partA < partB) return -1;
+            if (partA > partB) return 1;
+          }
+        }
+        return 0;
+      };
+    
+      return alphanumericCompare(codeA, codeB);
+    });
+    const paginatedItems = allItems.slice(offset, offset + limit);
+    
+    
+ 
+    
+    return res.json({
+      totalItems: allItems.length,
+      totalPages: Math.ceil(allItems.length / limit),
+      currentPage: page,
+      items: paginatedItems
+    });
+
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching items', error });
+    
+    res.status(500).json({ message: "Error fetching items", error });
   }
 };
 

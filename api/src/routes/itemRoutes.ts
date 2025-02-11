@@ -5,7 +5,7 @@ import { isAdmin, isAuth } from '../middlewares/auth';
 
 const router = Router();
 
-router.get('/', isAuth, getItems);
+router.get('/',  getItems);
 router.get('/avalible', isAuth, getAvalibleItems);
 router.get('/avalible/store', isAuth, getAvailableStoreItems);
 router.get('/avalible/category', isAuth, getAvalibleItemsByCategory);

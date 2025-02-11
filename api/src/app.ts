@@ -78,8 +78,6 @@ app.use('/locations', locationRoutes);
 // app.use('/items', itemRoutes);
 // app.use('/store-items', storeItemRoutes);
 
-//add locaton
-
 const forceSync = process.env.FORCE_SYNC === "true";
 sequelize.sync({ force: forceSync }).then(() => {
   console.log('Database connected and synchronized');

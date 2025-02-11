@@ -11,10 +11,6 @@ import {
     IconButton,
     Menu,
     MenuItem,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import axios from 'axios';
@@ -26,6 +22,10 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
 const ItemTable = () => {
     const [items, setItems] = useState([]);
+    const [page, setPage] = useState(1);
+    const [limit, _setLimit] = useState(10);
+    const [search, setSearch] = useState('');
+    const [totalPages, setTotalPages] = useState(1);
     const [categories, setCategories] = useState([]);
     const [openDialog, setOpenDialog] = useState(false);
     const [newItem, setNewItem] = useState({ name: '', description: '', type: '', isStorable: false, isContainer: false });
@@ -35,18 +35,16 @@ const ItemTable = () => {
     const [openAssignedItemsDialog, setOpenAssignedItemsDialog] = useState(false); // Estado para mostrar el modal de ítems asignados
     const [openAssignModal, setOpenAssignModal] = useState(false);
     const [avalibleStoreItems, setAvalibleStoreItems] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState('');
 
-    const initialNewItem = {
-        name: '',
-        description: '',
-        type: '',
-        isStorable: false,
-        isContainer: false
-    };
     useEffect(() => {
         fetchItems();
         fetchCategories();
     }, []);
+
+    useEffect(() => {
+        fetchItems();
+    }, [page, limit, search, selectedCategory]); // ← Ahora también escucha cambios en `search`
 
     useEffect(() => {
         items.forEach((item) => {
@@ -69,14 +67,21 @@ const ItemTable = () => {
 
     const fetchItems = async () => {
         try {
+            const params = { page, limit, search };
+            if (selectedCategory) {
+                params.category = selectedCategory;  // Agrega el filtro por categoría
+            }
             const { data } = await axios.get(`${apiUrl}/items`, {
                 headers: getAuthHeaders(),
+                params,
             });
-            setItems(data);
+            setItems(data.items);
+            setTotalPages(data.totalPages);
         } catch (error) {
             console.error('Error fetching items:', error);
         }
     };
+
 
     const fetchCategories = async () => {
         try {
@@ -94,7 +99,6 @@ const ItemTable = () => {
         setSelectedItem(item);
     };
 
-
     const handleCreateItem = async () => {
         try {
             await axios.post(`${apiUrl}/items`, newItem, {
@@ -107,9 +111,9 @@ const ItemTable = () => {
             console.error('Error creating item:', error);
         }
     };
+
     const handleMenuClose = () => {
         setMenuAnchor(null);
-        //setSelectedItem(null);
     };
 
     const handleDeleteItem = async () => {
@@ -171,10 +175,50 @@ const ItemTable = () => {
             <Typography variant="h4" gutterBottom>
                 Gestión de Ítems
             </Typography>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div>
 
-            <Button variant="contained" color="primary" onClick={() => setOpenDialog(true)}>
-                Crear Nuevo Ítem
-            </Button>
+                <input
+                
+                    type="text"
+                    placeholder="Buscar ítem..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{
+                        padding: '10px',
+                        borderRadius: '5px',
+                        border: '1px solid #ccc',
+                        width: '300px',
+                        margin: '0 2rem 0 0'
+                    }}
+                />
+
+                {/* Filtro por categoría */}
+                <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    style={{
+                        padding: '10px',
+                        borderRadius: '5px',
+                        border: '1px solid #ccc',
+                        width: '200px',
+                    }}
+                >
+                    <option value="">Seleccionar Categoría</option>
+                    {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                            {category.name}
+                        </option>
+                    ))}
+                </select>
+                </div>
+
+                <Button variant="contained" color="primary" onClick={() => setOpenDialog(true)}>
+                    Crear Nuevo Ítem
+                </Button>
+            </div>
+
+
 
             <Table>
                 <TableHead>
@@ -260,6 +304,48 @@ const ItemTable = () => {
                 fetchItems={fetchItems}
 
             />;
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+                <Button
+                    onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={page === 1}
+                >
+                    Anterior
+                </Button>
+
+                {/* Mostrar siempre las primeras 5 páginas y la última */}
+                <Button onClick={() => setPage(1)} disabled={page === 1}>
+                    1
+                </Button>
+
+                {/* Si la página actual está más allá de la página 3, mostrar puntos suspensivos */}
+                {page > 3 && <Typography variant="body1">...</Typography>}
+
+                {/* Mostrar las 3 páginas cercanas a la actual */}
+                {page - 1 > 1 && <Button onClick={() => setPage(page - 1)}>{page - 1}</Button>}
+                <Button
+                    style={{ backgroundColor: '#3f51b5', color: 'white' }}
+                    onClick={() => setPage(page)}
+                >
+                    {page}
+                </Button>
+                {page + 1 < totalPages && <Button onClick={() => setPage(page + 1)}>{page + 1}</Button>}
+
+                {/* Mostrar los puntos suspensivos si hay más páginas después */}
+                {page < totalPages - 2 && <Typography variant="body1">...</Typography>}
+
+                {/* Mostrar la última página */}
+                <Button onClick={() => setPage(totalPages)} disabled={page === totalPages}>
+                    {totalPages}
+                </Button>
+
+                <Button
+                    onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={page >= totalPages}
+                >
+                    Siguiente
+                </Button>
+            </div>
+
         </div>
     );
 };

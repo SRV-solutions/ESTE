@@ -28,7 +28,7 @@ const CategoryModal = ({
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <Dialog open={open} onClose={() => onClose(false)} maxWidth="sm" fullWidth>
             {/* 📝 Título del Modal */}
             <DialogTitle>
                 {itemData?.name ? 'Editar Categoria' : 'Crear Nueva Categoria'}
@@ -119,7 +119,7 @@ const CategoryModal = ({
 
             {/* ⚙️ Acciones */}
             <DialogActions>
-                <Button onClick={onClose} color="secondary">
+                <Button onClick={() => onClose(false)} color="secondary">
                     Cancelar
                 </Button>
                 <Button 
