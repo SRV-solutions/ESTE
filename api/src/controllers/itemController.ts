@@ -373,7 +373,20 @@ export const getAvailableStoreItems = async (req: Request, res: any) => {
       },
     });
 
-    return res.status(200).json(items);
+    const sortedItems = items.sort((a, b) => {
+      const regex = /-(\d+)$/; // Captura el número al final del código
+      const numA = parseInt(a.code.match(regex)?.[1] || "0", 10);
+      const numB = parseInt(b.code.match(regex)?.[1] || "0", 10);
+
+      // Primero ordenamos alfabéticamente sin el número final
+      const baseA = a.code.replace(regex, "");
+      const baseB = b.code.replace(regex, "");
+      const textComparison = baseA.localeCompare(baseB);
+
+      return textComparison !== 0 ? textComparison : numA - numB;
+    });
+
+    return res.status(200).json(sortedItems);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Error al obtener los ítems disponibles." });

@@ -106,6 +106,7 @@ const ItemTable = () => {
             });
             fetchItems();
             fetchCategories();
+            fetchAvalibleStoreItems()
             setOpenDialog(false);
         } catch (error) {
             console.error('Error creating item:', error);
@@ -127,6 +128,7 @@ const ItemTable = () => {
                     headers: getAuthHeaders(),
                 });
                 handleMenuClose();
+                fetchAvalibleStoreItems()
                 fetchItems();
             } catch (error) {
                 console.error('Error deleting item:', error);
