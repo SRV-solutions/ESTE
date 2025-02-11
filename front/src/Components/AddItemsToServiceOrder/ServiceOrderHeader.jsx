@@ -62,7 +62,7 @@ const ServiceOrderHeader = ({
           <Autocomplete
             options={allItems}
             getOptionLabel={(option) =>
-              `${option.code} - ${option.Category.name}`
+              `${option.code} - ${option.Category.name} - ${option.Category.description}`
             }
             value={selectedItem}
             onChange={(event, newValue) => setSelectedItem(newValue)}
