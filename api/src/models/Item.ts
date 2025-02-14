@@ -69,6 +69,7 @@ Item.init({
 
 Item.afterBulkCreate(async (items) => {
   try {
+
     if (!items.length) return; // Si no hay ítems, salir
 
     const categoryId = items[0].categoryId;
@@ -80,12 +81,27 @@ Item.afterBulkCreate(async (items) => {
       return;
     }
 
-    const lastItem = await Item.findOne({
+    const allItems = await Item.findAll({
       where: { categoryId, code: { [Op.ne]: null } },
       order: [['id', 'DESC']],
       attributes: ['code'],
+    })
+    
+    const sortedItems:any = allItems.sort((a:any, b:any) => {
+      
+      const regex = /-(\d+)$/; // Captura el número al final del código
+      const numA = parseInt(a.code.match(regex)?.[1] || "0", 10);
+      const numB = parseInt(b.code.match(regex)?.[1] || "0", 10);
+      
+      const baseA = a.code.replace(regex, "");
+      const baseB = b.code.replace(regex, "");
+      const textComparison = baseA.localeCompare(baseB);
+      
+      return textComparison !== 0 ? textComparison : numA - numB;
     });
 
+    const lastItem = sortedItems[sortedItems.length-1]
+    
     let highestCode = 0;
     if (lastItem && lastItem.code) {
       const parts = lastItem.code.split('-');
@@ -104,6 +120,7 @@ Item.afterBulkCreate(async (items) => {
       )
     );
   } catch (error) {
+
     console.error("🚨 Error en afterBulkCreate:", error);
   }
 });

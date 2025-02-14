@@ -44,7 +44,7 @@ export const getItems = async (req: Request, res: any) => {
       ],
     });
     const filteredItemsWithChildren = itemsWithChildren.filter(item => item.StoreItemParent.length !== 0);
-    
+
     const childItemIds = filteredItemsWithChildren.flatMap((item: any) => {
       const parentId = item.id;
       const childIds = item.StoreItemParent.map((storeItem: any) => storeItem.StoreItemChild.id);
@@ -67,18 +67,18 @@ export const getItems = async (req: Request, res: any) => {
     const allItems = cleanItems.sort((a, b) => {
       const codeA = a.code;
       const codeB = b.code;
-    
+
       // Función para dividir el código en partes numéricas y alfabéticas
-      const alphanumericCompare = (strA:any, strB:any) => {
+      const alphanumericCompare = (strA: any, strB: any) => {
         const regex = /(\D+|\d+)/g; // Captura las secuencias alfabéticas y numéricas
         const partsA = strA.match(regex);
         const partsB = strB.match(regex);
-    
+
         // Comparar parte por parte
         for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
           const partA = partsA[i] || '';
           const partB = partsB[i] || '';
-    
+
           // Si ambas partes son numéricas, compararlas como números
           if (!isNaN(partA) && !isNaN(partB)) {
             const numA = parseInt(partA, 10);
@@ -94,14 +94,14 @@ export const getItems = async (req: Request, res: any) => {
         }
         return 0;
       };
-    
+
       return alphanumericCompare(codeA, codeB);
     });
     const paginatedItems = allItems.slice(offset, offset + limit);
-    
-    
- 
-    
+
+
+
+
     return res.json({
       totalItems: allItems.length,
       totalPages: Math.ceil(allItems.length / limit),
@@ -110,7 +110,7 @@ export const getItems = async (req: Request, res: any) => {
     });
 
   } catch (error) {
-    
+
     res.status(500).json({ message: "Error fetching items", error });
   }
 };
@@ -133,6 +133,7 @@ export const createItem = async (req: Request, res: any) => {
   } = req.body;
 
   try {
+
     const searchedUserOwner = await User.findByPk(ownerId);
     if (!searchedUserOwner) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -166,7 +167,6 @@ export const createItem = async (req: Request, res: any) => {
         return res.status(404).json({ message: 'Categoría no encontrada' });
       }
     }
-
     // Crear ítems (bulk siempre, incluso si bulkQuantity es 1)
     const itemsToCreate = Array.from({ length: quantity }, () => ({
       isActive: true,
