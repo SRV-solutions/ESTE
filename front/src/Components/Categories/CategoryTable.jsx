@@ -48,9 +48,10 @@ const CategoryTable = () => {
     // 📝 Crear o editar una categoría
     const handleSaveCategory = async () => {
         try {
+            console.log(selectedCategory);
             
             if (selectedCategory.id) {
-                await axios.put(`${apiUrl}/categories/${selectedCategory.id}`, selectedCategory, {
+                await axios.patch(`${apiUrl}/categories/${selectedCategory.id}`, selectedCategory, {
                     headers: getAuthHeaders(),
                 });
             } else {
