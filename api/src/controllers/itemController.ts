@@ -99,9 +99,6 @@ export const getItems = async (req: Request, res: any) => {
     });
     const paginatedItems = allItems.slice(offset, offset + limit);
 
-
-
-
     return res.json({
       totalItems: allItems.length,
       totalPages: Math.ceil(allItems.length / limit),
@@ -226,7 +223,20 @@ export const getAvalibleItemsByCategory = async (req: Request, res: any) => {
     },
   });
 
-  return res.status(201).json(items);
+  const sortedItems = items.sort((a, b) => {
+    const regex = /-(\d+)$/; // Captura el número al final del código
+    const numA = parseInt(a.code.match(regex)?.[1] || "0", 10);
+    const numB = parseInt(b.code.match(regex)?.[1] || "0", 10);
+
+    // Primero ordenamos alfabéticamente sin el número final
+    const baseA = a.code.replace(regex, "");
+    const baseB = b.code.replace(regex, "");
+    const textComparison = baseA.localeCompare(baseB);
+
+    return textComparison !== 0 ? textComparison : numA - numB;
+  });
+
+  return res.status(201).json(sortedItems);
 }
 
 export const getAvalibleItems = async (req: Request, res: any) => {
