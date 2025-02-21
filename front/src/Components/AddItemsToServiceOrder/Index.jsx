@@ -8,8 +8,6 @@ import {
     Paper,
     Button,
     IconButton,
-    Snackbar,
-    Alert,
     Dialog,
     DialogTitle,
     DialogContent,
@@ -27,6 +25,7 @@ import axios from 'axios';
 import ServiceOrderHeader from './ServiceOrderHeader';
 import ServiceOrderTable from './ServiceOrderTable';
 import ItemChangeModal from './ItemChangeModal'
+import SnackbarComponent from '../SnackbarComponent';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const AddItemsToServiceOrder = () => {
@@ -652,19 +651,13 @@ const AddItemsToServiceOrder = () => {
                 </Dialog>
             </TableContainer>
 
-            <Snackbar
+            <SnackbarComponent
                 open={alertInfo.open}
-                autoHideDuration={6000}
+                message={alertInfo.message}
+                severity={alertInfo.severity}
                 onClose={handleCloseAlert}
-            >
-                <Alert
-                    onClose={handleCloseAlert}
-                    severity={alertInfo.severity}
-                    sx={{ width: `100%` }}
-                >
-                    {alertInfo.message}
-                </Alert>
-            </Snackbar>
+            />
+
             <Button
                 variant="contained"
                 color="primary"
