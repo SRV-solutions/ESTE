@@ -12,6 +12,7 @@ import {
     MenuItem,
     InputLabel
 } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 
 const ItemModal = ({
     open,
@@ -20,7 +21,7 @@ const ItemModal = ({
     itemData,
     setItemData,
     categories = [] // Lista de categorías existentes
-}) => {
+}) => {    
     const [mode, setMode] = useState('new'); // 'new' o 'existing'
     // 🛠️ Manejar cambios en los campos
     const handleChange = (e) => {
@@ -39,6 +40,9 @@ const ItemModal = ({
             }));
         }
     };
+
+    const types = [...new Set(categories.map(category => category.type))];
+
 
     // 🛠️ Manejar cambio de categoría existente
     const handleCategorySelect = (e) => {
@@ -121,13 +125,27 @@ const ItemModal = ({
                             value={itemData.description || ''}
                             onChange={handleChange}
                         />
-                        <TextField
-                            label="Tipo"
-                            name="type"
+                        <Autocomplete
+                            freeSolo
+                            options={types}
+                            getOptionLabel={(type) => `${type}`}
+                            onChange={(_, newValue) => {
+                                if (newValue) {
+                                    setItemData((prev) => ({
+                                        ...prev,
+                                        type: newValue,
+                                    }));
+                                }
+                            }}
+                            onInputChange={(_, newInputValue) => {
+                                setItemData((prev) => ({
+                                    ...prev,
+                                    type: newInputValue,
+                                }));
+                            }}
+                            renderInput={(params) => <TextField {...params} label="Tipo" />}
                             fullWidth
-                            margin="dense"
-                            value={itemData.type || ''}
-                            onChange={handleChange}
+                            sx={{ mt: 2 }}
                         />
                         <TextField
                             label="Unidad"
