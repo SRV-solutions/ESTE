@@ -17,7 +17,7 @@ import axios from 'axios';
 import ItemModal from './ItemModal';
 import AssignItemModal from './AssignItemModal'; // Importa el modal
 import AssignedItemsDialog from './AssignedItemsDialog'
-
+import SnackbarComponent from '../SnackbarComponent';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const ItemTable = () => {
@@ -36,7 +36,18 @@ const ItemTable = () => {
     const [openAssignModal, setOpenAssignModal] = useState(false);
     const [avalibleStoreItems, setAvalibleStoreItems] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [alertInfo, setAlertInfo] = useState({
+        open: false,
+        message: ``,
+        severity: `info`,
+    });
 
+    const handleCloseAlert = () => {
+        setAlertInfo((prev) => ({ ...prev, open: false }));
+    };
+ const showAlert = (message, severity = `info`) => {
+        setAlertInfo({ open: true, message, severity });
+    };
     useEffect(() => {
         fetchItems();
         fetchCategories();
@@ -78,6 +89,8 @@ const ItemTable = () => {
             setItems(data.items);
             setTotalPages(data.totalPages);
         } catch (error) {
+            showAlert(`Error al cargar los items ${error}` , `error`);
+
             console.error('Error fetching items:', error);
         }
     };
@@ -90,6 +103,8 @@ const ItemTable = () => {
             });
             setCategories(data);
         } catch (error) {
+            showAlert(`Error al cargar las categorias ${error}` , `error`);
+
             console.error('Error fetching categories:', error);
         }
     };
@@ -108,7 +123,10 @@ const ItemTable = () => {
             fetchCategories();
             fetchAvalibleStoreItems()
             setOpenDialog(false);
+            showAlert(`Items creados con exito` , `success`);
+
         } catch (error) {
+            showAlert(`Error al crear los items ${error}` , `error`);
             console.error('Error creating item:', error);
         }
     };
@@ -130,7 +148,10 @@ const ItemTable = () => {
                 handleMenuClose();
                 fetchAvalibleStoreItems()
                 fetchItems();
-            } catch (error) {
+                showAlert(`Item eliminado con Exito` , `success`);
+
+            } catch (error) {                
+                showAlert(`Error al querer eliminar un item: ${error.response.data.message ? error.response.data.message : error.message}`, `error`);
                 console.error('Error deleting item:', error);
             }
         }
@@ -174,6 +195,12 @@ const ItemTable = () => {
     };
     return (
         <div style={{ margin: '3rem' }}>
+            <SnackbarComponent
+                open={alertInfo.open}
+                message={alertInfo.message}
+                severity={alertInfo.severity}
+                onClose={handleCloseAlert}
+            />
             <Typography variant="h4" gutterBottom>
                 Gestión de Ítems
             </Typography>

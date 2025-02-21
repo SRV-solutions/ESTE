@@ -8,8 +8,6 @@ import {
     Paper,
     Button,
     IconButton,
-    Snackbar,
-    Alert,
     Dialog,
     DialogTitle,
     DialogContent,
@@ -27,6 +25,7 @@ import axios from 'axios';
 import ServiceOrderHeader from './ServiceOrderHeader';
 import ServiceOrderTable from './ServiceOrderTable';
 import ItemChangeModal from './ItemChangeModal'
+import SnackbarComponent from '../SnackbarComponent';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const AddItemsToServiceOrder = () => {
@@ -536,7 +535,7 @@ const AddItemsToServiceOrder = () => {
             } else {
                 // Si no es contenedor, agregar los ítems directamente
                 doc.text(`Items`, 14, startY);
-                startY+=2
+                startY += 2
                 const itemsData = categoryItems.map(item => [
                     item.Item.code,
                     item.Item.Category.name,
@@ -651,19 +650,13 @@ const AddItemsToServiceOrder = () => {
                 </Dialog>
             </TableContainer>
 
-            <Snackbar
+            <SnackbarComponent
                 open={alertInfo.open}
-                autoHideDuration={6000}
+                message={alertInfo.message}
+                severity={alertInfo.severity}
                 onClose={handleCloseAlert}
-            >
-                <Alert
-                    onClose={handleCloseAlert}
-                    severity={alertInfo.severity}
-                    sx={{ width: `100%` }}
-                >
-                    {alertInfo.message}
-                </Alert>
-            </Snackbar>
+            />
+
             <Button
                 variant="contained"
                 color="primary"

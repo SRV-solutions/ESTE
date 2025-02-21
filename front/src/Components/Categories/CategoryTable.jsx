@@ -13,6 +13,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import axios from 'axios';
 import CategoryModal from './CatgoryModal';
+import SnackbarComponent from '../SnackbarComponent';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const CategoryTable = () => {
@@ -20,7 +21,14 @@ const CategoryTable = () => {
     const [categories, setCategories] = useState([]);
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState({});
-
+    const [alertInfo, setAlertInfo] = useState({
+        open: false,
+        message: ``,
+        severity: `info`,
+    });
+    const handleCloseAlert = () => {
+        setAlertInfo((prev) => ({ ...prev, open: false }));
+    };
     // 📥 Cargar categorías al montar el componente
     useEffect(() => {
         fetchCategories();
@@ -41,15 +49,17 @@ const CategoryTable = () => {
             });
             setCategories(data);
         } catch (error) {
+            showAlert('Error al querer cargar las categorias', `error`);
             console.error('Error fetching categories:', error);
         }
     };
 
-    // 📝 Crear o editar una categoría
+    const showAlert = (message, severity = `info`) => {
+        setAlertInfo({ open: true, message, severity });
+    };
+
     const handleSaveCategory = async () => {
         try {
-            console.log(selectedCategory);
-            
             if (selectedCategory.id) {
                 await axios.patch(`${apiUrl}/categories/${selectedCategory.id}`, selectedCategory, {
                     headers: getAuthHeaders(),
@@ -59,10 +69,12 @@ const CategoryTable = () => {
                     headers: getAuthHeaders(),
                 });
             }
+            showAlert(selectedCategory.id ? `Categoria editada correctamente` : 'Categoria Creada Correctamente', `success`);
             fetchCategories();
             setOpenDialog(false);
             setSelectedCategory({});
-        } catch (error) {
+        } catch (error) {            
+            showAlert(selectedCategory.id ? `Error al modificar la categoria: ${selectedCategory.code}, Error: ${error.message}` : `Error al crear una categoria: ${error.message}`, `error`);
             console.error('Error saving category:', error);
         }
     };
@@ -74,7 +86,9 @@ const CategoryTable = () => {
                 headers: getAuthHeaders(),
             });
             fetchCategories();
+            showAlert(`Categoria Eliminada con Exito`, `success`);
         } catch (error) {
+            showAlert(`Error al querer eliminar una categoria: ${error.response.data.message ? error.response.data.message : error.message}`, `error`);
             console.error('Error deleting category:', error);
         }
     };
@@ -124,7 +138,7 @@ const CategoryTable = () => {
                             <TableCell align="center">{category.isStorable ? 'SI' : 'NO'}</TableCell>
                             <TableCell align="center">{category.isContainer ? 'SI' : 'NO'}</TableCell>
                             <TableCell align="center">
-                               
+
                                 <IconButton onClick={() => handleOpenDialog(category)}>
                                     <EditIcon />
                                 </IconButton>
@@ -136,7 +150,12 @@ const CategoryTable = () => {
                     ))}
                 </TableBody>
             </Table>
-
+            <SnackbarComponent
+                open={alertInfo.open}
+                message={alertInfo.message}
+                severity={alertInfo.severity}
+                onClose={handleCloseAlert}
+            />
             {/* 📦 Modal */}
             <CategoryModal
                 open={openDialog}
