@@ -1,24 +1,26 @@
-import React, { useState } from 'react';
-import { 
-    Dialog, 
-    DialogTitle, 
-    DialogContent, 
-    DialogActions, 
-    TextField, 
-    Button, 
-    Checkbox, 
-    FormControlLabel 
+import React from 'react';
+import {
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    Button,
+    Checkbox,
+    FormControlLabel
 } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 
-
-const CategoryModal = ({ 
-    open, 
-    onClose, 
-    onSave, 
-    itemData, 
-    setItemData 
+const CategoryModal = ({
+    open,
+    onClose,
+    onSave,
+    itemData,
+    setItemData,
+    categories
 }) => {
-    // 🛠️ Manejar cambios en los campos
+    const types = [...new Set(categories.map(category => category.type))];
+
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setItemData((prev) => ({
@@ -26,6 +28,7 @@ const CategoryModal = ({
             [name]: type === 'checkbox' ? checked : value,
         }));
     };
+
 
     return (
         <Dialog open={open} onClose={() => onClose(false)} maxWidth="sm" fullWidth>
@@ -61,14 +64,29 @@ const CategoryModal = ({
                     value={itemData.description || ''}
                     onChange={handleChange}
                 />
-                <TextField
-                    label="Tipo"
-                    name="type"
+                <Autocomplete
+                    freeSolo
+                    options={types}
+                    getOptionLabel={(type) => `${type}`}
+                    onChange={(_, newValue) => {
+                        if (newValue) {
+                            setItemData((prev) => ({
+                                ...prev,
+                                type: newValue,
+                            }));
+                        }
+                    }}
+                    onInputChange={(_, newInputValue) => {
+                        setItemData((prev) => ({
+                            ...prev,
+                            type: newInputValue,
+                        }));
+                    }}
+                    renderInput={(params) => <TextField {...params} label="Tipo" />}
                     fullWidth
-                    margin="dense"
-                    value={itemData.type || ''}
-                    onChange={handleChange}
+                    sx={{ mt: 2 }}
                 />
+
                 <TextField
                     label="Unidad"
                     name="unity"
@@ -122,9 +140,9 @@ const CategoryModal = ({
                 <Button onClick={() => onClose(false)} color="secondary">
                     Cancelar
                 </Button>
-                <Button 
-                    onClick={onSave} 
-                    color="primary" 
+                <Button
+                    onClick={onSave}
+                    color="primary"
                     variant="contained"
                 >
                     {itemData?.name ? 'Guardar Cambios' : 'Crear'}
