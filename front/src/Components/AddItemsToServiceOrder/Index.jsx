@@ -465,6 +465,7 @@ const AddItemsToServiceOrder = () => {
         doc.text(`Pedido por: ${serviceOrder.OrderedBy.username}`, 14, 40);
         doc.text(`Desplegado por: ${serviceOrder.DeployedBy.username}`, 14, 45);
         doc.text(`Verificado por: ${serviceOrder.CheckedBy.username}`, 14, 50);
+        doc.text(`Cliente: ${serviceOrder?.Event?.Location?.locationName} - ${serviceOrder?.Event?.organizer} - ${serviceOrder?.Event?.producer} - ${serviceOrder?.Event?.finalClient}`, 14, 55);
 
         let startY = 60 + 10; // posición inicial para las tablas de ítems
 
@@ -504,55 +505,55 @@ const AddItemsToServiceOrder = () => {
             startY += 20; // Ajustar posición Y para los ítems
 
             // Si la categoría tiene ítems que son contenedores, procesarlos
-            if (isContainer) {
-                categoryItems.forEach(item => {
-                    const storeItems = item.Item.StoreItemParentItem;
+            // if (isContainer) {
+            //     categoryItems.forEach(item => {
+            //         const storeItems = item.Item.StoreItemParentItem;
 
-                    // Título del contenedor
-                    doc.setFontSize(14);
-                    doc.text(`Codigo del contenedor: ${item.Item.code} - ${item.Item.Category.name}`, 14, startY);
-                    startY += 2; // Ajustar la posición para los ítems dentro del contenedor
-                    if (storeItems && storeItems.length > 0) {
+            //         // Título del contenedor
+            //         doc.setFontSize(14);
+            //         doc.text(`Codigo del contenedor: ${item.Item.code} - ${item.Item.Category.name}`, 14, startY);
+            //         startY += 2; // Ajustar la posición para los ítems dentro del contenedor
+            //         if (storeItems && storeItems.length > 0) {
 
-                        const documentData = storeItems.map(subItem => [
-                            subItem.code,
-                            subItem.Category.name,
-                            subItem.Category.description,
-                        ]);
-                        doc.autoTable({
-                            head: [["Código", "Categoría", "Descripción"]],
-                            body: documentData,
-                            startY: startY,
-                            styles: { fontSize: 10 },
-                        });
-                        startY = doc.lastAutoTable.finalY + 15;
-                    } else {
-                        // Si no tiene ítems dentro, mostrar un mensaje
-                        doc.setFontSize(10);
-                        doc.text("No hay ítems dentro de este contenedor.", 14, startY);
-                        startY += 15;
-                    }
-                });
-            } else {
-                // Si no es contenedor, agregar los ítems directamente
-                doc.text(`Items`, 14, startY);
-                startY+=2
-                const itemsData = categoryItems.map(item => [
-                    item.Item.code,
-                    item.Item.Category.name,
-                    item.Item.Category.description,
-                ]);
+            //             const documentData = storeItems.map(subItem => [
+            //                 subItem.code,
+            //                 subItem.Category.name,
+            //                 subItem.Category.description,
+            //             ]);
+            //             doc.autoTable({
+            //                 head: [["Código", "Categoría", "Descripción"]],
+            //                 body: documentData,
+            //                 startY: startY,
+            //                 styles: { fontSize: 10 },
+            //             });
+            //             startY = doc.lastAutoTable.finalY + 15;
+            //         } else {
+            //             // Si no tiene ítems dentro, mostrar un mensaje
+            //             doc.setFontSize(10);
+            //             doc.text("No hay ítems dentro de este contenedor.", 14, startY);
+            //             startY += 15;
+            //         }
+            //     });
+            // } else {
+            //     // Si no es contenedor, agregar los ítems directamente
+            //     doc.text(`Items`, 14, startY);
+            //     startY+=2
+            //     const itemsData = categoryItems.map(item => [
+            //         item.Item.code,
+            //         item.Item.Category.name,
+            //         item.Item.Category.description,
+            //     ]);
 
-                doc.autoTable({
-                    head: [["Código", "Categoría", "Descripción"]],
-                    body: itemsData,
-                    startY: startY,
-                    styles: { fontSize: 10 },
-                });
+            //     doc.autoTable({
+            //         head: [["Código", "Categoría", "Descripción"]],
+            //         body: itemsData,
+            //         startY: startY,
+            //         styles: { fontSize: 10 },
+            //     });
 
-                // Actualizar la posición Y después de la tabla
-                startY = doc.lastAutoTable.finalY + 15;
-            }
+            //     // Actualizar la posición Y después de la tabla
+            //     startY = doc.lastAutoTable.finalY + 15;
+            // }
         });
 
         // Guardar el PDF
