@@ -1,5 +1,7 @@
 import { Request } from 'express';
-import { Op } from 'sequelize';
+import { Op, where } from 'sequelize';
+import csvParser from "csv-parser";
+import fs from "fs";
 
 import Category from '../models/Category';
 import Item from '../models/Item';
@@ -400,5 +402,62 @@ export const getAvailableStoreItems = async (req: Request, res: any) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Error al obtener los ítems disponibles." });
+  }
+};
+
+export const uploadCSV = async (req: any, res: any) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No se proporcionó ningún archivo" });
+    }
+
+    const items: any[] = [];
+
+    fs.createReadStream(req.file.path)
+      .pipe(csvParser())
+      .on("data", (row) => {
+        items.push(row);
+      })
+      .on("end", async () => {
+        try {
+          const parseItems = items.map(item => {
+            return {
+              code: item.codigo,
+              name: item.nombre,
+              description: item.descripcion,
+              type: item.tipo,
+              unity: item.unidad,
+              value: parseFloat(item.valor), 
+              weight: parseFloat(item.peso), 
+              isStorable: item.es_almacenable.toLowerCase() === 'si', 
+              isContainer: item.es_contenedor.toLowerCase() === 'si', 
+              isActive: true,
+              usage: parseInt(item.usos, 10),
+              quantity: parseInt(item.cantidad, 10) 
+            };
+          });
+
+          for (let i = 0; i < parseItems.length; i++) {
+            const searchedCategory = await Category.findOne({
+              where:{
+                code: parseItems[i].code
+              }
+            })
+            console.log(searchedCategory);
+            if (searchedCategory) {
+              // await Item.bulkCreate()
+            }
+            
+          }
+
+          //await Item.bulkCreate(items);
+          //fs.unlinkSync(req.file.path); // Eliminar el archivo después de procesarlo
+          return res.status(201).json({ message: "Items subidos con éxito", items });
+        } catch (error) {
+          return res.status(500).json({ message: "Error al guardar los items", error });
+        }
+      });
+  } catch (error) {
+    return res.status(500).json({ message: "Error en la carga del archivo", error });
   }
 };
