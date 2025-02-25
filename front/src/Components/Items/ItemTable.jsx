@@ -18,6 +18,7 @@ import ItemModal from './ItemModal';
 import AssignItemModal from './AssignItemModal'; // Importa el modal
 import AssignedItemsDialog from './AssignedItemsDialog'
 import SnackbarComponent from '../SnackbarComponent';
+import UploadCSVComponent from '../UploadCSVComponent';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const ItemTable = () => {
@@ -195,6 +196,7 @@ const ItemTable = () => {
     };
     return (
         <div style={{ margin: '3rem' }}>
+            {/* <UploadCSVComponent></UploadCSVComponent> */}
             <SnackbarComponent
                 open={alertInfo.open}
                 message={alertInfo.message}
