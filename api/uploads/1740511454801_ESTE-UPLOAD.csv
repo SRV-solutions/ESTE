@@ -1,3 +1,0 @@
-nombre,codigo,descripcion,tipo,unidad,valor,peso,es_almacenable,es_contenedor,usos,cantidad
-Caja de herramientas,CAJ001,Caja con herramientas básicas,Almacen,unidad,150.5,3.2,true,false,Mantenimiento,10
-Contenedor Grande,CONT002,Contenedor para almacenamiento,Almacen,unidad,300.0,10.5,true,true,Transporte,5

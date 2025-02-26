@@ -42,11 +42,13 @@ const ItemTable = () => {
         message: ``,
         severity: `info`,
     });
+    const [isLoading, setIsLoading] = useState(false); // 🕒 Estado para el loading
+
 
     const handleCloseAlert = () => {
         setAlertInfo((prev) => ({ ...prev, open: false }));
     };
- const showAlert = (message, severity = `info`) => {
+    const showAlert = (message, severity = `info`) => {
         setAlertInfo({ open: true, message, severity });
     };
     useEffect(() => {
@@ -80,6 +82,8 @@ const ItemTable = () => {
     const fetchItems = async () => {
         try {
             const params = { page, limit, search };
+            console.log(params);
+            
             if (selectedCategory) {
                 params.category = selectedCategory;  // Agrega el filtro por categoría
             }
@@ -90,7 +94,7 @@ const ItemTable = () => {
             setItems(data.items);
             setTotalPages(data.totalPages);
         } catch (error) {
-            showAlert(`Error al cargar los items ${error}` , `error`);
+            showAlert(`Error al cargar los items ${error}`, `error`);
 
             console.error('Error fetching items:', error);
         }
@@ -104,7 +108,7 @@ const ItemTable = () => {
             });
             setCategories(data);
         } catch (error) {
-            showAlert(`Error al cargar las categorias ${error}` , `error`);
+            showAlert(`Error al cargar las categorias ${error}`, `error`);
 
             console.error('Error fetching categories:', error);
         }
@@ -117,17 +121,21 @@ const ItemTable = () => {
 
     const handleCreateItem = async () => {
         try {
+            setIsLoading(true); // ⏳ Activa el loader
+
             await axios.post(`${apiUrl}/items`, newItem, {
                 headers: getAuthHeaders(),
             });
+            setIsLoading(false); // ✅ Desactiva el loader
+
             fetchItems();
             fetchCategories();
             fetchAvalibleStoreItems()
             setOpenDialog(false);
-            showAlert(`Items creados con exito` , `success`);
+            showAlert(`Items creados con exito`, `success`);
 
         } catch (error) {
-            showAlert(`Error al crear los items ${error}` , `error`);
+            showAlert(`Error al crear los items ${error}`, `error`);
             console.error('Error creating item:', error);
         }
     };
@@ -149,9 +157,9 @@ const ItemTable = () => {
                 handleMenuClose();
                 fetchAvalibleStoreItems()
                 fetchItems();
-                showAlert(`Item eliminado con Exito` , `success`);
+                showAlert(`Item eliminado con Exito`, `success`);
 
-            } catch (error) {                
+            } catch (error) {
                 showAlert(`Error al querer eliminar un item: ${error.response.data.message ? error.response.data.message : error.message}`, `error`);
                 console.error('Error deleting item:', error);
             }
@@ -196,7 +204,11 @@ const ItemTable = () => {
     };
     return (
         <div style={{ margin: '3rem' }}>
-            {/* <UploadCSVComponent></UploadCSVComponent> */}
+            <UploadCSVComponent
+            fetchItems={fetchItems}
+            fetchCategories={fetchCategories}
+            fetchAvalibleStoreItems={fetchAvalibleStoreItems}
+            />
             <SnackbarComponent
                 open={alertInfo.open}
                 message={alertInfo.message}
@@ -209,39 +221,39 @@ const ItemTable = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
 
-                <input
-                
-                    type="text"
-                    placeholder="Buscar ítem..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    style={{
-                        padding: '10px',
-                        borderRadius: '5px',
-                        border: '1px solid #ccc',
-                        width: '300px',
-                        margin: '0 2rem 0 0'
-                    }}
-                />
+                    <input
 
-                {/* Filtro por categoría */}
-                <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    style={{
-                        padding: '10px',
-                        borderRadius: '5px',
-                        border: '1px solid #ccc',
-                        width: '200px',
-                    }}
-                >
-                    <option value="">Seleccionar Categoría</option>
-                    {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                            {category.name}
-                        </option>
-                    ))}
-                </select>
+                        type="text"
+                        placeholder="Buscar ítem..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        style={{
+                            padding: '10px',
+                            borderRadius: '5px',
+                            border: '1px solid #ccc',
+                            width: '300px',
+                            margin: '0 2rem 0 0'
+                        }}
+                    />
+
+                    {/* Filtro por categoría */}
+                    <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        style={{
+                            padding: '10px',
+                            borderRadius: '5px',
+                            border: '1px solid #ccc',
+                            width: '200px',
+                        }}
+                    >
+                        <option value="">Seleccionar Categoría</option>
+                        {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                                {category.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 <Button variant="contained" color="primary" onClick={() => setOpenDialog(true)}>
@@ -324,6 +336,7 @@ const ItemTable = () => {
                 itemData={newItem}
                 setItemData={setNewItem}
                 categories={categories}
+                isLoading={isLoading}
             />
             <AssignedItemsDialog
                 open={openAssignedItemsDialog}

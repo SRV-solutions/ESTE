@@ -1,51 +1,93 @@
 import { useState } from "react";
+import { Button, Typography, Stack } from "@mui/material";
+import SnackbarComponent from "./SnackbarComponent";
+import LoadingComponent from "./LoadingComponent";
 
-const UploadCSVComponent = () => {
+const UploadCSVComponent = ({
+    fetchItems,
+    fetchCategories,
+    fetchAvalibleStoreItems
+}) => {
     const [file, setFile] = useState(null);
-    const [message, setMessage] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [snackbar, setSnackbar] = useState({
+        open: false,
+        message: "",
+        severity: "info",
+    });
 
     const handleFileChange = (event) => {
-        if (event.target.files) {
+        if (event.target.files.length > 0) {
             setFile(event.target.files[0]);
         }
     };
 
     const handleUpload = async () => {
         if (!file) {
-            setMessage("Por favor selecciona un archivo CSV.");
+            setSnackbar({ open: true, message: "Por favor selecciona un archivo CSV.", severity: "warning" });
             return;
         }
-    
+
         const formData = new FormData();
         formData.append("file", file);
-    
-        console.log("FormData contenido:", formData.get("file")); // Verifica que realmente se agregó el archivo
-    
+
+        setLoading(true);
+
         try {
             const response = await fetch("http://localhost:3000/items/upload-csv", {
                 method: "POST",
                 body: formData,
             });
-    
+
             if (!response.ok) {
                 throw new Error("Error en la carga del archivo.");
             }
-    
+
             const jsonData = await response.json();
             console.log("JSON Recibido:", jsonData);
-            setMessage("✅ Archivo procesado correctamente.");
+            fetchItems()
+            fetchAvalibleStoreItems()
+            fetchCategories()
+            setSnackbar({ open: true, message: "✅ Archivo procesado correctamente.", severity: "success" });
         } catch (error) {
             console.error("Error:", error);
-            setMessage("❌ Hubo un error al procesar el archivo.");
+            setSnackbar({ open: true, message: "❌ Hubo un error al procesar el archivo.", severity: "error" });
+        } finally {
+            setLoading(false);
         }
     };
-    
+
     return (
-        <div>
-            <input type="file" accept=".csv" onChange={handleFileChange} />
-            <button onClick={handleUpload}>Subir CSV</button>
-            {message && <p>{message}</p>}
-        </div>
+        <Stack spacing={1} alignItems="center">
+            <Typography variant="h6">Subir Archivo CSV</Typography>
+            <input
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+                id="upload-csv"
+            />
+            <label htmlFor="upload-csv">
+                <Button variant="contained" component="span" color="primary">
+                    Seleccionar Archivo
+                </Button>
+            </label>
+            {file && <Typography variant="h6">{file.name}</Typography>}
+            <Button variant="contained" color="secondary" onClick={handleUpload} disabled={loading}>
+                Subir CSV
+            </Button>
+
+            {/* Loading Spinner */}
+            <LoadingComponent open={loading} message="Procesando archivo..." />
+
+            {/* Snackbar de Notificación */}
+            <SnackbarComponent
+                open={snackbar.open}
+                message={snackbar.message}
+                severity={snackbar.severity}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+            />
+        </Stack>
     );
 };
 

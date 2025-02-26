@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { Op, where } from 'sequelize';
+import { Op } from 'sequelize';
 import csvParser from "csv-parser";
 import fs from "fs";
 
@@ -18,7 +18,6 @@ export const getItems = async (req: Request, res: any) => {
     const category = req.query.category || '';  // Recibir categoría desde la query
     const offset = (page - 1) * limit;
     const search = req.query.search || ''; // ← Agregar el término de búsqueda
-
     // Obtener items con hijos, aplicando el filtro de búsqueda
     const itemsWithChildren = await Item.findAll({
       where: {
@@ -405,63 +404,78 @@ export const getAvailableStoreItems = async (req: Request, res: any) => {
   }
 };
 
-export const uploadCSV = async (req: any, res: any) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: "No se proporcionó ningún archivo" });
-    }
+export const uploadCSV = async (req: Request | any, res: Response | any) => {
+  if (!req.file) {
+    return res.status(400).json({ message: "No se proporcionó ningún archivo" });
+  }
 
+
+  try {
     const items: any[] = [];
 
+    // Leer CSV
     fs.createReadStream(req.file.path)
       .pipe(csvParser())
-      .on("data", (row) => {
-        items.push(row);
-      })
+      .on("data", (row) => items.push(row))
       .on("end", async () => {
         try {
-          const parseItems = items.map(item => {
-            return {
-              code: item.codigo,
-              name: item.nombre,
-              description: item.descripcion,
-              type: item.tipo,
-              unity: item.unidad,
-              value: parseFloat(item.valor), 
-              weight: parseFloat(item.peso), 
-              isStorable: item.es_almacenable.toLowerCase() === 'si', 
-              isContainer: item.es_contenedor.toLowerCase() === 'si', 
-              isActive: true,
-              usage: parseInt(item.usos, 10),
-              quantity: parseInt(item.cantidad, 10) 
-            };
-          });
+          // Procesar categorías y construir los ítems en paralelo
+          const itemsToCreate = await Promise.all(
+            items.map(async (item) => {
+              let category = await Category.findOne({
+                where: { code: item.codigo },
+              });
 
-          for (let i = 0; i < parseItems.length; i++) {
-            const searchedCategory = await Category.findOne({
-              where:{
-                code: parseItems[i].code
+              if (!category) {
+                category = await Category.create(
+                  {
+                    name: item.nombre,
+                    description: item.descripcion,
+                    code: item.codigo,
+                    type: item.tipo,
+                    unity: item.unidad,
+                    value: parseFloat(item.valor),
+                    weight: parseFloat(item.peso),
+                    isStorable: item.es_almacenable.toLowerCase() === "si",
+                    isContainer: item.es_contenedor.toLowerCase() === "si",
+                    isActive: true,
+                  }
+                );
               }
-            })
-            console.log(searchedCategory);
-            if (searchedCategory) {
-              // await Item.bulkCreate()
-            }
-            
-          }
 
-          //await Item.bulkCreate(items);
-          //fs.unlinkSync(req.file.path); // Eliminar el archivo después de procesarlo
-          return res.status(201).json({ message: "Items subidos con éxito", items });
+              return Array.from({ length: parseInt(item.cantidad, 10) || 1 }, () => ({
+                isActive: true,
+                uses: parseInt(item.usos, 10) || 0,
+                ownerId: 1, // Asignando por defecto al ownerId 1
+                categoryId: category.id,
+              }));
+            })
+          );
+
+          // Aplanamos el array y creamos los ítems en la base de datos
+          const flatItems = itemsToCreate.flat();
+          //console.log(flatItems);
+          
+         await Item.bulkCreate(flatItems);
+
+
+          // Eliminar el archivo después de procesarlo
+          fs.unlinkSync(req.file.path);
+
+          return res.status(201).json({
+            message: "Items subidos con éxito",
+            items: flatItems,
+          });
         } catch (error) {
+          console.error("Error al guardar los items:", error);
           return res.status(500).json({ message: "Error al guardar los items", error });
         }
       });
   } catch (error) {
+    console.error("Error en la carga del archivo:", error);
     return res.status(500).json({ message: "Error en la carga del archivo", error });
   }
 };
-
 // export const fixItems = async (req:any, res:any) => {
 
 // }

@@ -13,6 +13,8 @@ import {
     InputLabel
 } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
+import LoadingComponent from '../LoadingComponent'; // 🔄 Importa el componente
+
 
 const ItemModal = ({
     open,
@@ -20,8 +22,9 @@ const ItemModal = ({
     onSave,
     itemData,
     setItemData,
-    categories = [] // Lista de categorías existentes
-}) => {    
+    categories = [], // Lista de categorías existentes
+    isLoading
+}) => {
     const [mode, setMode] = useState('new'); // 'new' o 'existing'
     // 🛠️ Manejar cambios en los campos
     const handleChange = (e) => {
@@ -59,6 +62,8 @@ const ItemModal = ({
 
     return (
         <Dialog open={open} onClose={() => onClose(false)} maxWidth="sm" fullWidth>
+            <LoadingComponent open={isLoading} message="Guardando datos..." />
+
             {/* 📝 Título del Modal */}
             <DialogTitle>
                 {itemData?.id ? 'Editar Ítem' : 'Crear Nuevo Ítem'}

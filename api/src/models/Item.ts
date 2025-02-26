@@ -68,65 +68,72 @@ Item.init({
 });
 
 Item.afterBulkCreate(async (items, options) => {
-  const transaction:Transaction | any = await Item.sequelize?.transaction();
+  if (!items.length) return; // Si no hay ítems, salir
+  
+  const transaction:any = await Item.sequelize?.transaction();
+  
   try {
-    if (!items.length) return; // Si no hay ítems, salir
+    const categoriesId = [...new Set(items.map(item => item.categoryId))];
 
-    const categoryId = items[0].categoryId;
+    // Obtener categorías dentro de la transacción
+    const categories = await Category.findAll({
+      where: { id: categoriesId },
+      transaction
+    });
 
-    // Obtener la categoría dentro de la transacción
-    const category = await Category.findOne({ where: { id: categoryId }, transaction });
-    if (!category) {
-      console.error(`❌ Categoría con ID ${categoryId} no encontrada.`);
+    if (!categories.length) {
+      console.error(`❌ Categoría(s) con ID ${categoriesId} no encontrada(s).`);
       await transaction.rollback();
       return;
     }
 
-    const allItems = await Item.findAll({
-      where: { categoryId, code: { [Op.ne]: null } },
-      order: [['id', 'DESC']],
-      attributes: ['code'],
-      transaction,
+    // Obtener los últimos códigos de cada categoría existentes en la DB
+    const lastItems = await Item.findAll({
+      where: { categoryId: categoriesId, code: { [Op.ne]: null } },
+      attributes: ['categoryId', 'code'],
+      order: [['categoryId', 'ASC'], ['id', 'DESC']], // Obtener el último por categoría
+      transaction
     });
 
-    // Ordenar items manualmente con bucle for
-    const sortedItems: any[] = [...allItems]; // Copia del array
+    const highestCodesByCategory: Record<number, number> = {};
 
-    for (let i = 0; i < sortedItems.length - 1; i++) {
-      for (let j = i + 1; j < sortedItems.length; j++) {
-        const regex = /-(\d+)$/; // Captura el número al final del código
+    // Determinar el último número por categoría
+    for (const item of lastItems) {
+      const category = categories.find(c => c.id === item.categoryId);
+      if (!category) continue;
 
-        const numA = parseInt(sortedItems[i].code.match(regex)?.[1] || "0", 10);
-        const numB = parseInt(sortedItems[j].code.match(regex)?.[1] || "0", 10);
+      const regex = new RegExp(`^${category.code}-(\\d+)$`);
+      const match = item.code.match(regex);
 
-        const baseA = sortedItems[i].code.replace(regex, "");
-        const baseB = sortedItems[j].code.replace(regex, "");
-
-        const textComparison = baseA.localeCompare(baseB);
-
-        if (textComparison > 0 || (textComparison === 0 && numA > numB)) {
-          // Intercambiar posiciones si A es mayor que B
-          [sortedItems[i], sortedItems[j]] = [sortedItems[j], sortedItems[i]];
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num)) {
+          highestCodesByCategory[item.categoryId] = Math.max(
+            highestCodesByCategory[item.categoryId] || 0,
+            num
+          );
         }
       }
     }
 
-    const lastItem = sortedItems[sortedItems.length - 1];
+    // Asignar nuevos códigos a los items creados
+    const updates = items.map((item) => {
+      const category = categories.find(c => c.id === item.categoryId);
+      if (!category) return null;
 
-    let highestCode = 0;
-    if (lastItem && lastItem.code) {
-      const parts = lastItem.code.split('-');
-      const lastNumber = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(lastNumber)) highestCode = lastNumber;
-    }
+      // Obtener el último código asignado y calcular el siguiente
+      const lastCode = highestCodesByCategory[item.categoryId] || 0;
+      highestCodesByCategory[item.categoryId] = lastCode + 1;
 
-    const updates = items.map((item, i) => ({
-      id: item.id,
-      code: `${category.code}-${highestCode + i + 1}`,
-    }));
+      return {
+        id: item.id,
+        code: `${category.code}-${highestCodesByCategory[item.categoryId]}`
+      };
+    }).filter(Boolean); // Eliminar valores nulos
 
+    // Actualizar los ítems con los nuevos códigos
     await Promise.all(
-      updates.map(({ id, code }) =>
+      updates.map(({ id, code }: any) =>
         Item.update({ code }, { where: { id }, transaction })
       )
     );
