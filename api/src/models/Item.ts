@@ -1,4 +1,4 @@
-import { Model, DataTypes, Op } from 'sequelize';
+import { Model, DataTypes, Op, Transaction } from 'sequelize';
 import { sequelize } from '../config/database';
 import User from './User';
 import ServiceOrderItem from './ServiceOrderItem';
@@ -67,17 +67,18 @@ Item.init({
   timestamps: false,
 });
 
-Item.afterBulkCreate(async (items) => {
+Item.afterBulkCreate(async (items, options) => {
+  const transaction:Transaction | any = await Item.sequelize?.transaction();
   try {
-
     if (!items.length) return; // Si no hay ítems, salir
 
     const categoryId = items[0].categoryId;
 
-    // Obtener la categoría
-    const category = await Category.findOne({ where: { id: categoryId } });
+    // Obtener la categoría dentro de la transacción
+    const category = await Category.findOne({ where: { id: categoryId }, transaction });
     if (!category) {
       console.error(`❌ Categoría con ID ${categoryId} no encontrada.`);
+      await transaction.rollback();
       return;
     }
 
@@ -85,23 +86,33 @@ Item.afterBulkCreate(async (items) => {
       where: { categoryId, code: { [Op.ne]: null } },
       order: [['id', 'DESC']],
       attributes: ['code'],
-    })
-    
-    const sortedItems:any = allItems.sort((a:any, b:any) => {
-      
-      const regex = /-(\d+)$/; // Captura el número al final del código
-      const numA = parseInt(a.code.match(regex)?.[1] || "0", 10);
-      const numB = parseInt(b.code.match(regex)?.[1] || "0", 10);
-      
-      const baseA = a.code.replace(regex, "");
-      const baseB = b.code.replace(regex, "");
-      const textComparison = baseA.localeCompare(baseB);
-      
-      return textComparison !== 0 ? textComparison : numA - numB;
+      transaction,
     });
 
-    const lastItem = sortedItems[sortedItems.length-1]
-    
+    // Ordenar items manualmente con bucle for
+    const sortedItems: any[] = [...allItems]; // Copia del array
+
+    for (let i = 0; i < sortedItems.length - 1; i++) {
+      for (let j = i + 1; j < sortedItems.length; j++) {
+        const regex = /-(\d+)$/; // Captura el número al final del código
+
+        const numA = parseInt(sortedItems[i].code.match(regex)?.[1] || "0", 10);
+        const numB = parseInt(sortedItems[j].code.match(regex)?.[1] || "0", 10);
+
+        const baseA = sortedItems[i].code.replace(regex, "");
+        const baseB = sortedItems[j].code.replace(regex, "");
+
+        const textComparison = baseA.localeCompare(baseB);
+
+        if (textComparison > 0 || (textComparison === 0 && numA > numB)) {
+          // Intercambiar posiciones si A es mayor que B
+          [sortedItems[i], sortedItems[j]] = [sortedItems[j], sortedItems[i]];
+        }
+      }
+    }
+
+    const lastItem = sortedItems[sortedItems.length - 1];
+
     let highestCode = 0;
     if (lastItem && lastItem.code) {
       const parts = lastItem.code.split('-');
@@ -116,14 +127,17 @@ Item.afterBulkCreate(async (items) => {
 
     await Promise.all(
       updates.map(({ id, code }) =>
-        Item.update({ code }, { where: { id } })
+        Item.update({ code }, { where: { id }, transaction })
       )
     );
-  } catch (error) {
 
+    await transaction.commit();
+  } catch (error) {
     console.error("🚨 Error en afterBulkCreate:", error);
+    await transaction?.rollback();
   }
 });
+
 
 Item.afterCreate(async (item) => {
   try {
