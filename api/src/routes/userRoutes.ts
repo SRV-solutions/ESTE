@@ -20,7 +20,7 @@ router.post('/login', login);
 router.get('/', isAuth, getAllUsers);
 router.get('/:id', isAuth, getUser);
 router.post('/', isAuth, isAdmin, createUser);
-router.post('/register', register);
+router.post('/register',isAuth, register);
 router.patch('/update/:id', isAuth, updateUser)
 router.put('/:id/change-password',isAuth, changePassword);
 
