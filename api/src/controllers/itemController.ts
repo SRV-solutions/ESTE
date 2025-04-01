@@ -479,3 +479,33 @@ export const uploadCSV = async (req: Request | any, res: Response | any) => {
 // export const fixItems = async (req:any, res:any) => {
 
 // }
+export const updateItem = async (req: Request | any, res: Response | any) => {
+  const { id } = req.params;
+  const { code, isActive, uses, categoryId } = req.body;
+
+  try {
+    // Buscar el ítem por su ID
+    const item = await Item.findByPk(id);
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item no encontrado' });
+    }
+
+    // Crear un objeto con solo las propiedades definidas en el body
+    const updatedFields: any = {};
+
+    // Añadir solo los campos que estén presentes en el body
+    if (code !== undefined) updatedFields.code = code;
+    if (isActive !== undefined) updatedFields.isActive = isActive;
+    if (uses !== undefined) updatedFields.uses = uses;
+    if (categoryId !== undefined) updatedFields.categoryId = categoryId;
+
+    // Actualizar solo las propiedades que están presentes
+    await item.update(updatedFields);
+
+    return res.status(200).json(item);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Error al actualizar el ítem' });
+  }
+};

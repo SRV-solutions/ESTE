@@ -20,9 +20,9 @@ router.post('/login', login);
 router.get('/', isAuth, getAllUsers);
 router.get('/:id', isAuth, getUser);
 router.post('/', isAuth, isAdmin, createUser);
-router.post('/register',isAuth, register);
+router.post('/register', isAuth, isAdmin, register);
 router.patch('/update/:id', isAuth, updateUser)
-router.put('/:id/change-password',isAuth, changePassword);
+router.put('/:id/change-password', isAuth, changePassword);
 
 
 export default router;

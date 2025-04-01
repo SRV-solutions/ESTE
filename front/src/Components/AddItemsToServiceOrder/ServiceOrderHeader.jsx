@@ -1,5 +1,5 @@
-import React from 'react';
-import { Typography, Autocomplete, TextField, Button } from '@mui/material';
+import React, { useState } from 'react';
+import { Typography, Autocomplete, TextField, Button, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
 
 const ServiceOrderHeader = ({
   serviceOrder,
@@ -11,6 +11,7 @@ const ServiceOrderHeader = ({
   handleAddItem,
   canEditOrder
 }) => {
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   const status = {
     created: 'Creada',
@@ -27,13 +28,17 @@ const ServiceOrderHeader = ({
     disassembled: 'Desarmada',
   };
 
-
   const handleAddItemAndReset = () => {
     if (selectedItem && quantity > 0) {
-      handleAddItem(); // Llama la función existente para agregar el ítem
-      setSelectedItem(null); // Reinicia el valor del Autocomplete
+      handleAddItem();
+      setSelectedItem(null);
     }
   };
+
+  const categories = [...new Set(allItems.map(item => item.Category.name))];
+  const filteredItems = selectedCategory
+    ? allItems.filter(item => item.Category.name === selectedCategory)
+    : allItems;
 
   return (
     <>
@@ -43,38 +48,35 @@ const ServiceOrderHeader = ({
       <Typography>Creada por: {serviceOrder.OrderedBy.username}</Typography>
       <Typography>Encargado de Chequearla: {serviceOrder.CheckedBy.username}</Typography>
       <Typography>Encargado de Armarla: {serviceOrder.DeployedBy.username}</Typography>
-      <Typography>
-        Fecha de ingreso de material: {serviceOrder.incomeDate ? new Date(serviceOrder.incomeDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.incomeDate ? `${new Date(serviceOrder.incomeDate).toLocaleTimeString()} hs` : 'Sin Hora'}
-      </Typography>
-      <Typography>
-        Fecha de armado: {serviceOrder.assemblyDate ? new Date(serviceOrder.assemblyDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.assemblyDate ? `${new Date(serviceOrder.assemblyDate).toLocaleTimeString()} hs` : 'Sin Hora'}
-      </Typography>
-      <Typography>
-        Fecha de desarme: {serviceOrder.disassemblyDate ? new Date(serviceOrder.disassemblyDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.disassemblyDate ? `${new Date(serviceOrder.disassemblyDate).toLocaleTimeString()} hs` : 'Sin Hora'}
-      </Typography>
-      <Typography>
-        Fecha de egreso de material: {serviceOrder.outcomeDate ? new Date(serviceOrder.outcomeDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.outcomeDate ? `${new Date(serviceOrder.outcomeDate).toLocaleTimeString()} hs` : 'Sin Hora'}
-      </Typography>
+      <Typography>Fecha de ingreso de material: {serviceOrder.incomeDate ? new Date(serviceOrder.incomeDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.incomeDate ? `${new Date(serviceOrder.incomeDate).toLocaleTimeString()} hs` : 'Sin Hora'}</Typography>
+      <Typography>Fecha de armado: {serviceOrder.assemblyDate ? new Date(serviceOrder.assemblyDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.assemblyDate ? `${new Date(serviceOrder.assemblyDate).toLocaleTimeString()} hs` : 'Sin Hora'}</Typography>
+      <Typography>Fecha de desarme: {serviceOrder.disassemblyDate ? new Date(serviceOrder.disassemblyDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.disassemblyDate ? `${new Date(serviceOrder.disassemblyDate).toLocaleTimeString()} hs` : 'Sin Hora'}</Typography>
+      <Typography>Fecha de egreso de material: {serviceOrder.outcomeDate ? new Date(serviceOrder.outcomeDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.outcomeDate ? `${new Date(serviceOrder.outcomeDate).toLocaleTimeString()} hs` : 'Sin Hora'}</Typography>
       <Typography>Estado de la Orden de Servicio: {status[serviceOrder.status] || 'Estado desconocido'}</Typography>
 
       {canEditOrder() && (
-        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '10px' }}>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Categoría</InputLabel>
+            <Select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              <MenuItem value="">Todas</MenuItem>
+              {categories.map(category => (
+                <MenuItem key={category} value={category}>{category}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <Autocomplete
-            options={allItems}
-            getOptionLabel={(option) =>
-              `${option.code} - ${option.Category.name} - ${option.Category.description}`
-            }
+            options={filteredItems}
+            getOptionLabel={(option) => `${option.code} - ${option.Category.name} - ${option.Category.description}`}
             value={selectedItem}
             onChange={(event, newValue) => setSelectedItem(newValue)}
             renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Buscar ítem por nombre o descripción"
-                variant="outlined"
-                fullWidth
-              />
+              <TextField {...params} label="Buscar ítem" variant="outlined" fullWidth />
             )}
-            sx={{ flexGrow: 1, marginRight: 1 }}
+            sx={{ flexGrow: 1 }}
           />
           <TextField
             label="Cantidad"
@@ -83,7 +85,7 @@ const ServiceOrderHeader = ({
             value={quantity}
             onChange={(e) => setQuantity(Math.max(Number(e.target.value), 1))}
             inputProps={{ min: 1 }}
-            sx={{ width: 100, marginRight: 1 }}
+            sx={{ width: 100 }}
           />
           <Button
             variant="contained"

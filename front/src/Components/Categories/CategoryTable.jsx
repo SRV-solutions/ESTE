@@ -9,7 +9,8 @@ import {
     Button,
     IconButton,
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import ToggleOnIcon from '@mui/icons-material/ToggleOn';
+import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 import EditIcon from '@mui/icons-material/Edit';
 import axios from 'axios';
 import CategoryModal from './CatgoryModal';
@@ -73,28 +74,58 @@ const CategoryTable = () => {
             fetchCategories();
             setOpenDialog(false);
             setSelectedCategory({});
-        } catch (error) {            
+        } catch (error) {
             showAlert(selectedCategory.id ? `Error al modificar la categoria: ${selectedCategory.code}, Error: ${error.message}` : `Error al crear una categoria: ${error.message}`, `error`);
             console.error('Error saving category:', error);
         }
     };
 
-    // 🗑️ Eliminar categoría
-    const handleDeleteCategory = async (id) => {
+    const handleToggleCategoryStatus = async (id) => {
         try {
-            await axios.delete(`${apiUrl}/categories/${id}`, {
-                headers: getAuthHeaders(),
-            });
-            fetchCategories();
-            showAlert(`Categoria Eliminada con Exito`, `success`);
+            const categoryToToggle = categories.find(category => category.id === id);
+    
+            if (!categoryToToggle) {
+                showAlert("La categoría no existe o ya fue eliminada.", "error");
+                return;
+            }
+    
+            // Si la categoría está activa y tiene ítems relacionados, mostrar confirmación antes de desactivarla
+            if (categoryToToggle.isActive) {
+                const message = categoryToToggle.Items?.length
+                    ? `Esta categoría contiene ${categoryToToggle.Items.length} ítems. ¿Estás seguro de que deseas desactivarla?`
+                    : "¿Estás seguro de que deseas desactivar esta categoría?";
+    
+                const warning = "Este botón solamente desactiva la categoría, no la elimina. Para eliminar una categoría completamente contacte con el administrador. \n\r";
+    
+                const confirmDeactivate = window.confirm(warning + message);
+                if (!confirmDeactivate) return;
+    
+                // Desactivar la categoría (actualizando el estado)
+                await axios.delete(`${apiUrl}/categories/${id}`, {
+                    headers: getAuthHeaders(),
+                });
+                showAlert("Categoría desactivada con éxito", "success");
+            } else {
+                // Si está desactivada, activarla sin confirmación
+                await axios.delete(`${apiUrl}/categories/${id}`, {
+                    headers: getAuthHeaders(),
+                });
+                showAlert("Categoría activada con éxito", "success");
+            }
+    
+            fetchCategories(); // Actualizar la lista de categorías
         } catch (error) {
-            showAlert(`Error al querer eliminar una categoria: ${error.response.data.message ? error.response.data.message : error.message}`, `error`);
-            console.error('Error deleting category:', error);
+            showAlert(`Error al cambiar el estado de la categoría: ${error.response?.data?.message || error.message}`, "error");
+            console.error("Error toggling category status:", error);
         }
     };
+    
+
+
 
     // 🟢 Abrir Modal para crear/editar
     const handleOpenDialog = (category = {}) => {
+
         setSelectedCategory(category);
         setOpenDialog(true);
     };
@@ -122,6 +153,8 @@ const CategoryTable = () => {
                         <TableCell align="center">Codigo</TableCell>
                         <TableCell align="center">NOMBRE</TableCell>
                         <TableCell align="center">DESCRIPCIÓN</TableCell>
+                        <TableCell align="center">CANTIDAD DE ITEMS</TableCell>
+                        <TableCell align="center">ESTA ACTIVADA</TableCell>
                         <TableCell align="center">TIPO</TableCell>
                         <TableCell align="center">E.A</TableCell>
                         <TableCell align="center">E.C</TableCell>
@@ -130,23 +163,31 @@ const CategoryTable = () => {
                 </TableHead>
                 <TableBody>
                     {categories.map((category) => (
-                        <TableRow key={category.id}>
-                            <TableCell align="center">{category.code}</TableCell>
-                            <TableCell align="center">{category.name}</TableCell>
-                            <TableCell align="center">{category.description}</TableCell>
-                            <TableCell align="center">{category.type}</TableCell>
-                            <TableCell align="center">{category.isStorable ? 'SI' : 'NO'}</TableCell>
-                            <TableCell align="center">{category.isContainer ? 'SI' : 'NO'}</TableCell>
-                            <TableCell align="center">
+                       <TableRow
+                       key={category.id}
+                       sx={{
+                         backgroundColor: category.isActive ? 'transparent' : '#f0f0f0', // Gris claro cuando está desactivada
+                       }}
+                     >
+                       <TableCell align="center">{category.code}</TableCell>
+                       <TableCell align="center">{category.name}</TableCell>
+                       <TableCell align="center">{category.description}</TableCell>
+                       <TableCell align="center">{category.Items?.length}</TableCell>
+                       <TableCell align="center">{category.isActive ? 'SI' : 'NO'}</TableCell>
+                       <TableCell align="center">{category.type}</TableCell>
+                       <TableCell align="center">{category.isStorable ? 'SI' : 'NO'}</TableCell>
+                       <TableCell align="center">{category.isContainer ? 'SI' : 'NO'}</TableCell>
+                       <TableCell align="center">
+                         <IconButton onClick={() => handleOpenDialog(category)}>
+                           <EditIcon />
+                         </IconButton>
+                         <IconButton onClick={() => handleToggleCategoryStatus(category.id)}>
+                           {category.isActive ? <ToggleOnIcon color='info'/> : <ToggleOffIcon color='error'/>}
+                         </IconButton>
+                       </TableCell>
+                     </TableRow>
+                     
 
-                                <IconButton onClick={() => handleOpenDialog(category)}>
-                                    <EditIcon />
-                                </IconButton>
-                                <IconButton onClick={() => handleDeleteCategory(category.id)}>
-                                    <DeleteIcon />
-                                </IconButton>
-                            </TableCell>
-                        </TableRow>
                     ))}
                 </TableBody>
             </Table>
