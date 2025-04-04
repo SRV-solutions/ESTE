@@ -43,14 +43,12 @@ const UploadCSVComponent = ({
 
                 }
             });
-            console.log(formData);
 
             if (!response.ok) {
                 throw new Error("Error en la carga del archivo.");
             }
 
             const jsonData = await response.json();
-            console.log("JSON Recibido:", jsonData);
             fetchItems()
             fetchAvalibleStoreItems()
             fetchCategories()

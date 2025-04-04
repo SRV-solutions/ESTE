@@ -454,7 +454,6 @@ export const uploadCSV = async (req: Request | any, res: Response | any) => {
 
           // Aplanamos el array y creamos los ítems en la base de datos
           const flatItems = itemsToCreate.flat();
-          //console.log(flatItems);
           
          await Item.bulkCreate(flatItems);
 
