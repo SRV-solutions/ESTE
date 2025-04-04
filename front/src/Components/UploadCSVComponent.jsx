@@ -38,7 +38,12 @@ const UploadCSVComponent = ({
             const response = await fetch(`${apiUrl}/items/upload-csv`, {
                 method: "POST",
                 body: formData,
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
+
+                }
             });
+            console.log(formData);
 
             if (!response.ok) {
                 throw new Error("Error en la carga del archivo.");
