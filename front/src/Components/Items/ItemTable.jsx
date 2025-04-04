@@ -13,6 +13,8 @@ import {
     MenuItem,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ToggleOnIcon from '@mui/icons-material/ToggleOn';
+import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 import axios from 'axios';
 import ItemModal from './ItemModal';
 import AssignItemModal from './AssignItemModal'; // Importa el modal
@@ -82,8 +84,7 @@ const ItemTable = () => {
     const fetchItems = async () => {
         try {
             const params = { page, limit, search };
-            console.log(params);
-            
+
             if (selectedCategory) {
                 params.category = selectedCategory;  // Agrega el filtro por categoría
             }
@@ -144,27 +145,43 @@ const ItemTable = () => {
         setMenuAnchor(null);
     };
 
-    const handleDeleteItem = async () => {
-        if (selectedItem?.id) {
-            // Mostrar el mensaje de confirmación
-            const confirmDelete = window.confirm("¿Estás seguro de que deseas eliminar este ítem?");
-            if (!confirmDelete) return; // Si el usuario cancela, no se hace nada
-
-            try {
-                await axios.delete(`${apiUrl}/items/${selectedItem.id}`, {
-                    headers: getAuthHeaders(),
-                });
-                handleMenuClose();
-                fetchAvalibleStoreItems()
-                fetchItems();
-                showAlert(`Item eliminado con Exito`, `success`);
-
-            } catch (error) {
-                showAlert(`Error al querer eliminar un item: ${error.response.data.message ? error.response.data.message : error.message}`, `error`);
-                console.error('Error deleting item:', error);
+    const handleToggleItemStatus = async () => {
+        if (!selectedItem?.id) {
+            showAlert("El ítem no está seleccionado o no existe.", "error");
+            return;
+        }
+    
+        try {
+            const itemToToggle = selectedItem;
+    
+            // Si el ítem está activo, mostrar confirmación antes de desactivarlo
+            if (itemToToggle.isActive) {
+                const confirmDeactivate = window.confirm("¿Estás seguro de que deseas desactivar este ítem?");
+                if (!confirmDeactivate) return;
+    
+                // Desactivar el ítem (actualizando el estado)
+                await axios.patch(`${apiUrl}/items/${itemToToggle.id}`, 
+                    { isActive: false }, // Aquí desactivamos el ítem
+                    { headers: getAuthHeaders() }
+                );
+                showAlert("Ítem desactivado con éxito", "success");
+            } else {
+                // Si el ítem está desactivado, activarlo sin confirmación
+                await axios.patch(`${apiUrl}/items/${itemToToggle.id}`, 
+                    { isActive: true }, // Aquí activamos el ítem
+                    { headers: getAuthHeaders() }
+                );
+                showAlert("Ítem activado con éxito", "success");
             }
+    
+            // Actualizar la lista de ítems
+            fetchItems();
+        } catch (error) {
+            showAlert(`Error al cambiar el estado del ítem: ${error.response?.data?.message || error.message}`, "error");
+            console.error("Error toggling item status:", error);
         }
     };
+    
 
     const fetchAvalibleStoreItems = async () => {
         try {
@@ -205,9 +222,9 @@ const ItemTable = () => {
     return (
         <div style={{ margin: '3rem' }}>
             <UploadCSVComponent
-            fetchItems={fetchItems}
-            fetchCategories={fetchCategories}
-            fetchAvalibleStoreItems={fetchAvalibleStoreItems}
+                fetchItems={fetchItems}
+                fetchCategories={fetchCategories}
+                fetchAvalibleStoreItems={fetchAvalibleStoreItems}
             />
             <SnackbarComponent
                 open={alertInfo.open}
@@ -270,6 +287,7 @@ const ItemTable = () => {
                         <TableCell align="center">Código</TableCell>
                         <TableCell align="center">Nombre</TableCell>
                         <TableCell align="center">Descripción</TableCell>
+                        <TableCell align="center">Esta Activado</TableCell>
                         <TableCell align="center">Tipo</TableCell>
                         <TableCell align="center">E.A</TableCell>
                         <TableCell align="center">E.C</TableCell>
@@ -279,13 +297,16 @@ const ItemTable = () => {
                 </TableHead>
                 <TableBody>
                     {items.map((item) => (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.id} sx={{
+                            backgroundColor: item.isActive ? 'transparent' : '#f0f0f0', // Gris claro cuando está desactivada
+                        }}>
                             <TableCell align="center">
                                 <svg id={`barcode-${item.id}`}></svg>
                             </TableCell>
                             <TableCell align="center">{item.code}</TableCell>
                             <TableCell align="center">{item.Category.name}</TableCell>
                             <TableCell align="center">{item.Category.description}</TableCell>
+                            <TableCell align="center">{item.isActive ? 'SI' : 'NO'}</TableCell>
                             <TableCell align="center">{item.Category.type}</TableCell>
                             <TableCell align="center">{item.Category.isStorable ? 'SI' : 'NO'}</TableCell>
                             <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
@@ -300,7 +321,9 @@ const ItemTable = () => {
                                         open={Boolean(menuAnchor)}
                                         onClose={handleMenuClose}
                                     >
-                                        <MenuItem onClick={handleDeleteItem}>Eliminar</MenuItem>
+                                        <MenuItem onClick={handleToggleItemStatus}>
+                                            {item.isActive ? 'Desactivar Item' : 'Activar Item'}
+                                        </MenuItem>
                                         {item.Category.isContainer && (
                                             <MenuItem onClick={handleAssignedItemsContainer}>
                                                 Ver Ítems asignados

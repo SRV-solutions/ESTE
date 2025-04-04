@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { createStoreItems, deleteStoreItem } from '../controllers/storeItemController';
 
-import { isAuth } from '../middlewares/auth';
+import { isAdmin, isAuth } from '../middlewares/auth';
 
 const router = Router();
 
-router.post('/', isAuth, createStoreItems);
-router.delete('/:parentId/:childId', isAuth, deleteStoreItem);
+router.post('/', isAuth, isAdmin, createStoreItems);
+router.delete('/:parentId/:childId', isAuth, isAdmin, deleteStoreItem);
 
 export default router;

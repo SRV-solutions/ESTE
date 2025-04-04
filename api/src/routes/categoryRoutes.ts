@@ -6,8 +6,8 @@ import { isAdmin, isAuth } from '../middlewares/auth';
 const router = Router();
 
 router.get('/', isAuth, getCategories);
-router.post('/', isAuth, createCategory);
-router.delete('/:id', isAuth, deleteCategory);
+router.post('/', isAuth, isAdmin, createCategory);
+router.delete('/:id', isAuth, isAdmin, deleteCategory);
 router.patch('/:id', isAuth, isAdmin, updateCategory);
 
 export default router;
