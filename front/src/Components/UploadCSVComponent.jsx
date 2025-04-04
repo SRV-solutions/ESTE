@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Typography, Stack } from "@mui/material";
 import SnackbarComponent from "./SnackbarComponent";
 import LoadingComponent from "./LoadingComponent";
+const apiUrl = import.meta.env.VITE_API_URL;
 
 const UploadCSVComponent = ({
     fetchItems,
@@ -34,7 +35,7 @@ const UploadCSVComponent = ({
         setLoading(true);
 
         try {
-            const response = await fetch("http://localhost:3000/items/upload-csv", {
+            const response = await fetch(`${apiUrl}/items/upload-csv`, {
                 method: "POST",
                 body: formData,
             });

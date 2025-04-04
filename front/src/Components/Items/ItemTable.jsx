@@ -84,7 +84,6 @@ const ItemTable = () => {
     const fetchItems = async () => {
         try {
             const params = { page, limit, search };
-            console.log(params);
 
             if (selectedCategory) {
                 params.category = selectedCategory;  // Agrega el filtro por categoría
