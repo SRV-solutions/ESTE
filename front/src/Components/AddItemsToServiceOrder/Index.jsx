@@ -331,6 +331,7 @@ const AddItemsToServiceOrder = () => {
                 {canEditOrder() && (
                     <TableCell align="center">
                         <IconButton
+                            disabled={!isTemporalContainer}
                             onClick={() => handleDeleteItem(item.id, itemParent.id)}
                             sx={{
                                 color: '#757575',

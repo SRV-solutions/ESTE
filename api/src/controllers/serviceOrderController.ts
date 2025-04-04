@@ -180,9 +180,13 @@ export const getServiceOrderById = async (req: Request, res: any) => {
           : childItem.StoreItemChild.toJSON()
       );
 
-      parsedJson.Item.isTemporalContainer = containedItems.some(
+      const hasServiceOrderStoreItemChild = containedItems.some(
         (childItem) => "ServiceOrderStoreItemChild" in childItem
       );
+      const hasStoreItemChild = containedItems.some(
+        (childItem) => "StoreItemChild" in childItem
+      );
+      parsedJson.Item.isTemporalContainer = hasServiceOrderStoreItemChild || !hasStoreItemChild;
 
       return parsedJson;
     });
