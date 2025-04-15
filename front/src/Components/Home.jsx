@@ -1,18 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Box, Typography, Card, CardContent, Button, IconButton } from '@mui/material';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import DescriptionIcon from '@mui/icons-material/Description'; // Icono para la card de órdenes de servicio
 import { useNavigate } from 'react-router-dom';
 
+const apiUrl = import.meta.env.VITE_API_URL;
+
 const Home = () => {
+  const [user, setUser] = useState({
+    username: "",
+    role: "",
+    OrderedBy: [],
+    CheckedBy: [],
+    DeployedBy: []
+  });
+
   const navigate = useNavigate();
 
-  // Datos del usuario
-  const user = {
-    name: 'Juan Pérez',
-    role: 'Operador', // Cambiar según el rol real del usuario
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+    return { Authorization: `Bearer ${token}` };
   };
+
+  // 📥 Fetch Perfil del Usuario
+  const fetchUserProfile = async () => {
+    try {
+      const { data } = await axios.get(`${apiUrl}/users/profile`, {
+        headers: getAuthHeaders(),
+      });
+      setUser(data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  console.log(user);
+
 
   return (
     <Box
@@ -42,7 +73,8 @@ const Home = () => {
         <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <AccountCircle sx={{ fontSize: 60 }} /> {/* Icono de usuario */}
           <Box>
-            <Typography variant="h3">{user.name}</Typography>
+            <Typography variant="h3">{user.username}</Typography>
+            <Typography variant="h6">{user.email}</Typography>
           </Box>
         </CardContent>
 
@@ -52,6 +84,7 @@ const Home = () => {
           <Typography variant="h3">Ficha Tecnica</Typography>
           <Typography variant="body1">Mi Rol: {user.role}</Typography>
           <Button
+            disabled
             variant="outlined"
             sx={{ marginTop: 1, color: 'black', backgroundColor: "#a6a6a6", borderColor: '#a6a6a6' }}
             onClick={() => navigate('/organigrama')}
@@ -61,14 +94,14 @@ const Home = () => {
         </Card>
 
         {/* Botón fuera de la sub-card */}
-        <Button
+        {(user.role === 'Admin') && <Button
           variant="contained"
           sx={{ margin: 2, backgroundColor: "#777777", borderColor: '#777777' }}
           color="primary"
-          onClick={() => navigate('/admin-panel')}
+          onClick={() => navigate('/users')}
         >
           Panel de Admin
-        </Button>
+        </Button>}
       </Card>
 
       {/* Card de Ordenes de Servicio en el centro */}
@@ -84,7 +117,7 @@ const Home = () => {
       >
         <CardContent sx={{ textAlign: 'center' }}>
           <IconButton sx={{ fontSize: 60, color: 'primary.main' }}>
-            <DescriptionIcon sx={{ fontSize: 160, color: 'black' }} onClick={() => navigate('/service-orders')}/>
+            <DescriptionIcon sx={{ fontSize: 160, color: 'black' }} onClick={() => navigate('/service-orders')} />
           </IconButton>
           <Typography variant="h6" sx={{ marginTop: 1 }}>
             Órdenes de Servicio
@@ -92,7 +125,7 @@ const Home = () => {
           <Typography variant="body2" color="text.secondary">
             Gestiona y organiza tus órdenes de servicio de manera eficiente.
           </Typography>
-          
+
           {/* Círculos con números debajo */}
           <Box
             sx={{
@@ -124,7 +157,7 @@ const Home = () => {
                   fontSize: 20,
                 }}
               >
-                5 {/* Número dinámico */}
+                {user.OrderedBy.length} {/* Número dinámico */}
               </Box>
             </Box>
 
@@ -151,8 +184,8 @@ const Home = () => {
                   fontSize: 20,
                 }}
               >
-                3 {/* Número dinámico */}
-              </Box>
+                {user.CheckedBy.length} {/* Número dinámico */}
+                </Box>
             </Box>
 
             {/* Circulo de "A Armar" */}
@@ -178,8 +211,8 @@ const Home = () => {
                   fontSize: 20,
                 }}
               >
-                2 {/* Número dinámico */}
-              </Box>
+                {user.DeployedBy.length} {/* Número dinámico */}
+                </Box>
             </Box>
           </Box>
         </CardContent>

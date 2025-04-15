@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import Role from '../models/Role';
 import User from '../models/User';
 import { IsEmail } from 'sequelize-typescript';
+import ServiceOrder from '../models/ServiceOrder';
 
 // Clave secreta para JWT (colócala en un archivo .env)
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
@@ -106,54 +107,61 @@ export const register = async (req: Request, res: any) => {
   }
 };
 
-export const login = async (req: Request, res: any) => {  
-  
-  const { email, password } = req.body;  
+export const login = async (req: Request, res: any) => {
+
+  const { email, password } = req.body;
   try {
-    const user = await User.findOne({ where: { email }, include: [Role] });    
+    const user = await User.findOne({ where: { email }, include: [Role] });
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    
+
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Contraseña incorrecta' });
     }
 
-    const isAdmin = user.roleId === 2; 
+    const isAdmin = user.roleId === 2;
     const token = jwt.sign(
-      { id: user.id, 
-        email: user.email, 
-        role: user.Role, 
-        isAdmin  },
+      {
+        id: user.id,
+        email: user.email,
+        role: user.Role,
+        isAdmin
+      },
       JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    res.status(200).json({ 
-      message: 'Login exitoso', 
-      token, 
-      userData: { 
-        id: user.id, 
-        email: user.email, 
-        role: user.Role, 
-        isAdmin 
+    res.status(200).json({
+      message: 'Login exitoso',
+      token,
+      userData: {
+        id: user.id,
+        email: user.email,
+        role: user.Role,
+        isAdmin
       }
     });
-  } catch (error) {        
+  } catch (error) {
     res.status(500).json({ message: 'Error al iniciar sesión', error });
   }
 };
 
 export const getMyOwnUser = async (req: any, res: any) => {
-  try {    
+  try {
     if (!req.user) {
       return res.status(401).json({ message: 'No autorizado. Usuario no autenticado.' });
     }
 
     const user = await User.findByPk(req.user.id, {
-      include: [Role]
+      include: [
+        Role,
+        { model: ServiceOrder, as: 'DeployedBy' },
+        { model: ServiceOrder, as: 'CheckedBy' },
+        { model: ServiceOrder, as: 'OrderedBy' },
+      ]
     });
 
     if (!user) {
@@ -164,9 +172,14 @@ export const getMyOwnUser = async (req: any, res: any) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      role: user.Role ? user.Role.roleName : 'Sin rol asignado'
+      role: user.Role ? user.Role.roleName : 'Sin rol asignado',
+      CheckedBy: user.CheckedBy,
+      DeployedBy: user.DeployedBy,
+      OrderedBy: user.OrderedBy
     });
   } catch (error) {
+    console.log(error);
+
     res.status(500).json({
       message: 'Error al obtener la información del perfil.',
       error: error instanceof Error ? error.message : error
@@ -186,11 +199,11 @@ export const updateUser = async (req: any, res: any) => {
     }
 
     const user = await User.findByPk(id);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User invalido' });
     }
-    
+
     if (!newEmail && !newUsername) {
       return res.status(400).json({ message: 'Debe proporcionar al menos un campo para actualizar (email o nombre de usuario)' });
     }
@@ -217,9 +230,9 @@ export const updateUser = async (req: any, res: any) => {
     // Buscar el usuario actualizado e incluir su rol
     await user.save(); // Esperar a que se guarde antes de buscarlo nuevamente
     const updatedUser = await User.findByPk(id, { include: Role });
-    
+
     res.status(200).json(updatedUser);
-    
+
   } catch (error) {
     res.status(500).json({ message: 'Error al actualizar el usuario' });
   }
@@ -236,7 +249,7 @@ export const changePassword = async (req: Request, res: any) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
 
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Contraseña actual incorrecta' });
@@ -248,8 +261,8 @@ export const changePassword = async (req: Request, res: any) => {
     }
 
     // Encriptar la nueva contraseña    
-    const hashedNewPassword:string = await bcrypt.hash(newPassword, 10)
-    
+    const hashedNewPassword: string = await bcrypt.hash(newPassword, 10)
+
     // Actualizar la contraseña en la base de datos
     user.password = hashedNewPassword;
     await user.save();
