@@ -243,7 +243,7 @@ export const getServiceOrders = async (req: Request, res: any) => {
         {
           model: User,
           as: 'DeployedBy',
-          attributes: ['id', 'username', 'email', 'roleId'], // Solo traer los campos necesarios
+          attributes: ['id', 'username', 'email', 'roleId'],
         },
         {
           model: User,

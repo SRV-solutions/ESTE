@@ -15,7 +15,7 @@ const App = () => {
   return (
     <Router>
       <ConditionalNavBar />
-      <div style={{ paddingTop: '64px' }}> {/* Espacio para el NavBar fijo */}
+      <div> {/* Espacio para el NavBar fijo */}
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={
