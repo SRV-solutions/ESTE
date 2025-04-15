@@ -215,6 +215,14 @@ const Home = () => {
                 </Box>
             </Box>
           </Box>
+          <Button
+              sx={{ margin: 2, color: 'white', backgroundColor: 'black' }}
+              variant="outlined"
+              color="primary"
+              onClick={() => navigate('/service-orders/new')}
+            >
+              Agregar Orden de Servicio
+            </Button>
         </CardContent>
       </Card>
 
