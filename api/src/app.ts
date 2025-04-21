@@ -12,6 +12,7 @@ import eventRoutes from './routes/eventRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import locationRoutes from './routes/locationRoutes';
 import storeItemRoutes from './routes/storeItemRoutes';
+
 // import orderItemRoutes from './routes/orderItemRoutes';
 // import itemRoutes from './routes/itemRoutes';
 // import storeItemRoutes from './routes/storeItemRoutes';
@@ -26,6 +27,9 @@ import Item from './models/Item';
 import StoreItem from './models/StoreItem';
 import ServiceOrderStoreItem from './models/ServiceOrderStoreItem';
 import Category from './models/Category';
+import Permission from './models/Permission';
+import RolePermission from './models/RolePermission';
+
 
 User.associate();
 Role.associate();
@@ -37,6 +41,7 @@ Item.associate()
 StoreItem.associate()
 ServiceOrderStoreItem.associate()
 Category.associate()
+Permission.associate();
 
 const app = express();
 

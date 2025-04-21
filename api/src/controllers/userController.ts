@@ -178,8 +178,6 @@ export const getMyOwnUser = async (req: any, res: any) => {
       OrderedBy: user.OrderedBy
     });
   } catch (error) {
-    console.log(error);
-
     res.status(500).json({
       message: 'Error al obtener la información del perfil.',
       error: error instanceof Error ? error.message : error

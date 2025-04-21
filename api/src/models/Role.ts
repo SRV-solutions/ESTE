@@ -1,13 +1,22 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/database';
 import User from './User';
+import Permission from './Permission';
+import RolePermission from './RolePermission';
 
 class Role extends Model {
   public id!: number;
   public roleName!: string;
+  public description?: string;  // Nuevo campo
 
   public static associate() {
-    Role.hasMany(User, { foreignKey: 'roleId'});
+    Role.hasMany(User, { foreignKey: 'roleId' });
+
+    Role.belongsToMany(Permission, {
+      through: RolePermission,
+      foreignKey: 'roleId',
+      otherKey: 'permissionId',
+    });
   }
 }
 
@@ -20,6 +29,10 @@ Role.init({
   roleName: {
     type: DataTypes.STRING,
     allowNull: false,
+  },
+  description: {
+    type: DataTypes.STRING,
+    allowNull: true,  // Cambiar según si lo quieres obligatorio
   },
 }, {
   sequelize,
