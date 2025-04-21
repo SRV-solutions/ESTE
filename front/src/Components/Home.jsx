@@ -42,9 +42,6 @@ const Home = () => {
     fetchUserProfile();
   }, []);
 
-  console.log(user);
-
-
   return (
     <Box
       sx={{

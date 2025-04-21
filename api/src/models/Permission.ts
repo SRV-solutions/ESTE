@@ -6,7 +6,7 @@ import RolePermission from './RolePermission';
 class Permission extends Model {
   public id!: number;
   public entidad!: string;
-  public accion!: string;
+  public action!: string;
 
   public static associate() {
     Permission.belongsToMany(Role, {
@@ -23,11 +23,11 @@ Permission.init({
     primaryKey: true,
     autoIncrement: true,
   },
-  entidad: {
+  entity: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  accion: {
+  action: {
     type: DataTypes.STRING,
     allowNull: false,
   },

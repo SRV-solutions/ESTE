@@ -8,11 +8,11 @@ module.exports = {
         primaryKey: true,
         autoIncrement: true,
       },
-      entidad: {
+      entity: {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      accion: {
+      action: {
         type: Sequelize.STRING,
         allowNull: false,
       }
