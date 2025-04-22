@@ -5,7 +5,7 @@ import RolePermission from './RolePermission';
 
 class Permission extends Model {
   public id!: number;
-  public entidad!: string;
+  public entity!: string;
   public action!: string;
 
   public static associate() {

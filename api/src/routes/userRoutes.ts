@@ -9,20 +9,20 @@ import {
   updateUser,
   changePassword
 } from '../controllers/userController';
-
-import { isAuth, isAdmin } from '../middlewares/auth';
+import { Entity, Action } from '../models/enums';
+import { isAuth, checkPermission } from '../middlewares/auth';
 
 const router = Router();
 
 // Rutas para usuarios
-router.get('/profile', isAuth, getMyOwnUser);
+router.get('/profile', isAuth, checkPermission(Entity.USERS, Action.READ), getMyOwnUser);
 router.post('/login', login);
-router.get('/', isAuth, getAllUsers);
-router.get('/:id', isAuth, getUser);
-router.post('/', isAuth, isAdmin, createUser);
-router.post('/register', isAuth, isAdmin, register);
-router.patch('/update/:id', isAuth, updateUser)
-router.put('/:id/change-password', isAuth, changePassword);
+router.get('/', isAuth, checkPermission(Entity.USERS, Action.READ), getAllUsers);
+router.get('/:id', isAuth, checkPermission(Entity.USERS, Action.READ), getUser);
+router.post('/', isAuth, checkPermission(Entity.USERS, Action.CREATE), createUser);
+router.post('/register', isAuth, checkPermission(Entity.USERS, Action.CREATE), register);
+router.patch('/update/:id', isAuth, checkPermission(Entity.USERS, Action.UPDATE), updateUser)
+router.put('/:id/change-password', isAuth, checkPermission(Entity.USERS, Action.UPDATE), changePassword);
 
 
 export default router;

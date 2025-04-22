@@ -95,7 +95,7 @@ const ItemTable = () => {
             setItems(data.items);
             setTotalPages(data.totalPages);
         } catch (error) {
-            showAlert(`Error al cargar los items ${error}`, `error`);
+            showAlert(`Error al cargar los items ${error.response.data.message || error}`, `error`);
 
             console.error('Error fetching items:', error);
         }
@@ -109,7 +109,7 @@ const ItemTable = () => {
             });
             setCategories(data);
         } catch (error) {
-            showAlert(`Error al cargar las categorias ${error}`, `error`);
+            showAlert(`Error al cargar las categorias ${error.response.data.message || error}`, `error`);
 
             console.error('Error fetching categories:', error);
         }
@@ -136,7 +136,9 @@ const ItemTable = () => {
             showAlert(`Items creados con exito`, `success`);
 
         } catch (error) {
-            showAlert(`Error al crear los items ${error}`, `error`);
+            showAlert(`Error al crear los items ${error.response.data.message || error}`, `error`);
+            setIsLoading(false);
+            setOpenDialog(false);
             console.error('Error creating item:', error);
         }
     };
@@ -158,7 +160,7 @@ const ItemTable = () => {
             if (itemToToggle.isActive) {
                 const confirmDeactivate = window.confirm("¿Estás seguro de que deseas desactivar este ítem?");
                 if (!confirmDeactivate) return;
-    
+
                 // Desactivar el ítem (actualizando el estado)
                 await axios.patch(`${apiUrl}/items/${itemToToggle.id}`, 
                     { isActive: false }, // Aquí desactivamos el ítem

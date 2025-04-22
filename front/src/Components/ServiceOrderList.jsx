@@ -25,7 +25,6 @@ const ServiceOrderList = () => {
   const [filterType, setFilterType] = useState('myOrderServices');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -68,7 +67,6 @@ const ServiceOrderList = () => {
         const token = localStorage.getItem('token');
         const userData = JSON.parse(localStorage.getItem('userData'));
         setCurrentUserId(userData?.id);
-        setIsAdmin(userData?.isAdmin);
         const response = await axios.get(`${apiUrl}/service-orders`, {
           headers: { Authorization: `Bearer ${token}` },
         });        
@@ -109,9 +107,7 @@ const ServiceOrderList = () => {
     fontWeight: isCurrentUser(user) ? 'bold' : '',
   });
 
-  const availableFilters = isAdmin
-    ? FILTER_TYPES
-    : FILTER_TYPES.filter((filter) => filter.value !== '');
+  const availableFilters = FILTER_TYPES
 
   if (loading) {
     return (

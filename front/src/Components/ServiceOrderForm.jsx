@@ -103,9 +103,7 @@ const ServiceOrderForm = () => {
       const userData = JSON.parse(localStorage.getItem('userData'));
       if (userData) {
         setCurrentUser(userData);
-        if (!userData.isAdmin) {
-          setFormData((prev) => ({ ...prev, orderedBy: userData.id }));
-        }
+
       }
     } catch (error) {
       console.error('Error al obtener datos:', error);
@@ -275,7 +273,6 @@ const ServiceOrderForm = () => {
             value={formData.orderedBy}
             onChange={handleChange}
             required
-            disabled={!currentUser?.isAdmin} // Deshabilitar si no es admin
           >
             {users.map((user) => (
               <MenuItem key={user.id} value={user.id}>
