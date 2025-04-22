@@ -236,7 +236,7 @@ const Home = () => {
       >
         <CardContent sx={{ textAlign: 'center' }}>
           <IconButton sx={{ fontSize: 60, color: 'primary.main' }}>
-            <WarehouseIcon sx={{ fontSize: 160, color: 'black' }} />
+            <WarehouseIcon sx={{ fontSize: 160, color: 'black' }} onClick={() => navigate('/items')}/>
           </IconButton>
           <Typography variant="h6">Gestión de Ítems</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 2 }}>
