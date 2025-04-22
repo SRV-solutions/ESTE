@@ -37,7 +37,7 @@ export const createServiceOrder = async (req: any, res: any) => {
     }
 
     // Validar si el usuario autenticado tiene permiso para asignar la orden
-    if (!authenticatedUser.isAdmin && orderedBy !== authenticatedUser.id) {
+    if (orderedBy !== authenticatedUser.id) {
       return res.status(403).json({
         message: 'No tienes permisos para asignar esta orden a otro usuario.'
       });
@@ -263,24 +263,13 @@ export const getServiceOrders = async (req: Request, res: any) => {
       ],
     });
 
-    // Filtrar las órdenes dependiendo si el usuario es admin o no
-    const filteredOrders = serviceOrders.filter((order) => {
-      return (
-        order.CheckedBy.id === userData.id ||
-        order.OrderedBy.id === userData.id ||
-        order.DeployedBy.id === userData.id
-      );
-    });
-
-    const finalServiceOrders = userData.isAdmin ? serviceOrders : filteredOrders;
-
     // Si no hay órdenes de servicio, retornar un error
-    if (finalServiceOrders.length === 0) {
+    if (serviceOrders.length === 0) {
       return res.status(404).json({ message: 'No se encontraron órdenes de servicio.' });
     }
 
     // Retornar las órdenes encontradas
-    return res.status(200).json(finalServiceOrders);
+    return res.status(200).json(serviceOrders);
   } catch (error) {
     console.error('Error al obtener las órdenes de servicio:', error);
     return res.status(500).json({ message: 'Error interno del servidor.', error });

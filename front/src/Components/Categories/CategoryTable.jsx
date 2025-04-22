@@ -50,7 +50,7 @@ const CategoryTable = () => {
             });
             setCategories(data);
         } catch (error) {
-            showAlert('Error al querer cargar las categorias', `error`);
+            showAlert(`Error al querer cargar las categorias: ${error.response.data.message || error}`, `error`);
             console.error('Error fetching categories:', error);
         }
     };
@@ -75,7 +75,7 @@ const CategoryTable = () => {
             setOpenDialog(false);
             setSelectedCategory({});
         } catch (error) {
-            showAlert(selectedCategory.id ? `Error al modificar la categoria: ${selectedCategory.code}, Error: ${error.message}` : `Error al crear una categoria: ${error.message}`, `error`);
+            showAlert(selectedCategory.id ? `Error al modificar la categoria: ${selectedCategory.code}, Error: ${error.response.data.message || error.message}` : `Error al crear una categoria: ${error.response.data.message || error.message}`, `error`);
             console.error('Error saving category:', error);
         }
     };

@@ -64,9 +64,7 @@ const AddItemsToServiceOrder = () => {
 
     const canEditOrder = () => {
         // El creador puede editar si el estado es `created`
-        if (userData.isAdmin) {
-            return true
-        }
+
         if (
             userData.email === serviceOrder.OrderedBy.email &&
             serviceOrder.status === `created`
@@ -97,9 +95,7 @@ const AddItemsToServiceOrder = () => {
     };
 
     const canEditStatus = () => {
-        if (userData.isAdmin) {
-            return true;
-        }
+
         if (userData.email === serviceOrder.CheckedBy.email && serviceOrder.status === `in_review`) {
             return true;
         }
@@ -380,10 +376,6 @@ const AddItemsToServiceOrder = () => {
             `disassembled`,
         ];
 
-        // Verifica si es admin: puede cambiar a cualquier estado.
-        if (userData.isAdmin) {
-            return true;
-        }
 
         // Caso especial: Si está en `rejected`, solo puede cambiar a `in_review`.
         if (currentStatus === `rejected`) {
@@ -446,7 +438,6 @@ const AddItemsToServiceOrder = () => {
             }
         } catch (error) {
             // Manejo de errores
-            console.error(`Error al cambiar el estado de la orden:`, error);
             showAlert(error.response?.data?.message || `Error al cambiar el estado`, `error`);
         }
     };

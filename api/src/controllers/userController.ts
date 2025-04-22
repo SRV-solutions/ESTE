@@ -3,8 +3,8 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import Role from '../models/Role';
 import User from '../models/User';
-import { IsEmail } from 'sequelize-typescript';
 import ServiceOrder from '../models/ServiceOrder';
+import Permission from '../models/Permission';
 
 // Clave secreta para JWT (colócala en un archivo .env)
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
@@ -108,27 +108,29 @@ export const register = async (req: Request, res: any) => {
 };
 
 export const login = async (req: Request, res: any) => {
-
   const { email, password } = req.body;
+
   try {
-    const user = await User.findOne({ where: { email }, include: [Role] });
+    const user = await User.findOne({
+      where: { email },
+      include: [{
+        model: Role,
+        include: [Permission]
+      }]
+    });
+
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
-
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Contraseña incorrecta' });
     }
-
-    const isAdmin = user.roleId === 2;
     const token = jwt.sign(
       {
         id: user.id,
         email: user.email,
-        role: user.Role,
-        isAdmin
+        roleId: user.roleId,
       },
       JWT_SECRET,
       { expiresIn: '1h' }
@@ -140,8 +142,12 @@ export const login = async (req: Request, res: any) => {
       userData: {
         id: user.id,
         email: user.email,
-        role: user.Role,
-        isAdmin
+        roleId: user.roleId,
+        roleName: user.Role?.roleName,
+        permissions: user.Role?.Permissions?.map(p => ({
+          entity: p.entity,
+          action: p.action
+        }))
       }
     });
   } catch (error) {

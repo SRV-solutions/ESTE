@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { getCategories, createCategory, deleteCategory, updateCategory } from '../controllers/categoryController';
-
-import { isAdmin, isAuth } from '../middlewares/auth';
+import { isAuth, checkPermission } from '../middlewares/auth';
+import { Action, Entity } from '../models/enums';
 
 const router = Router();
 
-router.get('/', isAuth, getCategories);
-router.post('/', isAuth, isAdmin, createCategory);
-router.delete('/:id', isAuth, isAdmin, deleteCategory);
-router.patch('/:id', isAuth, isAdmin, updateCategory);
+router.get('/', isAuth, checkPermission(Entity.CATEGORIES, Action.READ), getCategories);
+router.post('/', isAuth, checkPermission(Entity.CATEGORIES, Action.CREATE), createCategory);
+router.delete('/:id', isAuth, checkPermission(Entity.CATEGORIES, Action.DELETE), deleteCategory);
+router.patch('/:id', isAuth, checkPermission(Entity.CATEGORIES, Action.UPDATE), updateCategory);
 
 export default router;

@@ -91,7 +91,7 @@ const Home = () => {
         </Card>
 
         {/* Botón fuera de la sub-card */}
-        {(user.role === 'Admin') && <Button
+        {<Button
           variant="contained"
           sx={{ margin: 2, backgroundColor: "#777777", borderColor: '#777777' }}
           color="primary"
@@ -182,7 +182,7 @@ const Home = () => {
                 }}
               >
                 {user.CheckedBy.length} {/* Número dinámico */}
-                </Box>
+              </Box>
             </Box>
 
             {/* Circulo de "A Armar" */}
@@ -209,17 +209,17 @@ const Home = () => {
                 }}
               >
                 {user.DeployedBy.length} {/* Número dinámico */}
-                </Box>
+              </Box>
             </Box>
           </Box>
           <Button
-              sx={{ margin: 2, color: 'white', backgroundColor: 'black' }}
-              variant="outlined"
-              color="primary"
-              onClick={() => navigate('/service-orders/new')}
-            >
-              Agregar Orden de Servicio
-            </Button>
+            sx={{ margin: 2, color: 'white', backgroundColor: 'black' }}
+            variant="outlined"
+            color="primary"
+            onClick={() => navigate('/service-orders/new')}
+          >
+            Agregar Orden de Servicio
+          </Button>
         </CardContent>
       </Card>
 

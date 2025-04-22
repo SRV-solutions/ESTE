@@ -8,6 +8,8 @@ class Role extends Model {
   public id!: number;
   public roleName!: string;
   public description?: string;  // Nuevo campo
+  public Permissions?: [Permission];  // Nuevo campo
+  
 
   public static associate() {
     Role.hasMany(User, { foreignKey: 'roleId' });
