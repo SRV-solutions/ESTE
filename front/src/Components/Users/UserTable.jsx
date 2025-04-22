@@ -75,9 +75,7 @@ const UserTable = () => {
         setUserModalOpen(true);
     };
 
-    const handleEditUser = (user) => {
-        console.log(user);
-        
+    const handleEditUser = (user) => {        
         setUserData(user); // Carga los datos del usuario en el modal
         setUserModalOpen(true);
     };
@@ -86,9 +84,7 @@ const UserTable = () => {
         try {
             const headers = getAuthHeaders();
             if (userData.id) {
-                // Editar usuario
-                console.log(userData);
-                
+                // Editar usuario                
                 await axios.patch(`${apiUrl}/users/update/${userData.id}`, userData, { headers });
             } else {
                 // Crear usuario
