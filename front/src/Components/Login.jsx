@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, TextField, Typography, Alert } from '@mui/material';
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Alert,
+  InputAdornment,
+  IconButton
+} from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -17,7 +28,6 @@ const Login = () => {
     e.preventDefault();
 
     try {
-      // Simulación de petición al backend (reemplaza con tu API real)
       const response = await fetch(`${apiUrl}/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -28,10 +38,10 @@ const Login = () => {
       }
 
       const data = await response.json();
-      localStorage.setItem('token', data.token); // Guarda el token
-      localStorage.setItem('userData', JSON.stringify(data.userData)); // Guarda el token
-      navigate('/'); // Redirige a una ruta protegida
-    } catch (error) {      
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userData', JSON.stringify(data.userData));
+      navigate('/');
+    } catch (error) {
       setError(error.message);
     }
   };
@@ -61,11 +71,20 @@ const Login = () => {
         <TextField
           label="Contraseña"
           name="password"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           value={formData.password}
           onChange={handleInputChange}
           fullWidth
           required
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton onClick={() => setShowPassword(prev => !prev)} edge="end">
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            )
+          }}
         />
         <Button
           type="submit"
