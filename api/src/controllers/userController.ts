@@ -76,7 +76,7 @@ export const createUser = async (req: Request, res: any) => {
     });
 
     res.status(201).json(user);
-  } catch (error) {
+  } catch (error) {    
     res.status(500).json({ message: 'Error al crear el usuario', error });
   }
 };
@@ -196,7 +196,7 @@ export const updateUser = async (req: any, res: any) => {
 
   try {
     const { id } = req.params;
-    const { newEmail, newUsername } = req.body;
+    const { email, username, roleId, password } = req.body;
 
     if (!id) {
       return res.status(404).json({ message: 'Id invalido' });
@@ -208,17 +208,13 @@ export const updateUser = async (req: any, res: any) => {
       return res.status(404).json({ message: 'User invalido' });
     }
 
-    if (!newEmail && !newUsername) {
-      return res.status(400).json({ message: 'Debe proporcionar al menos un campo para actualizar (email o nombre de usuario)' });
-    }
-
     // Validación para el email
-    if (newEmail && !/\S+@\S+\.\S+/.test(newEmail)) {
+    if (email && !/\S+@\S+\.\S+/.test(email)) {
       errors.newEmail = 'Email inválido';  // Guarda el error para el email
     }
 
     // Validación para el nombre de usuario
-    if (newUsername && !/^[a-zA-Z0-9_-]+$/.test(newUsername)) {
+    if (username && !/^[a-zA-Z0-9_-]+$/.test(username)) {
       errors.newUsername = 'El nombre de usuario solo puede contener letras, números, guiones y guiones bajos';  // Guarda el error para el nombre de usuario
     }
 
@@ -228,8 +224,10 @@ export const updateUser = async (req: any, res: any) => {
     }
 
     // Si no hay errores, actualiza el usuario
-    user.username = newUsername ? newUsername : user.username;
-    user.email = newEmail ? newEmail : user.email;
+    user.username = username ? username : user.username;
+    user.email = email ? email : user.email;
+    user.password = password ? await bcrypt.hash(password, 10) : user.password;
+    user.roleId = roleId ? roleId : user.roleId;
 
     // Buscar el usuario actualizado e incluir su rol
     await user.save(); // Esperar a que se guarde antes de buscarlo nuevamente
