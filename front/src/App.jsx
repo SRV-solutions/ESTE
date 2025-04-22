@@ -10,6 +10,8 @@ import Home from './Components/Home';
 import ItemTable from './Components/Items/ItemTable'; // Importa tu nuevo componente
 import CategoryTable from './Components/Categories/CategoryTable';
 import Profile from './Components/Profile';
+import UserTable from './Components/Users/UserTable';
+
 
 const App = () => {
   return (
@@ -26,6 +28,11 @@ const App = () => {
           <Route path="/service-orders/new" element={
             <PrivateRoute>
               <ServiceOrderForm />
+            </PrivateRoute>
+          }/>
+          <Route path="/users" element={
+            <PrivateRoute>
+              <UserTable />
             </PrivateRoute>
           }/>
           <Route path="/service-orders/:id/items" element={
