@@ -125,7 +125,7 @@ const Home = () => {
           color="primary"
           onClick={() => navigate('/users')}
         >
-          Panel de Admin
+          Ver Usuarios
         </Button>}
       </Card>
 
