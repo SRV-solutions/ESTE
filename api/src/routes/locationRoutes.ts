@@ -8,6 +8,6 @@ const router = Router();
 
 router.get('/', isAuth, checkPermission(Entity.SERVICE_ORDERS, Action.READ), getLocations);
 router.post('/', isAuth, checkPermission(Entity.SERVICE_ORDERS, Action.CREATE), createLocation);
-router.put('/events/:id', isAuth, checkPermission(Entity.SERVICE_ORDERS, Action.UPDATE), updateLocation); // Ruta para actualizar
+router.patch('/:id', isAuth, checkPermission(Entity.SERVICE_ORDERS, Action.UPDATE), updateLocation); // Ruta para actualizar
 
 export default router;

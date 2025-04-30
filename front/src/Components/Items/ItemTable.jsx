@@ -13,8 +13,6 @@ import {
     MenuItem,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import ToggleOnIcon from '@mui/icons-material/ToggleOn';
-import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 import axios from 'axios';
 import ItemModal from './ItemModal';
 import AssignItemModal from './AssignItemModal'; // Importa el modal
@@ -45,7 +43,24 @@ const ItemTable = () => {
         severity: `info`,
     });
     const [isLoading, setIsLoading] = useState(false); // 🕒 Estado para el loading
+    const [user, setUser] = useState({
+        username: "",
+        role: "",
+        OrderedBy: [],
+        CheckedBy: [],
+        DeployedBy: []
+    });
 
+    const fetchUserProfile = async () => {
+        try {
+            const { data } = await axios.get(`${apiUrl}/users/profile`, {
+                headers: getAuthHeaders(),
+            });
+            setUser(data);
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+        }
+    };
 
     const handleCloseAlert = () => {
         setAlertInfo((prev) => ({ ...prev, open: false }));
@@ -56,6 +71,7 @@ const ItemTable = () => {
     useEffect(() => {
         fetchItems();
         fetchCategories();
+        fetchUserProfile();
     }, []);
 
     useEffect(() => {
@@ -100,7 +116,6 @@ const ItemTable = () => {
             console.error('Error fetching items:', error);
         }
     };
-
 
     const fetchCategories = async () => {
         try {
@@ -152,30 +167,30 @@ const ItemTable = () => {
             showAlert("El ítem no está seleccionado o no existe.", "error");
             return;
         }
-    
+
         try {
             const itemToToggle = selectedItem;
-    
+
             // Si el ítem está activo, mostrar confirmación antes de desactivarlo
             if (itemToToggle.isActive) {
                 const confirmDeactivate = window.confirm("¿Estás seguro de que deseas desactivar este ítem?");
                 if (!confirmDeactivate) return;
 
                 // Desactivar el ítem (actualizando el estado)
-                await axios.patch(`${apiUrl}/items/${itemToToggle.id}`, 
+                await axios.patch(`${apiUrl}/items/${itemToToggle.id}`,
                     { isActive: false }, // Aquí desactivamos el ítem
                     { headers: getAuthHeaders() }
                 );
                 showAlert("Ítem desactivado con éxito", "success");
             } else {
                 // Si el ítem está desactivado, activarlo sin confirmación
-                await axios.patch(`${apiUrl}/items/${itemToToggle.id}`, 
+                await axios.patch(`${apiUrl}/items/${itemToToggle.id}`,
                     { isActive: true }, // Aquí activamos el ítem
                     { headers: getAuthHeaders() }
                 );
                 showAlert("Ítem activado con éxito", "success");
             }
-    
+
             // Actualizar la lista de ítems
             fetchItems();
         } catch (error) {
@@ -183,7 +198,6 @@ const ItemTable = () => {
             console.error("Error toggling item status:", error);
         }
     };
-    
 
     const fetchAvalibleStoreItems = async () => {
         try {
@@ -221,13 +235,19 @@ const ItemTable = () => {
             console.error('Error assigning items:', error);
         }
     };
+
+    const updateItemRole = user?.role?.Permissions?.some((permission) => (permission.entity === 'items' && permission.action === 'update'))
+    const createItemRole = user?.role?.Permissions?.some((permission) => (permission.entity === 'items' && permission.action === 'create'))
+    const deleteItemRole = user?.role?.Permissions?.some((permission) => (permission.entity === 'items' && permission.action === 'delete'))
+    
+
     return (
         <div style={{ margin: '3rem' }}>
-            <UploadCSVComponent
+            {createItemRole && <UploadCSVComponent
                 fetchItems={fetchItems}
                 fetchCategories={fetchCategories}
                 fetchAvalibleStoreItems={fetchAvalibleStoreItems}
-            />
+            />}
             <SnackbarComponent
                 open={alertInfo.open}
                 message={alertInfo.message}
@@ -275,9 +295,9 @@ const ItemTable = () => {
                     </select>
                 </div>
 
-                <Button variant="contained" color="primary" onClick={() => setOpenDialog(true)}>
+                {createItemRole && <Button variant="contained" color="primary" onClick={() => setOpenDialog(true)}>
                     Crear Nuevo Ítem
-                </Button>
+                </Button>}
             </div>
 
 
@@ -314,7 +334,7 @@ const ItemTable = () => {
                             <TableCell align="center">{item.Category.isContainer ? 'SI' : 'NO'}</TableCell>
                             <TableCell align="center">{item.Category.isContainer && item.StoreItemParent ? item.StoreItemParent.length : !item.Category.isContainer ? 'No Aplica' : 0}</TableCell>
                             <TableCell align="center">
-                                <IconButton onClick={(event) => handleMenuOpen(event, item)}>
+                                <IconButton disabled={!item.Category.isContainer && (!createItemRole || !updateItemRole)} onClick={(event) => handleMenuOpen(event, item)}>
                                     <MoreVertIcon />
                                 </IconButton>
                                 {selectedItem?.id === item.id && (
@@ -323,16 +343,16 @@ const ItemTable = () => {
                                         open={Boolean(menuAnchor)}
                                         onClose={handleMenuClose}
                                     >
-                                        <MenuItem onClick={handleToggleItemStatus}>
+                                        {updateItemRole && <MenuItem onClick={handleToggleItemStatus}>
                                             {item.isActive ? 'Desactivar Item' : 'Activar Item'}
-                                        </MenuItem>
+                                        </MenuItem>}
                                         {item.Category.isContainer && (
                                             <MenuItem onClick={handleAssignedItemsContainer}>
                                                 Ver Ítems asignados
                                             </MenuItem>
                                         )}
                                         {item.Category.isContainer && (
-                                            <MenuItem onClick={handleAssignItemsToContainer}>
+                                            updateItemRole && <MenuItem onClick={handleAssignItemsToContainer}>
                                                 Asignar Ítems al contenedor
                                             </MenuItem>
 
@@ -371,6 +391,7 @@ const ItemTable = () => {
                 getAuthHeaders={getAuthHeaders}
                 fetchAvalibleStoreItems={fetchAvalibleStoreItems}
                 fetchItems={fetchItems}
+                deleteItemRole={deleteItemRole}
 
             />;
             <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>

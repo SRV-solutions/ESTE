@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, Avatar, Box, CircularProgress, Button, Snackbar } from '@mui/material';
+import { Card, CardContent, Typography, Avatar, Box, CircularProgress } from '@mui/material';
 import EditProfileModal from './EditProfileModal';
 import ChangePassword from './ChangePassword';
 import axios from 'axios';
@@ -78,7 +78,7 @@ const Profile = () => {
                         📧 {user.email}
                     </Typography>
                     <Typography variant="body1" color="textSecondary">
-                        🛡️ Rol: {user.role}
+                        🛡️ Rol: {user?.role?.roleName}
                     </Typography>
                     <ChangePassword user={user} fetchUserProfile={fetchUserProfile}/>
                 </CardContent>

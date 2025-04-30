@@ -3,7 +3,16 @@ import axios from 'axios'
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from "@mui/material";
 const apiUrl = import.meta.env.VITE_API_URL;
 
-const AssignedItemsDialog = ({ open, onClose, assignedItems, selectedItem, getAuthHeaders, fetchItems, fetchAvalibleStoreItems }) => {
+const AssignedItemsDialog = ({
+    open,
+    onClose,
+    assignedItems,
+    selectedItem,
+    getAuthHeaders,
+    fetchItems,
+    fetchAvalibleStoreItems,
+    deleteItemRole
+}) => {
     const onDelete = async (item) => {
         try {
             await axios.delete(`${apiUrl}/store-items/${selectedItem.id}/${item.StoreItemChild.id}`, {
@@ -22,11 +31,11 @@ const AssignedItemsDialog = ({ open, onClose, assignedItems, selectedItem, getAu
             <DialogContent>
                 {assignedItems.length > 0 ? (
                     assignedItems.map((item) => (
-                        <Typography key={item.StoreItemChild.code}>
+                        <Typography key={item.StoreItemChild.code} style={{ display: 'flex', justifyContent: deleteItemRole ? 'space-around' : 'center', alignItems: 'center' }}>
                             {item.StoreItemChild.code} - {item.StoreItemChild.Category.name}
-                            <Button onClick={() => onDelete(item)} color="error">
+                            {deleteItemRole && <Button onClick={() => onDelete(item)} sx={{ backgroundColor: 'red', color: 'black', margin: '0.1rem', fontWeight: 'bold' }}>
                                 Eliminar
-                            </Button>
+                            </Button>}
                         </Typography>
                     ))
                 ) : (

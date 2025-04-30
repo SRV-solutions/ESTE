@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Table,
     TableHead,
@@ -10,8 +10,6 @@ import {
     IconButton,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
-import ToggleOnIcon from '@mui/icons-material/ToggleOn';
-import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 import axios from 'axios';
 import SnackbarComponent from '../SnackbarComponent';
 import UserModal from './UserModal';
@@ -20,6 +18,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
 const UserTable = () => {
     const [users, setUsers] = useState([]);
+    const [user, setUser] = useState([]);
     const [userModalOpen, setUserModalOpen] = useState(false);
     const [userData, setUserData] = useState({});
     const [roles, setRoles] = useState([{}])
@@ -32,6 +31,17 @@ const UserTable = () => {
 
     const handleCloseAlert = () => {
         setAlertInfo((prev) => ({ ...prev, open: false }));
+    };
+
+    const fetchUserProfile = async () => {
+        try {
+            const { data } = await axios.get(`${apiUrl}/users/profile`, {
+                headers: getAuthHeaders(),
+            });
+            setUser(data);
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+        }
     };
 
     const getAuthHeaders = () => {
@@ -75,7 +85,7 @@ const UserTable = () => {
         setUserModalOpen(true);
     };
 
-    const handleEditUser = (user) => {        
+    const handleEditUser = (user) => {
         setUserData(user); // Carga los datos del usuario en el modal
         setUserModalOpen(true);
     };
@@ -99,30 +109,34 @@ const UserTable = () => {
         }
     };
 
-    const toggleUserStatus = async (id) => {
-        try {
-            await axios.patch(`${apiUrl}/users/${id}/toggle`, null, {
-                headers: getAuthHeaders(),
-            });
-            setAlertInfo({
-                open: true,
-                message: 'Estado del usuario actualizado correctamente',
-                severity: 'success',
-            });
-            fetchUsers();
-        } catch (error) {
-            setAlertInfo({
-                open: true,
-                message: `Error cambiando estado: ${error.response?.data?.message || error.message}`,
-                severity: 'error',
-            });
-        }
-    };
+    // const toggleUserStatus = async (id) => {
+    //     try {
+    //         await axios.patch(`${apiUrl}/users/${id}/toggle`, null, {
+    //             headers: getAuthHeaders(),
+    //         });
+    //         setAlertInfo({
+    //             open: true,
+    //             message: 'Estado del usuario actualizado correctamente',
+    //             severity: 'success',
+    //         });
+    //         fetchUsers();
+    //     } catch (error) {
+    //         setAlertInfo({
+    //             open: true,
+    //             message: `Error cambiando estado: ${error.response?.data?.message || error.message}`,
+    //             severity: 'error',
+    //         });
+    //     }
+    // };
 
     useEffect(() => {
         fetchRoles()
         fetchUsers();
+        fetchUserProfile()
     }, []);
+
+    const createUserRole = user?.role?.Permissions?.some((permission) => (permission.entity === 'users' && permission.action === 'create'))
+    const updateUserRole = user?.role?.Permissions?.some((permission) => (permission.entity === 'users' && permission.action === 'update'))
 
     return (
         <div style={{ margin: '3rem' }}>
@@ -133,7 +147,7 @@ const UserTable = () => {
                 variant="contained"
                 color="primary"
                 onClick={handleOpenModal}
-                sx={{ mb: 2 }}
+                sx={{ mb: 2, display: createUserRole ? '' : 'none' }}
             >
                 Crear Usuario
             </Button>
@@ -146,7 +160,7 @@ const UserTable = () => {
                         <TableCell align="center">Email</TableCell>
                         <TableCell align="center">Rol</TableCell>
                         <TableCell align="center">Activo</TableCell>
-                        <TableCell align="center">Acciones</TableCell>
+                        {updateUserRole ? <TableCell align="center">Acciones</TableCell> : <></>}
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -160,14 +174,14 @@ const UserTable = () => {
                             <TableCell align="center">{user.email}</TableCell>
                             <TableCell align="center">{user.Role?.roleName || 'Sin rol'}</TableCell>
                             <TableCell align="center">{/*user.isActive*/true ? 'SI' : 'NO'}</TableCell>
-                            <TableCell align="center">
+                            {updateUserRole ? <TableCell align="center">
                                 <IconButton onClick={() => handleEditUser(user)}>
                                     <EditIcon />
                                 </IconButton>
                                 {/* <IconButton disabled onClick={() => toggleUserStatus(user.id)}>
                                     {true  ? <ToggleOnIcon color="info" /> : <ToggleOffIcon color="error" />}
                                 </IconButton> */}
-                            </TableCell>
+                            </TableCell> : <></>}
                         </TableRow>
                     ))}
                 </TableBody>

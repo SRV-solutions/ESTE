@@ -37,14 +37,10 @@ export const getUser = async (req: Request, res: any) => {
   const { id } = req.params;
   try {
     const user = await User.findByPk(id, {
-      include: [Role],
-      attributes: [
-        'id',
-        'username',
-        'email',
-        'roleId'
-      ]
-
+      include: [{
+        model: Role,
+        include: [Permission]
+      }]
     });
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -163,7 +159,7 @@ export const getMyOwnUser = async (req: any, res: any) => {
 
     const user = await User.findByPk(req.user.id, {
       include: [
-        Role,
+        {model: Role, include:[Permission]},
         { model: ServiceOrder, as: 'DeployedBy' },
         { model: ServiceOrder, as: 'CheckedBy' },
         { model: ServiceOrder, as: 'OrderedBy' },
@@ -178,7 +174,7 @@ export const getMyOwnUser = async (req: any, res: any) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      role: user.Role ? user.Role.roleName : 'Sin rol asignado',
+      role: user.Role,
       CheckedBy: user.CheckedBy,
       DeployedBy: user.DeployedBy,
       OrderedBy: user.OrderedBy

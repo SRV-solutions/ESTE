@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TextField, Button, Grid, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import axios from 'axios';
+import SnackbarComponent from './SnackbarComponent';
+
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const ServiceOrderForm = () => {
@@ -36,7 +38,11 @@ const ServiceOrderForm = () => {
     producer: '',
     finalClient: '',
   });
-
+  const [alertInfo, setAlertInfo] = useState({
+    open: false,
+    message: ``,
+    severity: `info`,
+  });
   const validateDates = (name, value) => {
     const newErrors = { ...errors };
 
@@ -87,6 +93,12 @@ const ServiceOrderForm = () => {
     setErrors(newErrors);
   };
 
+  const handleCloseAlert = () => {
+    setAlertInfo((prev) => ({ ...prev, open: false }));
+  };
+  const showAlert = (message, severity = `info`) => {
+    setAlertInfo({ open: true, message, severity });
+  };
   const fetchData = async () => {
     try {
       const headers = getAuthHeaders();
@@ -107,6 +119,8 @@ const ServiceOrderForm = () => {
       }
     } catch (error) {
       console.error('Error al obtener datos:', error);
+      showAlert(`Error al obtener datos: ${error.response.data.message || error.message}`, `error`);
+
     }
   };
   useEffect(() => {
@@ -142,7 +156,7 @@ const ServiceOrderForm = () => {
       const headers = getAuthHeaders();
       const response = await axios.post(`${apiUrl}/events`, newEvent, { headers });
       const createdEvent = response.data;
-      
+
       setEvents((prevEvents) => [...prevEvents, createdEvent]);
       setFormData((prev) => ({ ...prev, eventId: createdEvent.id }));
       setOpenEventModal(false);
@@ -163,6 +177,8 @@ const ServiceOrderForm = () => {
       );
       navigate(`/service-orders/${response.data.id}/items`);
     } catch (error) {
+      showAlert(`Error al crear la orden de servicio. Error: ${error.response.data.message || error.message}`, `error`);
+
       console.error('Error al crear la orden de servicio:', error);
     }
   };
@@ -348,6 +364,12 @@ const ServiceOrderForm = () => {
           <Button onClick={handleCreateEvent} color="primary">Crear Evento</Button>
         </DialogActions>
       </Dialog>
+      <SnackbarComponent
+        open={alertInfo.open}
+        message={alertInfo.message}
+        severity={alertInfo.severity}
+        onClose={handleCloseAlert}
+      />
     </form>
   );
 };

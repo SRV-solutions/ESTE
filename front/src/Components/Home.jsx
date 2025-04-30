@@ -3,7 +3,8 @@ import axios from 'axios';
 import { Box, Typography, Card, CardContent, Button, IconButton } from '@mui/material';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
-import DescriptionIcon from '@mui/icons-material/Description'; // Icono para la card de órdenes de servicio
+import DescriptionIcon from '@mui/icons-material/Description';
+import AddLocationIcon from '@mui/icons-material/AddLocation';
 import { useNavigate } from 'react-router-dom';
 
 const apiUrl = import.meta.env.VITE_API_URL;
@@ -30,26 +31,25 @@ const Home = () => {
     try {
       const { data } = await axios.get(`${apiUrl}/users/profile`, {
         headers: getAuthHeaders(),
-      });
+      });      
       setUser(data);
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }
   };
 
-
   useEffect(() => {
     fetchUserProfile();
   }, []);
-
+  const createServiceOrderRole = user?.role?.Permissions?.some((permission) => (permission.entity === 'serviceOrders' && permission.action === 'create'))
   return (
     <Box
       sx={{
         maxWidth: '80%', // Establece el ancho al 80% del contenedor
         margin: '50px auto',
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)', // Tres columnas para las tres cards
-        gap: 3,
+        gridTemplateColumns: 'repeat(4, 1fr)', // Tres columnas para las tres cards
+        gap: 4,
         padding: 2,
         width: '100%',
         minWidth: 1000, // Para asegurar que no se haga demasiado pequeño en pantallas pequeñas
@@ -79,7 +79,7 @@ const Home = () => {
         <Card sx={{ margin: 2, padding: 4, display: 'flex', flexDirection: 'column', backgroundColor: '#777777', borderRadius: '15px' }}>
 
           <Typography variant="h3">Ficha Tecnica</Typography>
-          <Typography variant="body1">Mi Rol: {user.role}</Typography>
+          <Typography variant="body1">Mi Rol: {user.role.roleName || 'Sin Rol asignado'}</Typography>
           <Button
             disabled
             variant="outlined"
@@ -93,7 +93,7 @@ const Home = () => {
         {/* Botón fuera de la sub-card */}
         {<Button
           variant="contained"
-          sx={{ margin: 2, backgroundColor: "#777777", borderColor: '#777777' }}
+          sx={{ margin: 2, backgroundColor: "#777777", borderColor: '#777777'}}
           color="primary"
           onClick={() => navigate('/users')}
         >
@@ -212,14 +212,14 @@ const Home = () => {
               </Box>
             </Box>
           </Box>
-          <Button
+          {createServiceOrderRole && <Button
             sx={{ margin: 2, color: 'white', backgroundColor: 'black' }}
             variant="outlined"
             color="primary"
             onClick={() => navigate('/service-orders/new')}
           >
             Agregar Orden de Servicio
-          </Button>
+          </Button>}
         </CardContent>
       </Card>
 
@@ -236,7 +236,7 @@ const Home = () => {
       >
         <CardContent sx={{ textAlign: 'center' }}>
           <IconButton sx={{ fontSize: 60, color: 'primary.main' }}>
-            <WarehouseIcon sx={{ fontSize: 160, color: 'black' }} onClick={() => navigate('/items')}/>
+            <WarehouseIcon sx={{ fontSize: 160, color: 'black' }} onClick={() => navigate('/items')} />
           </IconButton>
           <Typography variant="h6">Gestión de Ítems</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 2 }}>
@@ -261,6 +261,36 @@ const Home = () => {
               onClick={() => navigate('/categories')}
             >
               Agregar Categoría
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      <Card
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: 2,
+          boxShadow: 3,
+          height: '100%', // Ocupa todo el espacio vertical disponible
+          placeContent: 'center'
+        }}
+      >
+        <CardContent sx={{ textAlign: 'center' }}>
+          <IconButton sx={{ fontSize: 60, color: 'primary.main' }}>
+            <AddLocationIcon sx={{ fontSize: 160, color: 'black' }} onClick={() => navigate('/locations')} />
+          </IconButton>
+          <Typography variant="h6">Gestión de Ubicaciones</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 2 }}>
+            Agrega y administra ubicaciones fácilmente.
+          </Typography>
+          <div>
+            <Button
+              variant="contained"
+              sx={{ margin: 2, color: 'white', backgroundColor: 'black' }}
+              color="primary"
+              onClick={() => navigate('/locations')}
+            >
+              Agregar Ubicacion
             </Button>
           </div>
         </CardContent>

@@ -30,16 +30,26 @@ export const createLocation = async (req: Request, res: any) => {
 export const updateLocation = async (req: Request, res: any) => {
   try {
     const { id } = req.params;
-    const { locationName, address, city, country } = req.body;
 
     const location = await Location.findByPk(id);
     if (!location) {
       return res.status(404).json({ message: 'Ubicación no encontrada' });
     }
 
-    await location.update({ locationName, address, city, country });
+    // Filtrar solo las propiedades que realmente vinieron en el body
+    const fieldsToUpdate: any = {};
+    const updatableFields = ['locationName', 'address', 'city', 'country'];
+
+    updatableFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        fieldsToUpdate[field] = req.body[field];
+      }
+    });
+
+    await location.update(fieldsToUpdate);
     res.json(location);
   } catch (error) {
     res.status(500).json({ message: 'Error al actualizar la ubicación', error });
   }
 };
+

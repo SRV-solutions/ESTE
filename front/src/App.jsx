@@ -11,6 +11,7 @@ import ItemTable from './Components/Items/ItemTable'; // Importa tu nuevo compon
 import CategoryTable from './Components/Categories/CategoryTable';
 import Profile from './Components/Profile';
 import UserTable from './Components/Users/UserTable';
+import LocationTable from './Components/Locations/LocationTable'
 
 
 const App = () => {
@@ -33,6 +34,11 @@ const App = () => {
           <Route path="/users" element={
             <PrivateRoute>
               <UserTable />
+            </PrivateRoute>
+          }/>
+           <Route path="/locations" element={
+            <PrivateRoute>
+              <LocationTable />
             </PrivateRoute>
           }/>
           <Route path="/service-orders/:id/items" element={
