@@ -33,7 +33,7 @@ const EditPasswordModal = ({ user, fetchUserProfile }) => {
         }
 
         try {
-            await axios.put(`${apiUrl}/users/${user.id}/change-password`, formData, {
+            await axios.put(`${apiUrl}/users/change-password`, formData, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },

@@ -58,7 +58,6 @@ const ItemTable = () => {
             });
             setUser(data);
         } catch (error) {
-            console.error('Error fetching user profile:', error);
         }
     };
 
@@ -112,8 +111,6 @@ const ItemTable = () => {
             setTotalPages(data.totalPages);
         } catch (error) {
             showAlert(`Error al cargar los items ${error.response.data.message || error}`, `error`);
-
-            console.error('Error fetching items:', error);
         }
     };
 
@@ -125,8 +122,6 @@ const ItemTable = () => {
             setCategories(data);
         } catch (error) {
             showAlert(`Error al cargar las categorias ${error.response.data.message || error}`, `error`);
-
-            console.error('Error fetching categories:', error);
         }
     };
 
@@ -154,7 +149,6 @@ const ItemTable = () => {
             showAlert(`Error al crear los items ${error.response.data.message || error}`, `error`);
             setIsLoading(false);
             setOpenDialog(false);
-            console.error('Error creating item:', error);
         }
     };
 
@@ -195,7 +189,6 @@ const ItemTable = () => {
             fetchItems();
         } catch (error) {
             showAlert(`Error al cambiar el estado del ítem: ${error.response?.data?.message || error.message}`, "error");
-            console.error("Error toggling item status:", error);
         }
     };
 
@@ -206,7 +199,6 @@ const ItemTable = () => {
             });
             setAvalibleStoreItems(data);
         } catch (error) {
-            console.error('Error al obtener los ítems:', error);
         }
     };
 
@@ -232,7 +224,6 @@ const ItemTable = () => {
             fetchAvalibleStoreItems()
             fetchItems(); // Actualiza la lista de ítems después de asignar
         } catch (error) {
-            console.error('Error assigning items:', error);
         }
     };
 

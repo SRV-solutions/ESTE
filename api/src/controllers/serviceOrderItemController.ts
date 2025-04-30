@@ -130,7 +130,6 @@ export const createServiceOrderItems = async (req: Request, res: any) => {
 
     res.status(201).json({ message: 'Ítems creados exitosamente', data: newServiceOrderItems });
   } catch (error) {
-    console.error('Error al crear ítems en la orden de servicio:', error);
     res.status(500).json({ message: 'Error creando ítems en la orden de servicio', error });
   }
 };
@@ -241,7 +240,6 @@ export const deleteServiceOrderItem = async (req: Request, res: any) => {
 
     res.status(200).json({ message: 'Ítem eliminado exitosamente de la orden de servicio' });
   } catch (error) {
-    console.error('Error al eliminar ítem de la orden de servicio:', error);
     res.status(500).json({
       message: 'Ocurrió un error al intentar eliminar el ítem de la orden de servicio',
       error: error instanceof Error ? error.message : error,
@@ -318,12 +316,10 @@ export const changeItemsByServiceOrderId = async (req: Request, res: any) => {
 
     } catch (error) {
       await transaction.rollback();
-      console.error("Error al actualizar ítem en la orden de servicio:", error);
       return res.status(500).json({ error: "Error al actualizar ítem en la orden de servicio" });
     }
 
   } catch (error) {
-    console.error("Error en changeItemsByServiceOrderId:", error);
     return res.status(500).json({ error: "Error interno del servidor" });
   }
 };
@@ -399,7 +395,6 @@ export const changeContainerItemsByServiceOrderId = async (req: Request, res: an
 
   } catch (error) {
     await transaction.rollback();
-    console.error("Error en changeContainerItemsByServiceOrderId:", error);
     return res.status(500).json({ error: "Error interno del servidor" });
   }
 };

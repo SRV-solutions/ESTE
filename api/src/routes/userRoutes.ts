@@ -7,7 +7,9 @@ import {
   login,
   getMyOwnUser,
   updateUser,
-  changePassword
+  changePassword,
+  updateMyOwnUser,
+  changeMyOwnPassword
 } from '../controllers/userController';
 import { Entity, Action } from '../models/enums';
 import { isAuth, checkPermission } from '../middlewares/auth';
@@ -22,7 +24,9 @@ router.get('/:id', isAuth, checkPermission(Entity.USERS, Action.READ), getUser);
 router.post('/', isAuth, checkPermission(Entity.USERS, Action.CREATE), createUser);
 router.post('/register', isAuth, checkPermission(Entity.USERS, Action.CREATE), register);
 router.patch('/update/:id', isAuth, checkPermission(Entity.USERS, Action.UPDATE), updateUser)
+router.patch('/update', isAuth, checkPermission(Entity.USERS, Action.READ), updateMyOwnUser)
 router.put('/:id/change-password', isAuth, checkPermission(Entity.USERS, Action.UPDATE), changePassword);
+router.put('/change-password', isAuth, checkPermission(Entity.USERS, Action.READ), changeMyOwnPassword);
 
 
 export default router;

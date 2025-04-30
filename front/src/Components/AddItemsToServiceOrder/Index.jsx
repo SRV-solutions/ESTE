@@ -144,7 +144,6 @@ const AddItemsToServiceOrder = () => {
             });
             setAllItems(data);
         } catch (error) {
-            console.error(`Error al cargar los ítems:`, error);
         }
     };
 
@@ -157,7 +156,6 @@ const AddItemsToServiceOrder = () => {
 
             setServiceOrder(data);
         } catch (error) {
-            console.error(`Error al cargar la orden de servicio:`, error);
         }
     };
 
@@ -214,7 +212,6 @@ const AddItemsToServiceOrder = () => {
                 fetchServiceOrder();
             }
         } catch (error) {
-            console.error(`Error al eliminar el ítem:`, error);
             showAlert(error.response?.data?.message || `Error al eliminar el ítem`, `error`);
         }
     };
@@ -230,7 +227,6 @@ const AddItemsToServiceOrder = () => {
                 showAlert(`Todos los ítems fueron eliminados correctamente`, `success`);
             }
         } catch (error) {
-            console.error(`Error al eliminar todos los ítems:`, error);
             showAlert(error.response?.data?.message || `Error al eliminar ítems`, `error`);
         }
     };

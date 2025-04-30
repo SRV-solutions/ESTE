@@ -28,7 +28,6 @@ const Profile = () => {
             });
             setUser(data);
         } catch (error) {
-            console.error('Error fetching user profile:', error);
             setError('Hubo un error al cargar el perfil del usuario.'); // Mensaje de error
         } finally {
             setLoading(false);

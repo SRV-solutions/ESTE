@@ -72,7 +72,7 @@ export const createUser = async (req: Request, res: any) => {
     });
 
     res.status(201).json(user);
-  } catch (error) {    
+  } catch (error) {
     res.status(500).json({ message: 'Error al crear el usuario', error });
   }
 };
@@ -159,7 +159,7 @@ export const getMyOwnUser = async (req: any, res: any) => {
 
     const user = await User.findByPk(req.user.id, {
       include: [
-        {model: Role, include:[Permission]},
+        { model: Role, include: [Permission] },
         { model: ServiceOrder, as: 'DeployedBy' },
         { model: ServiceOrder, as: 'CheckedBy' },
         { model: ServiceOrder, as: 'OrderedBy' },
@@ -233,6 +233,89 @@ export const updateUser = async (req: any, res: any) => {
 
   } catch (error) {
     res.status(500).json({ message: 'Error al actualizar el usuario' });
+  }
+};
+
+export const updateMyOwnUser = async (req: any, res: any) => {
+  const errors: ValidationErrors = {};  // Tipo explícito para los errores
+  try {
+    const { email, username, roleId, password } = req.body;
+    if (!req.user) {
+      return res.status(401).json({ message: 'No autorizado. Usuario no autenticado.' });
+    }
+
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User invalido' });
+    }
+
+    // Validación para el email
+    if (email && !/\S+@\S+\.\S+/.test(email)) {
+      errors.newEmail = 'Email inválido';  // Guarda el error para el email
+    }
+
+    // Validación para el nombre de usuario
+    if (username && !/^[a-zA-Z0-9_-]+$/.test(username)) {
+      errors.newUsername = 'El nombre de usuario solo puede contener letras, números, guiones y guiones bajos';  // Guarda el error para el nombre de usuario
+    }
+
+    // Si hay errores, devuelve el objeto con los errores
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({ errors });
+    }
+
+    // Si no hay errores, actualiza el usuario
+    user.username = username ? username : user.username;
+    user.email = email ? email : user.email;
+    user.password = password ? await bcrypt.hash(password, 10) : user.password;
+    user.roleId = roleId ? roleId : user.roleId;
+
+    // Buscar el usuario actualizado e incluir su rol
+    await user.save(); // Esperar a que se guarde antes de buscarlo nuevamente
+    const updatedUser = await User.findByPk(req.user.id, { include: Role });
+
+    res.status(200).json(updatedUser);
+
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar el usuario' });
+  }
+};
+
+export const changeMyOwnPassword = async (req: any, res: any) => {
+
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!req.user) {
+      return res.status(401).json({ message: 'No autorizado. Usuario no autenticado.' });
+    }
+    const id = req.user.id
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Contraseña actual incorrecta' });
+    }
+
+    // Validar que la nueva contraseña cumpla con los criterios (mínimo 6 caracteres, por ejemplo)
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres' });
+    }
+
+    // Encriptar la nueva contraseña    
+    const hashedNewPassword: string = await bcrypt.hash(newPassword, 10)
+
+    // Actualizar la contraseña en la base de datos
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.status(200).json({ message: 'Contraseña cambiada con éxito' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al cambiar la contraseña', error });
   }
 };
 

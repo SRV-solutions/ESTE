@@ -8,9 +8,9 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
 const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
     const [open, setOpen] = useState(false);
-    const [formData, setFormData] = useState({ newUsername: user.username, newEmail: user.email });
+    const [formData, setFormData] = useState({ username: user.username, email: user.email });
     const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState({ newUsername: '', newEmail: '' }); // Estado para los errores
+    const [errors, setErrors] = useState({ username: '', email: '' }); // Estado para los errores
     const [openSnackbar, setOpenSnackbar] = useState(false); // Estado para el Snackbar
 
     const handleChange = (e) => {
@@ -19,10 +19,10 @@ const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
 
     const handleSubmit = async () => {
         setLoading(true);
-        setErrors({ newUsername: '', newEmail: '' }); // Limpiar errores antes de intentar enviar el formulario
+        setErrors({ username: '', email: '' }); // Limpiar errores antes de intentar enviar el formulario
     
         try {
-            const { data } = await axios.patch(`${apiUrl}/users/update/${user.id}`, formData, {
+            const { data } = await axios.patch(`${apiUrl}/users/update`, formData, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -38,11 +38,10 @@ const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
     
                 // Verifica y asigna errores a cada campo si existe
                 setErrors({
-                    newUsername: errorData.newUsername || '',
-                    newEmail: errorData.newEmail || '',
+                    username: errorData.username || '',
+                    email: errorData.email || '',
                 });
             } else {
-                console.error('Error updating profile:', error);
             }
         } finally {
             setLoading(false);
@@ -89,21 +88,21 @@ const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
                         fullWidth
                         margin="normal"
                         label="Nombre"
-                        name="newUsername"
-                        value={formData.newUsername}
+                        name="username"
+                        value={formData.username}
                         onChange={handleChange}
-                        error={!!errors.newUsername} // Mostrar error si lo hay
-                        helperText={errors.newUsername} // Mostrar el mensaje de error
+                        error={!!errors.username} // Mostrar error si lo hay
+                        helperText={errors.username} // Mostrar el mensaje de error
                     />
                     <TextField
                         fullWidth
                         margin="normal"
                         label="Email"
-                        name="newEmail"
-                        value={formData.newEmail}
+                        name="email"
+                        value={formData.email}
                         onChange={handleChange}
-                        error={!!errors.newEmail} // Mostrar error si lo hay
-                        helperText={errors.newEmail} // Mostrar el mensaje de error
+                        error={!!errors.email} // Mostrar error si lo hay
+                        helperText={errors.email} // Mostrar el mensaje de error
                     />
                     <Button variant="contained" color="primary" onClick={handleSubmit} disabled={loading} fullWidth>
                         {loading ? 'Guardando...' : 'Guardar Cambios'}

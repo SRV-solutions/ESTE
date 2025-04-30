@@ -38,7 +38,6 @@ export const createStoreItems = async (req: Request, res: any) => {
       data: storeItems,
     });
   } catch (error) {
-    console.error("Error creating StoreItems:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -67,7 +66,6 @@ export const deleteStoreItem = async (req: Request, res: any) => {
 
     return res.status(200).json({ message: "StoreItem eliminado correctamente." });
   } catch (error) {
-    console.error("Error eliminando StoreItem:", error);
     return res.status(500).json({ error: "Error interno del servidor." });
   }
 };

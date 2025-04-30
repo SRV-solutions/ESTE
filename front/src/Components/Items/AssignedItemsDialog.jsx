@@ -22,7 +22,6 @@ const AssignedItemsDialog = ({
             fetchItems()
             fetchAvalibleStoreItems()
         } catch (error) {
-            console.error("Error en la eliminación:", error);
         }
     };
     return (

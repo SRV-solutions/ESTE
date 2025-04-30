@@ -54,7 +54,6 @@ const UploadCSVComponent = ({
             fetchCategories()
             setSnackbar({ open: true, message: "✅ Archivo procesado correctamente.", severity: "success" });
         } catch (error) {
-            console.error("Error:", error);
             setSnackbar({ open: true, message: "❌ Hubo un error al procesar el archivo.", severity: "error" });
         } finally {
             setLoading(false);

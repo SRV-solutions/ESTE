@@ -74,7 +74,6 @@ const ServiceOrderList = () => {
         setFilteredOrders(response.data);
       } catch (err) {        
         setError(err?.response?.data?.message || 'Error al cargar las órdenes de servicio.');
-        console.error('Error fetching service orders:', err);
       } finally {
         setLoading(false);
       }

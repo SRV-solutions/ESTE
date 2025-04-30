@@ -206,7 +206,6 @@ export const getServiceOrderById = async (req: Request, res: any) => {
 
     return res.status(200).json(newServiceOrder);
   } catch (error) {
-    console.error('Error fetching service order:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -271,7 +270,6 @@ export const getServiceOrders = async (req: Request, res: any) => {
     // Retornar las órdenes encontradas
     return res.status(200).json(serviceOrders);
   } catch (error) {
-    console.error('Error al obtener las órdenes de servicio:', error);
     return res.status(500).json({ message: 'Error interno del servidor.', error });
   }
 };
@@ -328,7 +326,6 @@ export const updateStatusServiceOrderById = async (req: Request, res: any) => {
       serviceOrder,
     });
   } catch (error) {
-    console.error('Error al actualizar el estado de la orden de servicio:', error);
     return res.status(500).json({ message: 'Error interno del servidor.', error });
   }
 };

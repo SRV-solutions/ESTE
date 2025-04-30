@@ -40,7 +40,6 @@ const UserTable = () => {
             });
             setUser(data);
         } catch (error) {
-            console.error('Error fetching user profile:', error);
         }
     };
 
@@ -104,7 +103,6 @@ const UserTable = () => {
             setUserModalOpen(false);
             fetchUsers();
         } catch (error) {
-            console.error('Error al guardar el usuario:', error);
             // Podés agregar toast o alerta acá si querés
         }
     };

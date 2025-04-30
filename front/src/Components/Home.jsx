@@ -36,7 +36,6 @@ const Home = () => {
       });
       setUser(data);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
     }
   };
 

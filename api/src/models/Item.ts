@@ -82,7 +82,6 @@ Item.afterBulkCreate(async (items, options) => {
     });
 
     if (!categories.length) {
-      console.error(`❌ Categoría(s) con ID ${categoriesId} no encontrada(s).`);
       await transaction.rollback();
       return;
     }
@@ -140,7 +139,6 @@ Item.afterBulkCreate(async (items, options) => {
 
     await transaction.commit();
   } catch (error) {
-    console.error("🚨 Error en afterBulkCreate:", error);
     await transaction?.rollback();
   }
 });
@@ -150,7 +148,6 @@ Item.afterCreate(async (item) => {
   try {
     const category = await Category.findByPk(item.categoryId);
     if (!category) {
-      console.error(`❌ Categoría con ID ${item.categoryId} no encontrada.`);
       return;
     }
 
@@ -172,7 +169,6 @@ Item.afterCreate(async (item) => {
     item.code = `${category.code}-${highestCode + 1}`;
     await item.save();
   } catch (error) {
-    console.error("🚨 Error en afterCreate:", error);
   }
 });
 

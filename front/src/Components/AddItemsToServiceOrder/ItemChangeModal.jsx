@@ -12,13 +12,11 @@ const ItemChangeModal = ({ open, onClose, selectedItem, allItems, serviceOrder, 
   const handleSave = async () => {
     try {
       if (!serviceOrder?.id || !selectedItem?.id) {
-        console.error("Error: La orden de servicio o el ítem seleccionado no están definidos.");
         return;
       }
 
       const searchedItem = categoryItems.find(item => item.code === itemName);
       if (!searchedItem?.id) {
-        console.error("Error: El ítem ingresado no existe en la categoría.");
         return;
       }      
 
@@ -42,7 +40,6 @@ const ItemChangeModal = ({ open, onClose, selectedItem, allItems, serviceOrder, 
       await onClose();
       await fetchServiceOrder();
     } catch (error) {
-      console.error("Error al actualizar el ítem:", error);
     }
   };
 

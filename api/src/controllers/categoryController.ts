@@ -72,7 +72,6 @@ export const deleteCategory = async (req: Request, res: any) => {
 
     return res.json({ message: 'Categoría e ítems desactivados con éxito' });
   } catch (error) {
-    console.error('Error desactivando la categoría e ítems:', error);
     res.status(500).json({ message: 'Error desactivando la categoría e ítems', error });
   }
 };

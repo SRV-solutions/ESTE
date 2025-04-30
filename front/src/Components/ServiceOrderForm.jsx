@@ -118,7 +118,6 @@ const ServiceOrderForm = () => {
 
       }
     } catch (error) {
-      console.error('Error al obtener datos:', error);
       showAlert(`Error al obtener datos: ${error.response.data.message || error.message}`, `error`);
 
     }
@@ -163,7 +162,6 @@ const ServiceOrderForm = () => {
       setNewEvent({ dateEvent: '', locationId: 0, organizer: '', producer: '', finalClient: '' });
       fetchData()
     } catch (error) {
-      console.error('Error al crear evento:', error);
     }
   };
 
@@ -178,8 +176,6 @@ const ServiceOrderForm = () => {
       navigate(`/service-orders/${response.data.id}/items`);
     } catch (error) {
       showAlert(`Error al crear la orden de servicio. Error: ${error.response.data.message || error.message}`, `error`);
-
-      console.error('Error al crear la orden de servicio:', error);
     }
   };
 

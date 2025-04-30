@@ -97,7 +97,6 @@ export const createServiceOrderStoreItem = async (req: Request, res: any) => {
     return res.status(201).json(newServiceOrderStoreItem);
 
   } catch (error) {
-    console.error('Error creating ServiceOrderStoreItem:', error);
     return res.status(500).json({ message: 'Error creating ServiceOrderStoreItem', error });
   }
 };
@@ -177,7 +176,6 @@ export const createServiceOrderStoreItems = async (req: Request, res: any) => {
 
     res.status(201).json({ message: 'Ítems creados exitosamente en la orden de servicio' });
   } catch (error) {
-    console.error('Error creando ítems en la orden de servicio:', error);
     res.status(500).json({ message: 'Error creando ítems en la orden de servicio', error });
   }
 };
@@ -212,7 +210,6 @@ export const deleteServiceOrderStoreItem = async (req: Request, res: any) => {
     res.status(200).json({ message: 'Item de la orden de servicio eliminados exitosamente' });
 
   } catch (error) {
-    console.error('Error al eliminar item de la orden de servicio:', error);
     res.status(500).json({ message: 'Error al eliminar item de la orden de servicio', error });
   }
 }

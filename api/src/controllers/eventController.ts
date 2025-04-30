@@ -40,7 +40,6 @@ export const createEvent = async (req: Request, res: any) => {
     })
     return res.status(201).json(searchedEvent);
   } catch (error) {
-    console.error("Error al crear el evento:", error);
     res.status(500).json({ message: "Error al crear el evento.", error });
   }
 };
@@ -77,7 +76,6 @@ export const updateEvent = async (req: Request, res: any) => {
 
     return res.status(200).json(existingEvent);
   } catch (error) {
-    console.error("Error al actualizar el evento:", error);
     res.status(500).json({ message: "Error al actualizar el evento.", error });
   }
 };

@@ -309,7 +309,6 @@ export const getAvalibleItems = async (req: Request, res: any) => {
 
     return res.status(200).json(sortedItems);
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ message: 'Error al obtener los ítems disponibles.' });
   }
 };
@@ -399,7 +398,6 @@ export const getAvailableStoreItems = async (req: Request, res: any) => {
 
     return res.status(200).json(sortedItems);
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ message: "Error al obtener los ítems disponibles." });
   }
 };
@@ -466,12 +464,10 @@ export const uploadCSV = async (req: Request | any, res: Response | any) => {
             items: flatItems,
           });
         } catch (error) {
-          console.error("Error al guardar los items:", error);
           return res.status(500).json({ message: "Error al guardar los items", error });
         }
       });
   } catch (error) {
-    console.error("Error en la carga del archivo:", error);
     return res.status(500).json({ message: "Error en la carga del archivo", error });
   }
 };
@@ -504,7 +500,6 @@ export const updateItem = async (req: Request | any, res: Response | any) => {
 
     return res.status(200).json(item);
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ message: 'Error al actualizar el ítem' });
   }
 };

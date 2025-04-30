@@ -57,7 +57,6 @@ const CategoryTable = () => {
             setCategories(data);
         } catch (error) {
             showAlert(`Error al querer cargar las categorias: ${error.response.data.message || error}`, `error`);
-            console.error('Error fetching categories:', error);
         }
     };
 
@@ -82,7 +81,6 @@ const CategoryTable = () => {
             setSelectedCategory({});
         } catch (error) {
             showAlert(selectedCategory.id ? `Error al modificar la categoria: ${selectedCategory.code}, Error: ${error.response.data.message || error.message}` : `Error al crear una categoria: ${error.response.data.message || error.message}`, `error`);
-            console.error('Error saving category:', error);
         }
     };
 
@@ -122,7 +120,6 @@ const CategoryTable = () => {
             fetchCategories(); // Actualizar la lista de categorías
         } catch (error) {
             showAlert(`Error al cambiar el estado de la categoría: ${error.response?.data?.message || error.message}`, "error");
-            console.error("Error toggling category status:", error);
         }
     };
 
@@ -139,7 +136,6 @@ const CategoryTable = () => {
             });
             setUser(data);
         } catch (error) {
-            console.error('Error fetching user profile:', error);
         }
     };
 
