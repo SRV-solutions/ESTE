@@ -5,6 +5,8 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AddLocationIcon from '@mui/icons-material/AddLocation';
+import Tooltip from '@mui/material/Tooltip';
+
 import { useNavigate } from 'react-router-dom';
 
 const apiUrl = import.meta.env.VITE_API_URL;
@@ -31,7 +33,7 @@ const Home = () => {
     try {
       const { data } = await axios.get(`${apiUrl}/users/profile`, {
         headers: getAuthHeaders(),
-      });      
+      });
       setUser(data);
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -70,8 +72,35 @@ const Home = () => {
         <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <AccountCircle sx={{ fontSize: 60 }} /> {/* Icono de usuario */}
           <Box>
-            <Typography variant="h3">{user.username}</Typography>
-            <Typography variant="h6">{user.email}</Typography>
+          <Tooltip title={user.username} arrow>
+              <Typography
+                variant="h3"
+                sx={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: 200, // ajustá también
+                  display: 'block',
+                }}
+              >
+                {user.username}
+              </Typography>
+            </Tooltip>
+            <Tooltip title={user.email} arrow>
+              <Typography
+                variant="h6"
+                sx={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: 200, // ajustá también
+                  display: 'block',
+                }}
+              >
+                {user.email}
+              </Typography>
+            </Tooltip>
+
           </Box>
         </CardContent>
 
@@ -93,7 +122,7 @@ const Home = () => {
         {/* Botón fuera de la sub-card */}
         {<Button
           variant="contained"
-          sx={{ margin: 2, backgroundColor: "#777777", borderColor: '#777777'}}
+          sx={{ margin: 2, backgroundColor: "#777777", borderColor: '#777777' }}
           color="primary"
           onClick={() => navigate('/users')}
         >
