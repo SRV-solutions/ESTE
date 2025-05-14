@@ -96,7 +96,7 @@ const AddItemsToServiceOrder = () => {
 
     const canEditStatus = () => {
 
-        if (userData.email === serviceOrder.CheckedBy.email && serviceOrder.status === `in_review`) {
+        if ((userData.email === serviceOrder.OrderedBy.email || userData.email === serviceOrder.CheckedBy.email) && serviceOrder.status === `in_review`) {
             return true;
         }
         const editableStatuses = [
@@ -244,9 +244,16 @@ const AddItemsToServiceOrder = () => {
             const itemChildren = allItems.filter(item => item.Category.id === selectedStoreItem.Category.id);
 
             if (itemChildren.length < quantityToStore) {
-                showAlert(`No hay suficientes ítems disponibles en esta categoría`, `error`);
+                showAlert(`No hay suficientes ítems disponibles en esta categoría ${itemChildren[0]?.Category?.name || ''}`, `error`);
                 return;
             }
+            
+            if (!itemChildren[0].Category.isStorable) {
+                showAlert(`El item ${itemChildren[0].Category.name} no es almacenable`, `error`);
+                return;
+            }
+
+
 
             const storeItemData = {
                 serviceOrderId: Number(id),
@@ -301,7 +308,7 @@ const AddItemsToServiceOrder = () => {
                     getAuthHeaders={getAuthHeaders}
                     fetchServiceOrder={fetchServiceOrder}
                 />
-                <TableCell align="center"><IconButton
+                {canEditOrder() && <TableCell align="center"><IconButton
                     disabled={!isTemporalContainer}
                     onClick={() => handleOpenModal(item)}
                     sx={{
@@ -313,7 +320,7 @@ const AddItemsToServiceOrder = () => {
                     }}
                 >
                     <CachedIcon />
-                </IconButton></TableCell>
+                </IconButton></TableCell>}
                 <TableCell align="center">{item.code}</TableCell>
                 <TableCell align="center">{item.Category.name}</TableCell>
                 <TableCell align="center">{item.Category.description}</TableCell>

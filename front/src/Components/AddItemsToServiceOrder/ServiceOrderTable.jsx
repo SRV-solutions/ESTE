@@ -35,16 +35,16 @@ const ServiceOrderTable = ({
 
   serviceOrder.ServiceOrderItems.forEach(({ Item }) => {
     const categoryName = Item.Category.name;
-
+    
     if (!categorizedItems[categoryName]) {
       categorizedItems[categoryName] = [];
     }
-    categorizedItems[categoryName].push(Item);
+    categorizedItems[categoryName].push(Item);    
   });
-
+  
   let categorizedArray = Object.entries(categorizedItems).map(([category, items]) => ({
     category,
-    items
+    items,
   }));
 
   return (
@@ -63,14 +63,14 @@ const ServiceOrderTable = ({
                     <Table sx={{ mt: 2 }}>
                       <TableHead>
                         <TableRow>
-                          <TableCell align="center">Cambiar</TableCell>
+                          {canEditOrder() && <TableCell align="center">Cambiar</TableCell>}
                           <TableCell align="center">Codigo</TableCell>
-                          <TableCell align="center">NOMBRE</TableCell>
-                          <TableCell align="center">DESCRIPCIÓN</TableCell>
-                          <TableCell align="center">TIPO</TableCell>
+                          <TableCell align="center">Nombre</TableCell>
+                          <TableCell align="center">Descripcion</TableCell>
+                          <TableCell align="center">Tipo</TableCell>
                           <TableCell align="center">E.A</TableCell>
                           <TableCell align="center">E.C</TableCell>
-                          {canEditOrder() && <TableCell align="center">ACCIONES</TableCell>}
+                          {canEditOrder() && <TableCell align="center">Acciones</TableCell>}
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -92,12 +92,14 @@ const ServiceOrderTable = ({
                                     <Table sx={{ mt: 2 }}>
                                       <TableHead>
                                         <TableRow>
-                                          <TableCell align="center">NOMBRE</TableCell>
-                                          <TableCell align="center">DESCRIPCIÓN</TableCell>
-                                          <TableCell align="center">TIPO</TableCell>
+                                          {canEditOrder() && <TableCell align="center">Cambiar</TableCell>}
+                                          <TableCell align="center">Codigo</TableCell>
+                                          <TableCell align="center">Nombre</TableCell>
+                                          <TableCell align="center">Descripcion</TableCell>
+                                          <TableCell align="center">Tipo</TableCell>
                                           <TableCell align="center">E.A</TableCell>
                                           <TableCell align="center">E.C</TableCell>
-                                          {canEditOrder() && <TableCell align="center">ACCIONES</TableCell>}
+                                          {canEditOrder() && <TableCell align="center">Acciones</TableCell>}
                                         </TableRow>
                                       </TableHead>
                                       {renderTableRows(item, '#add')}
