@@ -12,7 +12,7 @@ import CategoryTable from './Components/Categories/CategoryTable';
 import Profile from './Components/Profile';
 import UserTable from './Components/Users/UserTable';
 import LocationTable from './Components/Locations/LocationTable'
-
+import ReportError from './Components/ReportError/ReportErrorModal'
 
 const App = () => {
   return (
@@ -68,6 +68,7 @@ const App = () => {
           }/>
         </Routes>
       </div>
+      {/* <ReportError /> */}
     </Router>
   );
 };

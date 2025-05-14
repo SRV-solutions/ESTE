@@ -1,0 +1,17 @@
+.reportButton {
+  position: fixed;             /* Fijo respecto al viewport */
+  bottom: 20px;                /* 20px desde abajo */
+  left: 20px;                 /* 20px desde la derecha */
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: rgb(255, 0, 0);
+  color: rgb(0, 0, 0);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
