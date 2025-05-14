@@ -43,6 +43,10 @@ const Home = () => {
     fetchUserProfile();
   }, []);
   const createServiceOrderRole = user?.role?.Permissions?.some((permission) => (permission.entity === 'serviceOrders' && permission.action === 'create'))
+  
+  const toCheckServiceOrders = user.CheckedBy.filter(serviceOrder => serviceOrder.status === 'in_review') || []
+  const createdServiceOrders = user.OrderedBy.filter(serviceOrder => serviceOrder.status === 'created') || []
+  const toDeployServiceOrders = user.DeployedBy.filter(serviceOrder => serviceOrder.status === 'approved') || []
   return (
     <Box
       sx={{
@@ -182,7 +186,7 @@ const Home = () => {
                   fontSize: 20,
                 }}
               >
-                {user.OrderedBy.length} {/* Número dinámico */}
+                {createdServiceOrders.length} {/* Número dinámico */}
               </Box>
             </Box>
 
@@ -209,7 +213,7 @@ const Home = () => {
                   fontSize: 20,
                 }}
               >
-                {user.CheckedBy.length} {/* Número dinámico */}
+                {toCheckServiceOrders.length} {/* Número dinámico */}
               </Box>
             </Box>
 
@@ -236,7 +240,7 @@ const Home = () => {
                   fontSize: 20,
                 }}
               >
-                {user.DeployedBy.length} {/* Número dinámico */}
+                {toDeployServiceOrders.length} {/* Número dinámico */}
               </Box>
             </Box>
           </Box>
