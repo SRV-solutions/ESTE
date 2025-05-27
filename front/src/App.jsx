@@ -66,9 +66,10 @@ const App = () => {
               <CategoryTable />
             </PrivateRoute>
           }/>
+          
         </Routes>
       </div>
-      {/* <ReportError /> */}
+      <ReportError />
     </Router>
   );
 };

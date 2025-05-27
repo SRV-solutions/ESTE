@@ -12,6 +12,7 @@ import eventRoutes from './routes/eventRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import locationRoutes from './routes/locationRoutes';
 import storeItemRoutes from './routes/storeItemRoutes';
+import reportsRouts from './routes/reportsRoute'
 
 // import orderItemRoutes from './routes/orderItemRoutes';
 // import itemRoutes from './routes/itemRoutes';
@@ -79,6 +80,7 @@ app.use('/service-order-store-items', serviceOrderStoreItemRoutes);//baules de c
 app.use('/events', eventRoutes);
 app.use('/categories', categoryRoutes);
 app.use('/locations', locationRoutes);
+app.use('/reports', reportsRouts)
 // app.use('/order-items', orderItemRoutes);
 // app.use('/items', itemRoutes);
 // app.use('/store-items', storeItemRoutes);
