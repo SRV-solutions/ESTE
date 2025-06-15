@@ -1,6 +1,5 @@
 import express, { Request, NextFunction } from 'express';
 import { sequelize } from './config/database';
-import bcrypt from 'bcrypt';
 
 import userRoutes from './routes/userRoutes';
 import roleRoutes from './routes/roleRoutes';
