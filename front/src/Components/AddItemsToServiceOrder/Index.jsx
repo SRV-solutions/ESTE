@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { jsPDF } from "jspdf";
-import "jspdf-autotable"; // Para crear tablas automáticamente en el PDF
+import autoTable from 'jspdf-autotable';
 import {
     TableCell,
     TableContainer,
@@ -26,6 +26,11 @@ import ServiceOrderHeader from './ServiceOrderHeader';
 import ServiceOrderTable from './ServiceOrderTable';
 import ItemChangeModal from './ItemChangeModal'
 import SnackbarComponent from '../SnackbarComponent';
+
+
+
+
+
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const AddItemsToServiceOrder = () => {
@@ -247,7 +252,7 @@ const AddItemsToServiceOrder = () => {
                 showAlert(`No hay suficientes ítems disponibles en esta categoría ${itemChildren[0]?.Category?.name || ''}`, `error`);
                 return;
             }
-            
+
             if (!itemChildren[0].Category.isStorable) {
                 showAlert(`El item ${itemChildren[0].Category.name} no es almacenable`, `error`);
                 return;
@@ -445,112 +450,108 @@ const AddItemsToServiceOrder = () => {
         }
     };
 
-    const generatePDF = () => {
+
+
+    const generatePDF = async (serviceOrder) => {
         const doc = new jsPDF();
+        const getImageAsBase64 = (url) => {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous"; // Por seguridad, pero en local no importa mucho
+                img.src = url;
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
 
-        // Agregar el título
-        doc.setFontSize(18);
-        doc.text("Orden de Servicio", 14, 20);
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0);
+                    const dataURL = canvas.toDataURL("image/png");
+                    resolve(dataURL);
+                };
+                img.onerror = (err) => reject(err);
+            });
+        };
 
-        // Agregar detalles de la orden de servicio
+        const fechaActual = new Date().toLocaleDateString("es-AR");
+        // Encabezado
+        const logoBase64 = await getImageAsBase64("/logo.png");
+        doc.addImage(logoBase64, "PNG", 15, 5, 20, 20); // (x, y, width, height)        doc.setFontSize(10);
+        doc.text("4921-1200", 105, 15, { align: "center" });
+        doc.text("FAMATINA 4033", 105, 20, { align: "center" });
         doc.setFontSize(12);
-        doc.text(`ID de la Orden: ${serviceOrder.id}`, 14, 30);
-        doc.text(`Estado: ${status[serviceOrder.status]}`, 14, 35);
-        doc.text(`Pedido por: ${serviceOrder.OrderedBy.username}`, 14, 40);
-        doc.text(`Desplegado por: ${serviceOrder.DeployedBy.username}`, 14, 45);
-        doc.text(`Verificado por: ${serviceOrder.CheckedBy.username}`, 14, 50);
-        doc.text(`Cliente: ${serviceOrder?.Event?.Location?.locationName} - ${serviceOrder?.Event?.organizer} - ${serviceOrder?.Event?.producer} - ${serviceOrder?.Event?.finalClient}`, 14, 55);
+        doc.text("ORDEN DE SERVICIO", 105, 25, { align: "center" });
+        doc.text(`N° ${serviceOrder.id}`, 200, 15, { align: "right" });
+        doc.text(`Fecha: ${fechaActual}`, 200, 20, { align: "right" });
 
-        let startY = 60 + 10; // posición inicial para las tablas de ítems
+        // Línea separadora
+        doc.line(14, 30, 200, 30);
 
-        // Agrupar los ítems por categoría
+        // Info principal del evento
+        const infoY = 35;
+        doc.setFontSize(11);
+        doc.text(`Evento: ${serviceOrder.Event?.eventName || "-"}`, 14, infoY);
+        doc.text(`Empresa: ${serviceOrder.Event?.organizer || "-"}`, 120, infoY);
+        doc.text(`Fecha: ${new Date(serviceOrder.Event?.dateEvent).toLocaleDateString()}`, 14, infoY + 7);
+        doc.text(`Contacto: ${serviceOrder.Event?.producer || "-"}`, 120, infoY + 7);
+        doc.text(`Datos Extra: ${serviceOrder.Event?.finalClient || "-"}`, 14, infoY + 14);
+
+        doc.line(14, infoY + 20, 200, infoY + 20); // línea separadora
+
+        // Más detalles
+        const detailsY = infoY + 28;
+        const formatDateTime = (date) =>
+            date ? new Date(date).toLocaleString("es-AR").replace(",", "") : "-";
+
+        doc.text(`Lugar: ${serviceOrder.Event?.Location?.locationName || "-"}`, 14, detailsY);
+        doc.text(`Dirección: ${serviceOrder.Event?.Location?.address || "-"}`, 120, detailsY);
+        doc.text(`Ciudad: ${serviceOrder.Event?.Location?.city || "-"}`, 14, detailsY + 7);
+        doc.text(`País: ${serviceOrder.Event?.Location?.country || "-"}`, 120, detailsY + 7);
+        doc.text(`Armado: ${formatDateTime(serviceOrder.assemblyDate)}`, 14, detailsY + 14);
+        doc.text(`Desarme: ${formatDateTime(serviceOrder.disassemblyDate)}`, 120, detailsY + 14);
+        doc.text(`Preparado por: ${serviceOrder.OrderedBy.username}`, 14, detailsY + 21);
+        doc.text(`Chequeado por: ${serviceOrder.CheckedBy.username}`, 120, detailsY + 21);
+        doc.text(`Armado por: ${serviceOrder.DeployedBy.username}`, 14, detailsY + 28);
+        doc.text(`Observaciones: ${serviceOrder.observations || "-"}`, 14, detailsY + 35);
+
+        doc.line(14, detailsY + 40, 200, detailsY + 40); // línea separadora
+
+        // Tabla de ítems
+        let startY = detailsY + 48;
+
         const groupedItems = serviceOrder.ServiceOrderItems.reduce((acc, item) => {
-            const categoryId = item.Item.categoryId;
-
-            // Verificar si la categoría ya existe en el acumulador
-            if (!acc[categoryId]) {
-                acc[categoryId] = { items: [], totalLength: 0 };  // Crear un array y una propiedad totalLength
-            }
-
-            // Agregar el item al array correspondiente a su categoría
-            acc[categoryId].items.push(item);
-            acc[categoryId].totalLength = acc[categoryId].items.length;  // Sumar la cantidad de ítems
-
-            return acc;  // Retornar el acumulador para la siguiente iteración
+            const catId = item.Item.Category.id;
+            if (!acc[catId]) acc[catId] = [];
+            acc[catId].push(item);
+            return acc;
         }, {});
 
-        // Recorrer las categorías agrupadas y agregar tablas por categoría
-        Object.keys(groupedItems).forEach(categoryId => {
-            const categoryGroup = groupedItems[categoryId];
-            const categoryItems = categoryGroup.items;
-            // Obtener el nombre y el código de la categoría
-            const categoryCode = categoryItems[0].Item.Category.code;
-            const categoryName = categoryItems[0].Item.Category.name;
-            const isContainer = categoryItems[0].Item.Category.isContainer;
+        Object.keys(groupedItems).forEach((categoryId) => {
+            const items = groupedItems[categoryId];
+            const category = items[0].Item.Category;
 
-            // Título de la categoría
-            doc.setFontSize(14);
-            doc.text(`Categoría: ${categoryCode} - ${categoryName}`, 14, startY);
+            doc.setFontSize(12);
+            doc.text(`Categoría: ${category.code} - ${category.name}`, 14, startY);
+            startY += 6;
 
-            // Agregar la cantidad total de ítems para esta categoría
-            doc.setFontSize(14);
-            doc.text(`Total de ítems: ${categoryGroup.totalLength}`, 14, startY + 10);
+            const tableData = items.map((item) => [
+                item.Item.code,
+                category.name,
+                category.description || "-",
+                item.quantity || 1,
+            ]);
 
-            startY += 20; // Ajustar posición Y para los ítems
+            autoTable(doc, {
+                startY: startY,
+                head: [["Código", "Categoría", "Descripción", "Cantidad"]],
+                body: tableData,
+                theme: "grid",
+                styles: { fontSize: 10 },
+            });
 
-            // Si la categoría tiene ítems que son contenedores, procesarlos
-            // if (isContainer) {
-            //     categoryItems.forEach(item => {
-            //         const storeItems = item.Item.StoreItemParentItem;
-
-            //         // Título del contenedor
-            //         doc.setFontSize(14);
-            //         doc.text(`Codigo del contenedor: ${item.Item.code} - ${item.Item.Category.name}`, 14, startY);
-            //         startY += 2; // Ajustar la posición para los ítems dentro del contenedor
-            //         if (storeItems && storeItems.length > 0) {
-
-            //             const documentData = storeItems.map(subItem => [
-            //                 subItem.code,
-            //                 subItem.Category.name,
-            //                 subItem.Category.description,
-            //             ]);
-            //             doc.autoTable({
-            //                 head: [["Código", "Categoría", "Descripción"]],
-            //                 body: documentData,
-            //                 startY: startY,
-            //                 styles: { fontSize: 10 },
-            //             });
-            //             startY = doc.lastAutoTable.finalY + 15;
-            //         } else {
-            //             // Si no tiene ítems dentro, mostrar un mensaje
-            //             doc.setFontSize(10);
-            //             doc.text("No hay ítems dentro de este contenedor.", 14, startY);
-            //             startY += 15;
-            //         }
-            //     });
-            // } else {
-            //     // Si no es contenedor, agregar los ítems directamente
-            //     doc.text(`Items`, 14, startY);
-            //     startY+=2
-            //     const itemsData = categoryItems.map(item => [
-            //         item.Item.code,
-            //         item.Item.Category.name,
-            //         item.Item.Category.description,
-            //     ]);
-
-            //     doc.autoTable({
-            //         head: [["Código", "Categoría", "Descripción"]],
-            //         body: itemsData,
-            //         startY: startY,
-            //         styles: { fontSize: 10 },
-            //     });
-
-            //     // Actualizar la posición Y después de la tabla
-            //     startY = doc.lastAutoTable.finalY + 15;
-            // }
+            startY = doc.lastAutoTable.finalY + 10;
         });
 
-        // Guardar el PDF
         doc.save(`orden_de_servicio_${serviceOrder.id}.pdf`);
     };
 
@@ -656,7 +657,7 @@ const AddItemsToServiceOrder = () => {
             <Button
                 variant="contained"
                 color="primary"
-                onClick={generatePDF}
+                onClick={() => generatePDF(serviceOrder)}
                 sx={{ mt: 2 }}
             >
                 Descargar PDF
