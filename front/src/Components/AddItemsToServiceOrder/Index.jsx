@@ -503,14 +503,43 @@ const AddItemsToServiceOrder = () => {
         const formatDateTime = (date) =>
             date ? new Date(date).toLocaleString("es-AR").replace(",", "") : "-";
 
+        var x = serviceOrder.Event?.Location?.address
+
+        const cortarTextoCadaN = (texto, maxLength = 33) => {
+            if (!texto) return [];
+
+            const partes = [];
+            for (let i = 0; i < texto.length; i += maxLength) {
+                let parte = texto.slice(i, i + maxLength);
+                if (parte.length === maxLength && i + maxLength < texto.length) {
+                    parte += "-";
+                }
+                partes.push(parte);
+            }
+
+            return partes;
+        };
+
+
+        const direccion = serviceOrder.Event?.Location?.address || "-";
+        const direccionPartes = cortarTextoCadaN(direccion);
+
+        direccionPartes.forEach((linea, i) => {
+            doc.text(`${i === 0 ? "Dirección: " : ""}${linea}`, 120, detailsY + (i * 7));
+        });
+
+        const yOffset = detailsY + (direccionPartes.length * 7);
+
+        doc.text(`País: ${serviceOrder.Event?.Location?.country || "-"}`, 120, yOffset);
+        doc.text(`Desarme: ${formatDateTime(serviceOrder.disassemblyDate)}`, 120, yOffset + 7);
+        doc.text(`Chequeado por: ${serviceOrder.CheckedBy.username}`, 120, yOffset + 14);
+
+
+
         doc.text(`Lugar: ${serviceOrder.Event?.Location?.locationName || "-"}`, 14, detailsY);
-        doc.text(`Dirección: ${serviceOrder.Event?.Location?.address || "-"}`, 120, detailsY);
         doc.text(`Ciudad: ${serviceOrder.Event?.Location?.city || "-"}`, 14, detailsY + 7);
-        doc.text(`País: ${serviceOrder.Event?.Location?.country || "-"}`, 120, detailsY + 7);
         doc.text(`Armado: ${formatDateTime(serviceOrder.assemblyDate)}`, 14, detailsY + 14);
-        doc.text(`Desarme: ${formatDateTime(serviceOrder.disassemblyDate)}`, 120, detailsY + 14);
         doc.text(`Preparado por: ${serviceOrder.OrderedBy.username}`, 14, detailsY + 21);
-        doc.text(`Chequeado por: ${serviceOrder.CheckedBy.username}`, 120, detailsY + 21);
         doc.text(`Armado por: ${serviceOrder.DeployedBy.username}`, 14, detailsY + 28);
         doc.text(`Observaciones: ${serviceOrder.observations || "-"}`, 14, detailsY + 35);
 
