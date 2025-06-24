@@ -9,26 +9,24 @@ const apiUrl = import.meta.env.VITE_API_URL;
 const Profile = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null); // Estado para manejar errores
+    const [error, setError] = useState(null);
 
-    // 🔑 Obtener headers de autenticación
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
         return { Authorization: `Bearer ${token}` };
     };
 
-    // 📥 Fetch Perfil del Usuario
     const fetchUserProfile = async () => {
-        setLoading(true); // Aseguramos que siempre se empieza con el estado de carga en true
-        setError(null); // Limpiar errores previos
+        setLoading(true);
+        setError(null);
         try {
             const { data } = await axios.get(`${apiUrl}/users/profile`, {
                 headers: getAuthHeaders(),
             });
             setUser(data);
         } catch (error) {
-            setError('Hubo un error al cargar el perfil del usuario.'); // Mensaje de error
+            setError('Hubo un error al cargar el perfil del usuario.');
         } finally {
             setLoading(false);
         }
@@ -57,29 +55,45 @@ const Profile = () => {
     const handleProfileUpdate = (updatedUser) => {
         setUser(updatedUser);
     };
+    
+    const fullName = `${user.firstname || ''} ${user.lastname || ''}`.trim();
 
     return (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-            <Card sx={{ maxWidth: 400, textAlign: 'center', padding: 2 }}>
-                <div style={{ "display": "flex", "justifyContent": "right" }}>
+            <Card sx={{ maxWidth: 400, width: '90%', textAlign: 'center', p: 3, boxShadow: 3 }}>
+                <Box display="flex" justifyContent="flex-end">
                     <EditProfileModal user={user} onUpdate={handleProfileUpdate} fetchUserProfile={fetchUserProfile} />
-                </div>
+                </Box>
+
                 <Avatar
                     src={user.avatarUrl || 'https://via.placeholder.com/150'}
                     alt={user.username}
-                    sx={{ width: 100, height: 100, margin: 'auto' }}
+                    sx={{ width: 100, height: 100, margin: '16px auto' }}
                 />
+
                 <CardContent>
-                    <Typography variant="h5" gutterBottom>
-                        {user.username}
+                    {/* Mostrar nombre completo si está disponible */}
+                    {fullName ? (
+                        <Typography variant="h5" gutterBottom>
+                            {fullName}
+                        </Typography>
+                    ) : null}
+
+                    <Typography variant="subtitle1" color="textSecondary" gutterBottom>
+                        @{user.username}
                     </Typography>
+
                     <Typography variant="body1" color="textSecondary">
                         📧 {user.email}
                     </Typography>
+
                     <Typography variant="body1" color="textSecondary">
                         🛡️ Rol: {user?.role?.roleName}
                     </Typography>
-                    <ChangePassword user={user} fetchUserProfile={fetchUserProfile}/>
+
+                    <Box mt={2}>
+                        <ChangePassword user={user} fetchUserProfile={fetchUserProfile} />
+                    </Box>
                 </CardContent>
             </Card>
         </Box>

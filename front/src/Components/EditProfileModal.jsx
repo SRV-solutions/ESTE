@@ -8,10 +8,23 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
 const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
     const [open, setOpen] = useState(false);
-    const [formData, setFormData] = useState({ username: user.username, email: user.email });
     const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState({ username: '', email: '' }); // Estado para los errores
-    const [openSnackbar, setOpenSnackbar] = useState(false); // Estado para el Snackbar
+    const [openSnackbar, setOpenSnackbar] = useState(false);
+
+    const [formData, setFormData] = useState({
+        username: user.username,
+        email: user.email,
+        firstname: user.firstname || '',
+        lastname: user.lastname || ''
+    });
+
+    const [errors, setErrors] = useState({
+        username: '',
+        email: '',
+        firstname: '',
+        lastname: ''
+    });
+
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -20,7 +33,7 @@ const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
     const handleSubmit = async () => {
         setLoading(true);
         setErrors({ username: '', email: '' }); // Limpiar errores antes de intentar enviar el formulario
-    
+
         try {
             const { data } = await axios.patch(`${apiUrl}/users/update`, formData, {
                 headers: {
@@ -28,21 +41,25 @@ const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
                 },
             });
             fetchUserProfile()
-            
+
             //onUpdate(data); // Actualizar el estado en Profile con los nuevos datos
             setOpen(false);
             setOpenSnackbar(true); // Mostrar el Snackbar de éxito
         } catch (error) {
+            console.log(error);
+
             if (error.response && error.response.data && error.response.data.errors) {
                 const errorData = error.response.data.errors;
-    
-                // Verifica y asigna errores a cada campo si existe
                 setErrors({
-                    username: errorData.username || '',
-                    email: errorData.email || '',
+                    username: errorData.username || errorData.newUsername || '',
+                    email: errorData.email || errorData.newEmail || '',
+                    firstname: errorData.firstname || '',
+                    lastname: errorData.lastname || '',
                 });
-            } else {
+            } else if (error.response && error.response.data.message?.includes('llave duplicada')) {
+                setErrors(prev => ({ ...prev, username: 'Ese nombre de usuario ya está en uso.' }));
             }
+
         } finally {
             setLoading(false);
         }
@@ -88,6 +105,28 @@ const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
                         fullWidth
                         margin="normal"
                         label="Nombre"
+                        name="firstname"
+                        value={formData.firstname}
+                        onChange={handleChange}
+                        error={!!errors.firstname}
+                        helperText={errors.firstname}
+                    />
+
+                    <TextField
+                        fullWidth
+                        margin="normal"
+                        label="Apellido"
+                        name="lastname"
+                        value={formData.lastname}
+                        onChange={handleChange}
+                        error={!!errors.lastname}
+                        helperText={errors.lastname}
+                    />
+
+                    <TextField
+                        fullWidth
+                        margin="normal"
+                        label="Nombre de Usuario (debe ser unico)"
                         name="username"
                         value={formData.username}
                         onChange={handleChange}

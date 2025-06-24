@@ -14,7 +14,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 const Login = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
@@ -60,10 +60,10 @@ const Login = () => {
       <Typography variant="h4">Iniciar Sesión</Typography>
       <form onSubmit={handleSubmit}>
         <TextField
-          label="Correo Electrónico"
-          name="email"
-          type="email"
-          value={formData.email}
+          label="Nombre de Usuario"
+          name="username"
+          type="text"
+          value={formData.username}
           onChange={handleInputChange}
           fullWidth
           required

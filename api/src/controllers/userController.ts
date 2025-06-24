@@ -104,11 +104,11 @@ export const register = async (req: Request, res: any) => {
 };
 
 export const login = async (req: Request, res: any) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
   try {
     const user = await User.findOne({
-      where: { email },
+      where: { username },
       include: [{
         model: Role,
         include: [Permission]
@@ -126,6 +126,7 @@ export const login = async (req: Request, res: any) => {
       {
         id: user.id,
         email: user.email,
+        username: user.username,
         roleId: user.roleId,
       },
       JWT_SECRET,
@@ -138,6 +139,7 @@ export const login = async (req: Request, res: any) => {
       userData: {
         id: user.id,
         email: user.email,
+        username: user.username,
         roleId: user.roleId,
         roleName: user.Role?.roleName,
         permissions: user.Role?.Permissions?.map(p => ({
@@ -173,6 +175,8 @@ export const getMyOwnUser = async (req: any, res: any) => {
     res.status(200).json({
       id: user.id,
       username: user.username,
+      firstname: user.firstname,
+      lastname: user.lastname,
       email: user.email,
       role: user.Role,
       CheckedBy: user.CheckedBy,
@@ -235,50 +239,77 @@ export const updateUser = async (req: any, res: any) => {
     res.status(500).json({ message: 'Error al actualizar el usuario' });
   }
 };
-
+interface ValidationErrors {
+  username?: string;
+  email?: string;
+  firstname?: string;
+  lastname?: string;
+}
 export const updateMyOwnUser = async (req: any, res: any) => {
-  const errors: ValidationErrors = {};  // Tipo explícito para los errores
+  const errors: ValidationErrors = {};
+
   try {
-    const { email, username, roleId, password } = req.body;
+    const { email, username, roleId, password, firstname, lastname } = req.body;
+
     if (!req.user) {
       return res.status(401).json({ message: 'No autorizado. Usuario no autenticado.' });
     }
 
     const user = await User.findByPk(req.user.id);
-
     if (!user) {
-      return res.status(404).json({ message: 'User invalido' });
+      return res.status(404).json({ message: 'Usuario inválido' });
     }
 
-    // Validación para el email
+    // Validación de email
     if (email && !/\S+@\S+\.\S+/.test(email)) {
-      errors.newEmail = 'Email inválido';  // Guarda el error para el email
+      errors.email = 'Email inválido';
     }
 
-    // Validación para el nombre de usuario
+    // Validación de username
     if (username && !/^[a-zA-Z0-9_-]+$/.test(username)) {
-      errors.newUsername = 'El nombre de usuario solo puede contener letras, números, guiones y guiones bajos';  // Guarda el error para el nombre de usuario
+      errors.username = 'El nombre de usuario solo puede contener letras, números, guiones y guiones bajos';
     }
 
-    // Si hay errores, devuelve el objeto con los errores
+    // Chequeo de username duplicado si se cambió
+    if (username && username !== user.username) {
+      const existingUser = await User.findOne({ where: { username } });
+      if (existingUser) {
+        errors.username = 'Ese nombre de usuario ya está en uso';
+      }
+    }
+
+    // Validaciones simples de firstname y lastname
+    if (firstname && firstname.length < 2) {
+      errors.firstname = 'El nombre debe tener al menos 2 caracteres';
+    }
+
+    if (lastname && lastname.length < 2) {
+      errors.lastname = 'El apellido debe tener al menos 2 caracteres';
+    }
+
+    // Si hay errores, retornar
     if (Object.keys(errors).length > 0) {
       return res.status(400).json({ errors });
     }
 
-    // Si no hay errores, actualiza el usuario
-    user.username = username ? username : user.username;
-    user.email = email ? email : user.email;
+    // Actualización de campos
+    user.username = username || user.username;
+    user.firstname = firstname || user.firstname;
+    user.lastname = lastname || user.lastname;
+    user.email = email || user.email;
     user.password = password ? await bcrypt.hash(password, 10) : user.password;
-    user.roleId = roleId ? roleId : user.roleId;
+    user.roleId = roleId || user.roleId;
 
-    // Buscar el usuario actualizado e incluir su rol
-    await user.save(); // Esperar a que se guarde antes de buscarlo nuevamente
-    const updatedUser = await User.findByPk(req.user.id, { include: Role });
+    await user.save();
 
-    res.status(200).json(updatedUser);
+    const updatedUser = await User.findByPk(req.user.id, {
+      include: Role,
+    });
 
+    return res.status(200).json(updatedUser);
   } catch (error) {
-    res.status(500).json({ message: 'Error al actualizar el usuario' });
+    console.error(error);
+    return res.status(500).json({ message: 'Error al actualizar el usuario', error });
   }
 };
 

@@ -9,6 +9,8 @@ class User extends Model {
   public username!: string;
   public email!: string;
   public password!: string; // Campo para almacenar la contraseña
+  public firstname?: string;  // agregado
+  public lastname?: string;   // agregado
   public roleId!: number;
   public Role!: Role
   public DeployedBy!: [ServiceOrder]
@@ -33,6 +35,7 @@ User.init(
     username: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,        // <- lo agrego para que sea único
     },
     email: {
       type: DataTypes.STRING,
@@ -42,6 +45,14 @@ User.init(
     password: {
       type: DataTypes.STRING,
       allowNull: false, // Contraseña es obligatoria
+    },
+    firstname: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    lastname: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     roleId: {
       type: DataTypes.INTEGER,
