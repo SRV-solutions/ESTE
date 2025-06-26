@@ -80,12 +80,12 @@ const ItemTable = () => {
     useEffect(() => {
         items.forEach((item) => {
             if (item.code) {
-                JsBarcode(`#barcode-${item.id}`, item.code, {
-                    format: 'CODE128',
-                    displayValue: false,
-                    height: 40,
-                    width: 1.5
-                });
+                // JsBarcode(`#barcode-${item.id}`, item.code, {
+                //     format: 'CODE128',
+                //     displayValue: false,
+                //     height: 40,
+                //     width: 1.5
+                // });
             }
         });
     }, [items]);
@@ -290,13 +290,9 @@ const ItemTable = () => {
                     Crear Nuevo Ítem
                 </Button>}
             </div>
-
-
-
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell align="center">Código de barras</TableCell>
                         <TableCell align="center">Código</TableCell>
                         <TableCell align="center">Nombre</TableCell>
                         <TableCell align="center">Descripción</TableCell>
@@ -313,9 +309,7 @@ const ItemTable = () => {
                         <TableRow key={item.id} sx={{
                             backgroundColor: item.isActive ? 'transparent' : '#f0f0f0', // Gris claro cuando está desactivada
                         }}>
-                            <TableCell align="center">
-                                <svg id={`barcode-${item.id}`}></svg>
-                            </TableCell>
+
                             <TableCell align="center">{item.code}</TableCell>
                             <TableCell align="center">{item.Category.name}</TableCell>
                             <TableCell align="center">{item.Category.description}</TableCell>

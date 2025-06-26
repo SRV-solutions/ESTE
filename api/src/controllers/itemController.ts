@@ -407,17 +407,44 @@ export const uploadCSV = async (req: Request | any, res: Response | any) => {
     return res.status(400).json({ message: "No se proporcionó ningún archivo" });
   }
 
+  const requiredHeaders = [
+    "nombre",
+    "descripcion",
+    "codigo",
+    "tipo",
+    "unidad",
+    "valor",
+    "peso",
+    "es_almacenable",
+    "es_contenedor",
+    "cantidad",
+    "usos"
+  ];
 
   try {
     const items: any[] = [];
+    let headersValidated = false;
 
-    // Leer CSV
     fs.createReadStream(req.file.path)
       .pipe(csvParser())
+      .on("headers", (headers) => {
+        const headersLower = headers.map((h:any) => h.toLowerCase().trim());
+        const missing = requiredHeaders.filter(h => !headersLower.includes(h));
+
+        if (missing.length > 0) {
+          fs.unlinkSync(req.file.path); // Eliminamos el archivo para no dejar basura
+          return res.status(400).json({
+            message: `Faltan los siguientes encabezados obligatorios: ${missing.join(", ")}`,
+          });
+        }
+
+        headersValidated = true;
+      })
       .on("data", (row) => items.push(row))
       .on("end", async () => {
+        if (!headersValidated) return;
+
         try {
-          // Procesar categorías y construir los ítems en paralelo
           const itemsToCreate = await Promise.all(
             items.map(async (item) => {
               let category = await Category.findOne({
@@ -425,38 +452,32 @@ export const uploadCSV = async (req: Request | any, res: Response | any) => {
               });
 
               if (!category) {
-                category = await Category.create(
-                  {
-                    name: item.nombre,
-                    description: item.descripcion,
-                    code: item.codigo,
-                    type: item.tipo,
-                    unity: item.unidad,
-                    value: parseFloat(item.valor),
-                    weight: parseFloat(item.peso),
-                    isStorable: item.es_almacenable.toLowerCase() === "si",
-                    isContainer: item.es_contenedor.toLowerCase() === "si",
-                    isActive: true,
-                  }
-                );
+                category = await Category.create({
+                  name: item.nombre,
+                  description: item.descripcion,
+                  code: item.codigo,
+                  type: item.tipo,
+                  unity: item.unidad,
+                  value: parseFloat(item.valor),
+                  weight: parseFloat(item.peso),
+                  isStorable: item.es_almacenable.toLowerCase() === "si",
+                  isContainer: item.es_contenedor.toLowerCase() === "si",
+                  isActive: true,
+                });
               }
 
               return Array.from({ length: parseInt(item.cantidad, 10) || 1 }, () => ({
                 isActive: true,
                 uses: parseInt(item.usos, 10) || 0,
-                ownerId: 1, // Asignando por defecto al ownerId 1
+                ownerId: 1,
                 categoryId: category.id,
               }));
             })
           );
 
-          // Aplanamos el array y creamos los ítems en la base de datos
           const flatItems = itemsToCreate.flat();
-          
-         await Item.bulkCreate(flatItems);
+          await Item.bulkCreate(flatItems);
 
-
-          // Eliminar el archivo después de procesarlo
           fs.unlinkSync(req.file.path);
 
           return res.status(201).json({
@@ -464,13 +485,19 @@ export const uploadCSV = async (req: Request | any, res: Response | any) => {
             items: flatItems,
           });
         } catch (error) {
+          console.log(error);
+          
+          fs.unlinkSync(req.file.path);
           return res.status(500).json({ message: "Error al guardar los items", error });
         }
       });
-  } catch (error) {
+  } catch (error) {    
+    fs.unlinkSync(req.file.path);
     return res.status(500).json({ message: "Error en la carga del archivo", error });
   }
 };
+
+
 // export const fixItems = async (req:any, res:any) => {
 
 // }

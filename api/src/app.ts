@@ -48,7 +48,7 @@ const app = express();
 app.use(express.json());
 
 app.use((req: Request, res: any, next: NextFunction) => {
-  const allowedOrigins = ['http://localhost:5173', 'https://este.wearesrv.com'];
+  const allowedOrigins = ['http://localhost:5174', 'http://localhost:5173', 'https://este.wearesrv.com'];
   const origin: any = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
