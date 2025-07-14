@@ -77,7 +77,7 @@ const App = () => {
 // Componente que renderiza NavBar solo si no estamos en el Login
 const ConditionalNavBar = () => {
   const location = useLocation(); // Obtener la ruta actual
-  return (location.pathname !== '/login' || location.pathname !== '/login/') ? <NavBar /> : null; // Mostrar NavBar solo si no estamos en "/"
+  return (location.pathname !== '/login' && location.pathname !== '/login/') ? <NavBar /> : null; // Mostrar NavBar solo si no estamos en "/"
 };
 
 export default App;
