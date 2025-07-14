@@ -130,7 +130,7 @@ export const login = async (req: Request, res: any) => {
         roleId: user.roleId,
       },
       JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '20h' }
     );
 
     res.status(200).json({
