@@ -555,15 +555,51 @@ const AddItemsToServiceOrder = () => {
             return acc;
         }, {});
 
+        const categoryCount = serviceOrder.ServiceOrderItems.reduce((acc, item) => {
+            const category = item.Item.Category; // guardamos TODO el objeto Category
+            const key = category.code; // usamos code como clave única
+
+            if (!acc[key]) {
+                acc[key] = { category, count: 0 };
+            }
+
+            acc[key].count++;
+
+            return acc;
+        }, {});
+
+        const categoryList = Object.values(categoryCount);
+
+        console.log(categoryList);
+
+        const tableData = categoryList.map((category) => [
+            category.category.code,
+            category.category.name,
+            category.category.description || "-",
+            category.count || 1,
+        ]);
+        console.log(tableData);
+        
+        autoTable(doc, {
+            startY: startY,
+            head: [["Código", "Categoría", "Descripción", "Cantidad"]],
+            body: tableData,
+            theme: "grid",
+            styles: { fontSize: 10 },
+        });
+
+        startY = doc.lastAutoTable.finalY + 10;
+
+
         Object.keys(groupedItems).forEach((categoryId) => {
             const items = groupedItems[categoryId];
             const category = items[0].Item.Category;
 
-            doc.setFontSize(12);
-            doc.text(`Categoría: ${category.code} - Nombre: ${category.name} - Cantidad: ${items.length}`, 14, startY);
-            startY += 6;
-            console.log(items);
-            
+            // doc.setFontSize(12);
+            // doc.text(`Categoría: ${category.code} - ${category.name}`, 14, startY);
+            // startY += 6;
+            // console.log(items);
+
             // const tableData = items.map((item) => [
             //     item.Item.code,
             //     category.name,
@@ -571,17 +607,17 @@ const AddItemsToServiceOrder = () => {
             //     item.quantity || 1,
             // ]);
             const tableData = [[category.code, category.name, category.description || '', items.length]]
-            console.log(tableData);
-            
-            autoTable(doc, {
-                startY: startY,
-                head: [["Código", "Categoría", "Descripción", "Cantidad"]],
-                body: tableData,
-                theme: "grid",
-                styles: { fontSize: 10 },
-            });
+            // console.log(tableData);
 
-            startY = doc.lastAutoTable.finalY + 10;
+            // autoTable(doc, {
+            //     startY: startY,
+            //     head: [["Código", "Categoría", "Descripción", "Cantidad"]],
+            //     body: tableData,
+            //     theme: "grid",
+            //     styles: { fontSize: 10 },
+            // });
+
+            // startY = doc.lastAutoTable.finalY + 10;
         });
 
         doc.save(`orden_de_servicio_${serviceOrder.id}.pdf`);
