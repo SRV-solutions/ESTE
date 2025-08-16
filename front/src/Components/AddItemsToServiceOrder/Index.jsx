@@ -560,16 +560,19 @@ const AddItemsToServiceOrder = () => {
             const category = items[0].Item.Category;
 
             doc.setFontSize(12);
-            doc.text(`Categoría: ${category.code} - ${category.name}`, 14, startY);
+            doc.text(`Categoría: ${category.code} - Nombre: ${category.name} - Cantidad: ${items.length}`, 14, startY);
             startY += 6;
-
-            const tableData = items.map((item) => [
-                item.Item.code,
-                category.name,
-                category.description || "-",
-                item.quantity || 1,
-            ]);
-
+            console.log(items);
+            
+            // const tableData = items.map((item) => [
+            //     item.Item.code,
+            //     category.name,
+            //     category.description || "-",
+            //     item.quantity || 1,
+            // ]);
+            const tableData = [[category.code, category.name, category.description || '', items.length]]
+            console.log(tableData);
+            
             autoTable(doc, {
                 startY: startY,
                 head: [["Código", "Categoría", "Descripción", "Cantidad"]],
