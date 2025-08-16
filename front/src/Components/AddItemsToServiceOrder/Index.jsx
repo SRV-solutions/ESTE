@@ -545,80 +545,40 @@ const AddItemsToServiceOrder = () => {
 
         doc.line(14, detailsY + 40, 200, detailsY + 40); // línea separadora
 
-        // Tabla de ítems
         let startY = detailsY + 48;
 
-        const groupedItems = serviceOrder.ServiceOrderItems.reduce((acc, item) => {
-            const catId = item.Item.Category.id;
-            if (!acc[catId]) acc[catId] = [];
-            acc[catId].push(item);
-            return acc;
-        }, {});
-
         const categoryCount = serviceOrder.ServiceOrderItems.reduce((acc, item) => {
-            const category = item.Item.Category; // guardamos TODO el objeto Category
-            const key = category.code; // usamos code como clave única
 
+            const containedItems = item.Item.Category.isContainer ? item.Item.StoreItemParentItem.length : 'Este Item no puede almacenar otros items'
+            const containerItem = item.Item.Category.isContainer ? item.Item : undefined
+            const category = item.Item.Category;
+            const key = category.code;
             if (!acc[key]) {
-                acc[key] = { category, count: 0 };
+                acc[key] = { category, count: 0, containedItems, containerItem };
             }
-
             acc[key].count++;
-
             return acc;
         }, {});
 
-        const categoryList = Object.values(categoryCount);
-
-        console.log(categoryList);
+        const categoryList = Object.values(categoryCount);        
 
         const tableData = categoryList.map((category) => [
             category.category.code,
             category.category.name,
             category.category.description || "-",
             category.count || 1,
+            category.containedItems
         ]);
-        console.log(tableData);
-        
+
         autoTable(doc, {
             startY: startY,
-            head: [["Código", "Categoría", "Descripción", "Cantidad"]],
+            head: [["Código", "Categoría", "Descripción", "Cantidad", "Items Guardados dentro"]],
             body: tableData,
             theme: "grid",
             styles: { fontSize: 10 },
         });
 
         startY = doc.lastAutoTable.finalY + 10;
-
-
-        Object.keys(groupedItems).forEach((categoryId) => {
-            const items = groupedItems[categoryId];
-            const category = items[0].Item.Category;
-
-            // doc.setFontSize(12);
-            // doc.text(`Categoría: ${category.code} - ${category.name}`, 14, startY);
-            // startY += 6;
-            // console.log(items);
-
-            // const tableData = items.map((item) => [
-            //     item.Item.code,
-            //     category.name,
-            //     category.description || "-",
-            //     item.quantity || 1,
-            // ]);
-            const tableData = [[category.code, category.name, category.description || '', items.length]]
-            // console.log(tableData);
-
-            // autoTable(doc, {
-            //     startY: startY,
-            //     head: [["Código", "Categoría", "Descripción", "Cantidad"]],
-            //     body: tableData,
-            //     theme: "grid",
-            //     styles: { fontSize: 10 },
-            // });
-
-            // startY = doc.lastAutoTable.finalY + 10;
-        });
 
         doc.save(`orden_de_servicio_${serviceOrder.id}.pdf`);
     };
