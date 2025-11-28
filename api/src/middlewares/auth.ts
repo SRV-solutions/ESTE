@@ -50,12 +50,12 @@ export const checkPermission = (entity: Entity, action: Action) => {
     if (!req.user) {
       return res.status(401).json({ message: 'Usuario no autenticado.' });
     }
-
+    
     try {
       const role = await Role.findByPk(req.user.roleId, {
         include: [Permission]
       });
-
+      
       if (!role) {
         return res.status(404).json({ message: 'Rol no encontrado.' });
       }

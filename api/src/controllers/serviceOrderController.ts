@@ -21,9 +21,9 @@ export const createServiceOrder = async (req: any, res: any) => {
     disassemblyDate = null,
     status,
     observations,
-    checkedBy,
+    checkedBy = null,
     orderedBy,
-    deployedBy,
+    deployedBy = null,
   } = req.body;
 
   // Usuario autenticado desde el middleware `isAuth`
@@ -37,7 +37,8 @@ export const createServiceOrder = async (req: any, res: any) => {
     }
 
     // Validar si el usuario autenticado tiene permiso para asignar la orden
-    if (orderedBy !== authenticatedUser.id) {
+
+    if (orderedBy !== authenticatedUser.id && authenticatedUser.roleId !== 1) {
       return res.status(403).json({
         message: 'No tienes permisos para asignar esta orden a otro usuario.'
       });
@@ -327,5 +328,97 @@ export const updateStatusServiceOrderById = async (req: Request, res: any) => {
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor.', error });
+  }
+};
+
+export const updateServiceOrderById = async (req: Request, res: any) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    // Validar que sea un ID válido
+    const serviceOrderId = parseInt(id);
+    if (isNaN(serviceOrderId)) {
+      return res.status(400).json({ message: 'ID de orden de servicio inválido.' });
+    }
+
+    // Buscar la orden de servicio
+    const serviceOrder = await ServiceOrder.findByPk(serviceOrderId, {
+      include: ['Event', 'OrderedBy', 'CheckedBy', 'DeployedBy']
+    });
+
+    if (!serviceOrder) {
+      return res.status(404).json({ message: 'Orden de servicio no encontrada.' });
+    }
+
+    // Validar status si viene en el body
+    if (updates.status && !Object.values(ServiceOrderStatus).includes(updates.status)) {
+      return res.status(400).json({
+        message: `Estado no permitido. Los estados válidos son: ${Object.values(ServiceOrderStatus).join(', ')}`,
+      });
+    }
+
+    // Actualizar los campos permitidos
+    const allowedUpdates = [
+      'checkedBy',
+      'deployedBy',
+      'status',
+      'observations',
+      'incomeDate',
+      'outcomeDate',
+      'assemblyDate',
+      'disassemblyDate'
+    ];
+
+    const validUpdates: any = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (allowedUpdates.includes(key)) {
+        const toNullIfEmpty = (v: any) => v === '' ? null : v;
+        validUpdates[key] = toNullIfEmpty(value);
+      }
+    }
+
+
+    Object.assign(serviceOrder, validUpdates);
+    await serviceOrder.save();
+
+    // Lógica especial para status 'disassembled'
+    if (updates.status === 'disassembled') {
+      await ServiceOrderItem.update(
+        { isActive: false },
+        { where: { serviceOrderId: serviceOrderId } }
+      );
+
+      await ServiceOrderStoreItem.update(
+        { isActive: false },
+        { where: { serviceOrderId: serviceOrderId } }
+      );
+    } else if (updates.status) {
+      await ServiceOrderItem.update(
+        { isActive: true },
+        { where: { serviceOrderId: serviceOrderId } }
+      );
+
+      await ServiceOrderStoreItem.update(
+        { isActive: true },
+        { where: { serviceOrderId: serviceOrderId } }
+      );
+    }
+
+    // Traer la orden actualizada con relaciones
+    const updatedServiceOrder = await ServiceOrder.findByPk(serviceOrderId, {
+      include: ['Event', 'OrderedBy', 'CheckedBy', 'DeployedBy']
+    });
+
+    return res.status(200).json({
+      message: 'Orden de servicio actualizada correctamente.',
+      serviceOrder: updatedServiceOrder,
+    });
+
+  } catch (error: any) {
+    console.error('Error updating service order:', error);
+    return res.status(500).json({
+      message: 'Error interno del servidor.',
+      error: error.message
+    });
   }
 };

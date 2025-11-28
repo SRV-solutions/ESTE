@@ -1,5 +1,20 @@
 import React, { useState } from 'react';
-import { Typography, Autocomplete, TextField, Button, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
+import {
+  Typography,
+  Autocomplete,
+  TextField,
+  Button,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Grid,
+  IconButton,
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const ServiceOrderHeader = ({
   serviceOrder,
@@ -9,9 +24,18 @@ const ServiceOrderHeader = ({
   setQuantity,
   quantity,
   handleAddItem,
-  canEditOrder
+  canEditOrder,
+  onUpdateCheckedBy,
+  onUpdateDeployedBy,
+  users
 }) => {
   const [selectedCategory, setSelectedCategory] = useState('');
+
+  // Estados para edición
+  const [editingCheckedBy, setEditingCheckedBy] = useState(false);
+  const [editingDeployedBy, setEditingDeployedBy] = useState(false);
+  const [tempCheckedBy, setTempCheckedBy] = useState(serviceOrder.CheckedBy?.id || null);
+  const [tempDeployedBy, setTempDeployedBy] = useState(serviceOrder.DeployedBy?.id || null);
 
   const status = {
     created: 'Creada',
@@ -40,14 +64,117 @@ const ServiceOrderHeader = ({
     ? allItems.filter(item => item.Category.name === selectedCategory)
     : allItems;
 
+  const handleSaveCheckedBy = () => {
+    onUpdateCheckedBy(tempCheckedBy);
+    setEditingCheckedBy(false);
+  };
+
+  const handleCancelCheckedBy = () => {
+    setTempCheckedBy(serviceOrder.CheckedBy?.id || null);
+    setEditingCheckedBy(false);
+  };
+
+  const handleSaveDeployedBy = () => {
+    onUpdateDeployedBy(tempDeployedBy);
+    setEditingDeployedBy(false);
+  };
+
+  const handleCancelDeployedBy = () => {
+    setTempDeployedBy(serviceOrder.DeployedBy?.id || null);
+    setEditingDeployedBy(false);
+  };
+
   return (
     <>
       <Typography variant="h6">Orden de Servicio N°: {serviceOrder.id}</Typography>
       <Typography>Evento: {serviceOrder?.Event?.Location?.locationName} - {serviceOrder.Event.organizer} - {serviceOrder.Event.producer} - {serviceOrder.Event.finalClient}</Typography>
       <Typography>Observaciones: {serviceOrder.observations}</Typography>
       <Typography>Creada por: {serviceOrder.OrderedBy.username}</Typography>
-      <Typography>Encargado de Chequearla: {serviceOrder.CheckedBy.username}</Typography>
-      <Typography>Encargado de Armarla: {serviceOrder.DeployedBy.username}</Typography>
+
+      {/* Encargado de Chequearla */}
+      <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {editingCheckedBy ? (
+          <>
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <Select
+                value={tempCheckedBy || ''}
+                onChange={(e) => setTempCheckedBy(e.target.value)}
+                displayEmpty
+              >
+                <MenuItem value="">
+                  <em>Sin Asignar</em>
+                </MenuItem>
+                {users.map((user) => (
+                  <MenuItem key={user.id} value={user.id}>
+                    {user.username}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <IconButton onClick={handleSaveCheckedBy} color="success" size="small" title="Guardar">
+              <CheckIcon fontSize="small" />
+            </IconButton>
+            <IconButton onClick={handleCancelCheckedBy} color="error" size="small" title="Cancelar">
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </>
+        ) : (
+          <>
+            <Typography sx={{ mr: 1 }} variant="body1">
+              Encargado de Chequearla: <strong>{serviceOrder?.CheckedBy?.username || 'Sin Asignar'}</strong>
+            </Typography>
+            {canEditOrder() && (
+              <IconButton onClick={() => setEditingCheckedBy(true)} size="small" title="Editar">
+                <EditIcon fontSize="small" />
+              </IconButton>
+            )}
+          </>
+        )}
+      </Grid>
+
+
+      <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+        {editingDeployedBy ? (
+          <>
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <Select
+                value={tempDeployedBy || ''}
+                onChange={(e) => setTempDeployedBy(e.target.value)}
+                displayEmpty
+                label="Armada por"
+              >
+                <MenuItem value="">
+                  <em>Sin Asignar</em>
+                </MenuItem>
+                {users.map((user) => (
+                  <MenuItem key={user.id} value={user.id}>
+                    {user.username}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <IconButton onClick={handleSaveDeployedBy} color="success" size="small" title="Guardar">
+              <CheckIcon fontSize="small" />
+            </IconButton>
+            <IconButton onClick={handleCancelDeployedBy} color="error" size="small" title="Cancelar">
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </>
+        ) : (
+          <>
+            <Typography variant="body1" sx={{ mr: 1 }}>
+              Encargado de Armarla: <strong>{serviceOrder?.DeployedBy?.username || 'Sin Asignar'}</strong>
+            </Typography>
+            {canEditOrder() && (
+              <IconButton onClick={() => setEditingDeployedBy(true)} size="small" title="Editar">
+                <EditIcon fontSize="small" />
+              </IconButton>
+            )}
+          </>
+        )}
+      </Grid>
+
+
       <Typography>Fecha de ingreso de material: {serviceOrder.incomeDate ? new Date(serviceOrder.incomeDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.incomeDate ? `${new Date(serviceOrder.incomeDate).toLocaleTimeString()} hs` : 'Sin Hora'}</Typography>
       <Typography>Fecha de armado: {serviceOrder.assemblyDate ? new Date(serviceOrder.assemblyDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.assemblyDate ? `${new Date(serviceOrder.assemblyDate).toLocaleTimeString()} hs` : 'Sin Hora'}</Typography>
       <Typography>Fecha de desarme: {serviceOrder.disassemblyDate ? new Date(serviceOrder.disassemblyDate).toLocaleDateString() : 'Sin Fecha'} - {serviceOrder.disassemblyDate ? `${new Date(serviceOrder.disassemblyDate).toLocaleTimeString()} hs` : 'Sin Hora'}</Typography>

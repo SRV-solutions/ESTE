@@ -17,9 +17,9 @@ const ServiceOrderForm = () => {
     disassemblyDate: '',
     status: 'created',
     observations: '',
-    checkedBy: '',
-    orderedBy: '',
-    deployedBy: '',
+    checkedBy: null,
+    orderedBy: null,
+    deployedBy: null,
   });
   const [errors, setErrors] = useState({
     incomeDate: "",
@@ -293,25 +293,40 @@ const ServiceOrderForm = () => {
             ))}
           </TextField>
         </Grid>
-        {['checkedBy', 'deployedBy'].map((field) => (
-          <Grid item xs={12} sm={4} key={field}>
-            <TextField
-              select
-              fullWidth
-              label={field === 'checkedBy' ? 'Chequeado por' : 'Armada por'}
-              name={field}
-              value={formData[field]}
-              onChange={handleChange}
-              required
-            >
-              {users.map((user) => (
-                <MenuItem key={user.id} value={user.id}>
-                  {user.id} - {user.username}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-        ))}
+        <Grid item xs={12} sm={4}>
+          <TextField
+            select
+            fullWidth
+            label="Chequeado por"
+            name="checkedBy"
+            value={formData.checkedBy}
+            onChange={handleChange}
+          >
+            {users.map((user) => (
+              <MenuItem key={user.id} value={user.id}>
+                {user.id} - {user.username}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <TextField
+            select
+            fullWidth
+            label="Armada por"
+            name="deployedBy"
+            value={formData.deployedBy}
+            onChange={handleChange}
+          // aquí no agregamos required, por lo que es opcional
+          >
+            {users.map((user) => (
+              <MenuItem key={user.id} value={user.id}>
+                {user.id} - {user.username}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+
         <Grid item xs={12}>
           <Button type="submit" variant="contained" color="primary">
             Crear Orden de Servicio

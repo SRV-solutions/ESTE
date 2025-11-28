@@ -47,7 +47,7 @@ const ItemChangeModal = ({ open, onClose, selectedItem, allItems, serviceOrder, 
 
 
   const fetchItems = async () => {
-    const filteredItems = allItems.filter((item) => item.Category.id === selectedItem.Category.id)
+    const filteredItems = allItems.filter((item) => item?.Category.id === selectedItem?.Category.id)
     setCategoryItems(filteredItems)
   }
 

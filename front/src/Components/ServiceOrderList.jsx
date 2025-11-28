@@ -22,7 +22,7 @@ const ServiceOrderList = () => {
   const navigate = useNavigate();
   const [serviceOrders, setServiceOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
-  const [filterType, setFilterType] = useState('myOrderServices');
+  const [filterType, setFilterType] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -182,13 +182,13 @@ const ServiceOrderList = () => {
                   </TableCell>
                   <TableCell align='center'>{status[order.status] || 'Desconocido'}</TableCell>
                   <TableCell align='center' style={getCellStyle(order.OrderedBy)}>
-                    {order.OrderedBy?.username || 'Desconocido'}
+                    {order.OrderedBy?.username || 'No Asignado'}
                   </TableCell>
                   <TableCell align='center' style={getCellStyle(order.CheckedBy)}>
-                    {order.CheckedBy?.username || 'Desconocido'}
+                    {order.CheckedBy?.username || 'No Asignado'}
                   </TableCell>
                   <TableCell align='center' style={getCellStyle(order.DeployedBy)}>
-                    {order.DeployedBy?.username || 'Desconocido'}
+                    {order.DeployedBy?.username || 'No Asignado'}
                   </TableCell>
                   <TableCell align='center'>
                     <Button

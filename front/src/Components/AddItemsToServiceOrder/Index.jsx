@@ -59,17 +59,27 @@ const AddItemsToServiceOrder = () => {
     const [quantity, setQuantity] = useState(1);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState(serviceOrder.status);
+    const [usersList, setUsersList] = useState([]);
 
     useEffect(() => {
         fetchItems();
         fetchServiceOrder();
+        fetchUsers();
     }, [id]);
 
+    const fetchUsers = async () => {
+        const { data } = await axios.get(`${apiUrl}/users`, {
+            headers: getAuthHeaders(),
+        });
+        setUsersList(data);
+    }
     const userData = JSON.parse(localStorage.getItem(`userData`));
 
     const canEditOrder = () => {
-        // El creador puede editar si el estado es `created`
 
+        if (userData.roleName === "Administrador") {
+            return true;
+        }
         if (
             userData.email === serviceOrder.OrderedBy.email &&
             serviceOrder.status === `created`
@@ -80,20 +90,20 @@ const AddItemsToServiceOrder = () => {
             return true
         }
         // El encargado del armado puede editar si el estado es `approved` o `in_process`
-        if (
-            userData.email === serviceOrder.DeployedBy.email &&
-            (serviceOrder.status === `approved` || serviceOrder.status === `in_process`)
-        ) {
-            return true;
-        }
+        // if (
+        //     userData.email === serviceOrder.DeployedBy.email &&
+        //     (serviceOrder.status === `approved` || serviceOrder.status === `in_process`)
+        // ) {
+        //     return true;
+        // }
 
         // El chequeador nunca puede editar
-        if (userData.email === serviceOrder.CheckedBy.email && serviceOrder.status === `in_review`) {
-            return false;
-        }
-        if (userData.email === serviceOrder.CheckedBy.email) {
-            return false;
-        }
+        // if (userData.email === serviceOrder?.CheckedBy?.email  && serviceOrder.status === `in_review`) {
+        //     return false;
+        // }
+        // if (userData.email === serviceOrder.CheckedBy.email) {
+        //     return false;
+        // }
 
         // Por defecto, no puede editar
         return false;
@@ -101,9 +111,13 @@ const AddItemsToServiceOrder = () => {
 
     const canEditStatus = () => {
 
-        if ((userData.email === serviceOrder.OrderedBy.email || userData.email === serviceOrder.CheckedBy.email) && serviceOrder.status === `in_review`) {
+        if (userData.roleName === "Administrador") {
             return true;
         }
+
+        // if ((userData.email === serviceOrder.OrderedBy.email || userData.email === serviceOrder?.CheckedBy?.email) && serviceOrder.status === `in_review`) {
+        //     return true;
+        // }
         const editableStatuses = [
             `ready`,
             `dispatched`,
@@ -560,7 +574,7 @@ const AddItemsToServiceOrder = () => {
             return acc;
         }, {});
 
-        const categoryList = Object.values(categoryCount);        
+        const categoryList = Object.values(categoryCount);
 
         const tableData = categoryList.map((category) => [
             category.category.code,
@@ -583,6 +597,27 @@ const AddItemsToServiceOrder = () => {
         doc.save(`orden_de_servicio_${serviceOrder.id}.pdf`);
     };
 
+    // En tu componente padre (donde usas ServiceOrderHeader)
+    const updateServiceOrder = async (updates) => {
+        console.log(updates);
+        const deuredData = {
+            checkedBy: updates.CheckedById,
+            deployedBy: updates.DeployedById,
+        }
+        const response = await axios.put(
+            `${apiUrl}/service-orders/${id}`,
+            deuredData,
+            { headers: getAuthHeaders() }
+        );
+        if (response.status === 200) {
+            fetchServiceOrder();
+            showAlert(`Orden de servicio actualizada correctamente`, `success`);
+        }
+
+
+    };
+
+
 
     return (
         <div style={{ margin: `3%` }}>
@@ -598,7 +633,11 @@ const AddItemsToServiceOrder = () => {
                     quantity={quantity}
                     handleAddItem={handleAddItem}
                     canEditOrder={canEditOrder}
+                    users={usersList}  // tu lista de usuarios
+                    onUpdateCheckedBy={(userId) => updateServiceOrder({ CheckedById: userId })}
+                    onUpdateDeployedBy={(userId) => updateServiceOrder({ DeployedById: userId })}
                 />
+
 
                 <ServiceOrderTable
                     serviceOrder={serviceOrder}

@@ -30,9 +30,9 @@ class ServiceOrder extends Model {
   public disassemblyDate !: Date;
   public status!: ServiceOrderStatus;
   public observations!: string;
-  public checkedBy!: number;
-  public orderBy!: number;
-  public deployedBy!: number;
+  public checkedBy!: any;
+  public orderBy!: any;
+  public deployedBy!: any;
   public ServiceOrderItems!: Array<ServiceOrderItem>
   public DeployedBy!: User
   public OrderedBy!: User
@@ -66,6 +66,7 @@ ServiceOrder.init({
   },
   orderedBy: {
     type: DataTypes.INTEGER,
+    allowNull: false,
     references: {
       model: 'User', // Nombre de la tabla referenciada
       key: 'id',      // Clave primaria de la tabla referenciada
@@ -73,6 +74,7 @@ ServiceOrder.init({
   },
   deployedBy: {
     type: DataTypes.INTEGER,
+    allowNull: true,
     references: {
       model: 'User', // Nombre de la tabla referenciada
       key: 'id',      // Clave primaria de la tabla referenciada
@@ -80,6 +82,7 @@ ServiceOrder.init({
   },
   checkedBy: {
     type: DataTypes.INTEGER,
+    allowNull: true,
     references: {
       model: 'User', // Nombre de la tabla referenciada
       key: 'id',      // Clave primaria de la tabla referenciada

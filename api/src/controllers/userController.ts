@@ -107,6 +107,7 @@ export const login = async (req: Request, res: any) => {
   const { username, password } = req.body;
 
   try {
+    
     const user = await User.findOne({
       where: { username },
       include: [{
