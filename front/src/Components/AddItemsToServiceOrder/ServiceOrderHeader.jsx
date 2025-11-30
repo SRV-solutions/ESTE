@@ -59,10 +59,27 @@ const ServiceOrderHeader = ({
     }
   };
 
-  const categories = [...new Set(allItems.map(item => item.Category.name))];
-  const filteredItems = selectedCategory
-    ? allItems.filter(item => item.Category.name === selectedCategory)
-    : allItems;
+
+  const groupedItems = allItems.reduce((acc, item) => {
+    const catName = item.Category.name;
+    
+    if (!acc[catName]) {
+      acc[catName] = {
+        Category: item.Category,
+        categoryName: catName,
+        quantity: 0,
+        items: []
+      };
+    }
+
+    acc[catName].quantity++;
+    acc[catName].items.push(item);
+
+    return acc;
+  }, {});
+
+  // Convertir a array de objetos
+  const filteredItems = Object.values(groupedItems);
 
   const handleSaveCheckedBy = () => {
     onUpdateCheckedBy(tempCheckedBy);
@@ -183,25 +200,14 @@ const ServiceOrderHeader = ({
 
       {canEditOrder() && (
         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '10px' }}>
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Categoría</InputLabel>
-            <Select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-            >
-              <MenuItem value="">Todas</MenuItem>
-              {categories.map(category => (
-                <MenuItem key={category} value={category}>{category}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+
           <Autocomplete
             options={filteredItems}
-            getOptionLabel={(option) => `${option.code} - ${option.Category.name} - ${option.Category.description}`}
+            getOptionLabel={(option) => `${option.categoryName} - Cantidad Disponible: ${option.quantity}`}
             value={selectedItem}
             onChange={(event, newValue) => setSelectedItem(newValue)}
             renderInput={(params) => (
-              <TextField {...params} label="Buscar ítem" variant="outlined" fullWidth />
+              <TextField {...params} label="Buscar Items" variant="outlined" fullWidth />
             )}
             sx={{ flexGrow: 1 }}
           />

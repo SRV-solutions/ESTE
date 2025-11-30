@@ -46,8 +46,6 @@ const EditProfileModal = ({ user, onUpdate, fetchUserProfile }) => {
             setOpen(false);
             setOpenSnackbar(true); // Mostrar el Snackbar de éxito
         } catch (error) {
-            console.log(error);
-
             if (error.response && error.response.data && error.response.data.errors) {
                 const errorData = error.response.data.errors;
                 setErrors({

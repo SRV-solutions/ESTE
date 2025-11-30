@@ -179,8 +179,7 @@ const AddItemsToServiceOrder = () => {
     };
 
     const handleAddItem = async () => {
-        if (!selectedItem || quantity <= 0) return;
-
+        if (!selectedItem || quantity <= 0) return;        
         try {
             const response = await axios.post(
                 `${apiUrl}/service-order-items/bulk`,
@@ -202,7 +201,7 @@ const AddItemsToServiceOrder = () => {
                 fetchServiceOrder();
                 showAlert(`Ítem agregado correctamente`, `success`);
             }
-        } catch (error) {
+        } catch (error) {            
             showAlert(error.response?.data?.message || `Error al agregar el ítem`, `error`);
         }
     };
@@ -599,7 +598,6 @@ const AddItemsToServiceOrder = () => {
 
     // En tu componente padre (donde usas ServiceOrderHeader)
     const updateServiceOrder = async (updates) => {
-        console.log(updates);
         const deuredData = {
             checkedBy: updates.CheckedById,
             deployedBy: updates.DeployedById,

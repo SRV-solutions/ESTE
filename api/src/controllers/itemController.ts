@@ -484,9 +484,7 @@ export const uploadCSV = async (req: Request | any, res: Response | any) => {
             message: "Items subidos con éxito",
             items: flatItems,
           });
-        } catch (error) {
-          console.log(error);
-          
+        } catch (error) {          
           fs.unlinkSync(req.file.path);
           return res.status(500).json({ message: "Error al guardar los items", error });
         }

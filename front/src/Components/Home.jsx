@@ -43,7 +43,7 @@ const Home = () => {
     fetchUserProfile();
   }, []);
   const createServiceOrderRole = user?.role?.Permissions?.some((permission) => (permission.entity === 'serviceOrders' && permission.action === 'create'))
-  
+
   const toCheckServiceOrders = user.CheckedBy.filter(serviceOrder => serviceOrder.status === 'in_review') || []
   const createdServiceOrders = user.OrderedBy.filter(serviceOrder => serviceOrder.status === 'created') || []
   const toDeployServiceOrders = user.DeployedBy.filter(serviceOrder => serviceOrder.status === 'approved') || []
@@ -75,7 +75,7 @@ const Home = () => {
         <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <AccountCircle sx={{ fontSize: 60 }} /> {/* Icono de usuario */}
           <Box>
-          <Tooltip title={user.username} arrow>
+            <Tooltip title={user.username} arrow>
               <Typography
                 variant="h3"
                 sx={{
@@ -145,9 +145,11 @@ const Home = () => {
         }}
       >
         <CardContent sx={{ textAlign: 'center' }}>
-          <IconButton sx={{ fontSize: 60, color: 'primary.main' }}>
-            <DescriptionIcon sx={{ fontSize: 160, color: 'black' }} onClick={() => navigate('/service-orders')} />
-          </IconButton>
+          <Tooltip title="Ver todas las órdenes de servicio">
+            <IconButton sx={{ fontSize: 60, color: 'primary.main' }}>
+              <DescriptionIcon sx={{ fontSize: 160, color: 'black' }} onClick={() => navigate('/service-orders')} />
+            </IconButton>
+          </Tooltip>
           <Typography variant="h6" sx={{ marginTop: 1 }}>
             Órdenes de Servicio
           </Typography>
@@ -267,10 +269,13 @@ const Home = () => {
         }}
       >
         <CardContent sx={{ textAlign: 'center' }}>
-          <IconButton sx={{ fontSize: 60, color: 'primary.main' }}>
-            <WarehouseIcon sx={{ fontSize: 160, color: 'black' }} onClick={() => navigate('/items')} />
-          </IconButton>
+          <Tooltip title="Ver todos los items">
+            <IconButton sx={{ fontSize: 60, color: 'primary.main' }}>
+              <WarehouseIcon sx={{ fontSize: 160, color: 'black' }} onClick={() => navigate('/items')} />
+            </IconButton></Tooltip>
           <Typography variant="h6">Gestión de Ítems</Typography>
+
+
           <Typography variant="body2" color="text.secondary" sx={{ marginBottom: 2 }}>
             Agrega y administra ítems en tus órdenes de servicio fácilmente.
           </Typography>
