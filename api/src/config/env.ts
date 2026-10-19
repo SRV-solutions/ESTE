@@ -62,7 +62,7 @@ export const env = {
     resendApiKey: process.env.RESEND_API_KEY || '',
     from: process.env.EMAIL_FROM || 'Event Box <no-reply@wearesrv.com>',
     /** Adónde llegan los reportes de problemas. */
-    supportTo: process.env.SUPPORT_EMAIL || 'marcos.costa@bue.edu.ar',
+    supportTo: process.env.SUPPORT_EMAIL || 'info@wearesrv.com',
   },
 
   mercadoPago: {
