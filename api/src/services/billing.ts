@@ -1,9 +1,11 @@
 import { Op, Transaction } from 'sequelize';
 import { sequelize } from '../config/database';
-import { Company, Invoice, Payment } from '../models';
+import { env } from '../config/env';
+import { Company, Invoice, Payment, User } from '../models';
 import { HttpError } from '../utils/http';
 import { ArcaError, isArcaConfigured, issueVoucher } from './arca';
 import { getBlueRate, usdToArs } from './dollar';
+import { button, details, paragraph, sendEmail } from './email';
 import { createCheckout, getMpPayment, isMercadoPagoConfigured } from './mercadopago';
 import { addMonths, nextPeriod, todayAR } from './subscription';
 
@@ -47,7 +49,7 @@ export const startCheckout = async (company: Company) => {
 
   const { preferenceId, checkoutUrl } = await createCheckout({
     paymentId: payment.id,
-    title: `Sortex · suscripción ${quote.periodLabel} · ${company.name}`,
+    title: `Event Box · suscripción ${quote.periodLabel} · ${company.name}`,
     amountArs: quote.amountArs,
     payerEmail: company.email,
   });
@@ -107,7 +109,7 @@ export const invoicePayment = async (paymentId: number) => {
     });
   } catch (err) {
     const message = err instanceof ArcaError || err instanceof HttpError ? err.message : 'Error inesperado al emitir la factura.';
-    if (!(err instanceof ArcaError)) console.error('[sortex] Error al facturar el pago', payment.id, err);
+    if (!(err instanceof ArcaError)) console.error('[eventbox] Error al facturar el pago', payment.id, err);
     const failed = { ...base, status: 'failed' as const, error: message };
     return payment.Invoice ? payment.Invoice.update(failed) : Invoice.create(failed);
   }
@@ -117,7 +119,7 @@ export const invoicePayment = async (paymentId: number) => {
 export const handleMercadoPagoPayment = async (mpPaymentId: string) => {
   const mpPayment = await getMpPayment(mpPaymentId);
   const paymentId = Number(mpPayment.external_reference);
-  if (!Number.isInteger(paymentId)) return { ignored: 'sin referencia de Sortex' };
+  if (!Number.isInteger(paymentId)) return { ignored: 'sin referencia de Event Box' };
 
   const result = await sequelize.transaction(async (t) => {
     const payment = await Payment.findByPk(paymentId, { lock: t.LOCK.UPDATE, transaction: t });
@@ -127,7 +129,7 @@ export const handleMercadoPagoPayment = async (mpPaymentId: string) => {
     if (mpPayment.status === 'approved') {
       const paidEnough = mpPayment.currency_id === 'ARS' && mpPayment.transaction_amount + 0.01 >= Number(payment.amountArs);
       if (!paidEnough) {
-        console.error('[sortex] Pago de Mercado Pago con monto distinto', mpPayment.id, mpPayment.transaction_amount, payment.amountArs);
+        console.error('[eventbox] Pago de Mercado Pago con monto distinto', mpPayment.id, mpPayment.transaction_amount, payment.amountArs);
         return { ignored: 'monto distinto' };
       }
       await approve(payment, { mpPaymentId: String(mpPayment.id), paidAt: mpPayment.date_approved ? new Date(mpPayment.date_approved) : undefined }, t);
@@ -139,8 +141,38 @@ export const handleMercadoPagoPayment = async (mpPaymentId: string) => {
     return { status: mpPayment.status };
   });
 
-  if ('approved' in result && isArcaConfigured()) await invoicePayment(result.approved as number);
+  if ('approved' in result) {
+    if (isArcaConfigured()) await invoicePayment(result.approved as number);
+    await notifyPaymentApproved(result.approved as number);
+  }
   return result;
+};
+
+/** Mail de confirmación al administrador de la empresa (y al email de facturación). */
+export const notifyPaymentApproved = async (paymentId: number) => {
+  const payment = await Payment.findByPk(paymentId, { include: [Company, Invoice] });
+  const company = payment?.Company;
+  if (!payment || !company) return;
+  const admins = await User.findAll({ where: { companyId: company.id, roleId: env.adminRoleId }, attributes: ['email'] });
+  const to = [...new Set([company.email, ...admins.map((a) => a.email)].filter(Boolean) as string[])];
+  if (!to.length) return;
+
+  const invoice = payment.Invoice?.status === 'issued' ? payment.Invoice : null;
+  await sendEmail({
+    to,
+    subject: `Recibimos el pago de Event Box · ${periodLabel(payment.period)}`,
+    title: '¡Pago recibido!',
+    body:
+      paragraph(`Gracias, ${company.name}. La suscripción a Event Box quedó al día.`) +
+      details([
+        ['Mes', periodLabel(payment.period)],
+        ['Monto', `$ ${Number(payment.amountArs).toLocaleString('es-AR')}`],
+        ['Paga hasta', company.paidUntil ? company.paidUntil.split('-').reverse().join('/') : null],
+        ['Factura', invoice ? `C ${String(invoice.pointOfSale).padStart(5, '0')}-${String(invoice.voucherNumber).padStart(8, '0')}` : null],
+      ]) +
+      (invoice ? paragraph('La factura está disponible para descargar en Event Box, en Mi empresa.') : '') +
+      button('Ver Mi empresa', `${env.appUrl}/billing`),
+  });
 };
 
 /** Pago registrado a mano por SRV (transferencia, efectivo…). Se aprueba en el acto. */
@@ -162,5 +194,6 @@ export const registerManualPayment = async (company: Company, opts: { invoice: b
     return p;
   });
   const invoice = opts.invoice && isArcaConfigured() ? await invoicePayment(payment.id) : null;
+  void notifyPaymentApproved(payment.id);
   return { payment, invoice };
 };

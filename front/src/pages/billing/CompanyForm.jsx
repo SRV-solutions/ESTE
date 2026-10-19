@@ -36,9 +36,6 @@ const CompanyForm = ({ value, onChange, errors = {} }) => {
       <Grid item xs={12}>
         {field('address', 'Dirección')}
       </Grid>
-      <Grid item xs={12}>
-        {field('logoUrl', 'Logo (URL)', { helperText: 'Imagen https para el encabezado de los PDF de órdenes', placeholder: 'https://…' })}
-      </Grid>
     </Grid>
   );
 };

@@ -26,7 +26,7 @@ export const getBlueRate = async (): Promise<DollarRate> => {
   } catch (err) {
     // Si la API no responde, una cotización de hasta 12 h sirve más que cortar el cobro.
     if (cache && Date.now() - cache.at < 12 * 60 * 60 * 1000) return cache.rate;
-    console.error('[sortex] No se pudo obtener el dólar blue:', err);
+    console.error('[eventbox] No se pudo obtener el dólar blue:', err);
     throw new HttpError(503, 'No se pudo obtener la cotización del dólar. Probá de nuevo en unos minutos.');
   }
 };

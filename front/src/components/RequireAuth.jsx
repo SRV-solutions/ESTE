@@ -16,7 +16,7 @@ const RequireAuth = ({ children, perm, admin, superAdmin, allowBlocked, shell })
   const { status, can, isAdmin, isSuperAdmin, company, hasAccess, subscription } = useAuth();
   const location = useLocation();
 
-  if (status === 'loading') return <Loading label="Abriendo Sortex…" />;
+  if (status === 'loading') return <Loading label="Abriendo Event Box…" />;
   if (status === 'anonymous') return <Navigate to="/login" replace state={{ from: location }} />;
   if (shell) return children;
 
@@ -46,7 +46,7 @@ const RequireAuth = ({ children, perm, admin, superAdmin, allowBlocked, shell })
           suspended
             ? 'Contactá a SRV para reactivarla.'
             : isAdmin
-              ? 'Regularizá el pago para volver a usar Sortex. Tus datos están intactos.'
+              ? 'Regularizá el pago para volver a usar Event Box. Tus datos están intactos.'
               : 'Avisale al administrador de tu empresa para que regularice el pago. Tus datos están intactos.'
         }
         action={

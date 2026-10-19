@@ -4,7 +4,7 @@ import { sequelize } from '../config/database';
 export const TAX_CONDITIONS = ['responsable_inscripto', 'monotributo', 'exento', 'consumidor_final'] as const;
 export type TaxCondition = (typeof TAX_CONDITIONS)[number];
 
-/** Empresa que alquila Sortex. Todo su stock, órdenes y usuarios cuelgan de acá. */
+/** Empresa que alquila Event Box. Todo su stock, órdenes y usuarios cuelgan de acá. */
 class Company extends Model {
   declare id: number;
   declare name: string;

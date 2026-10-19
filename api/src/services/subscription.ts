@@ -26,7 +26,7 @@ const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T
 /**
  * Estado de acceso de una empresa:
  * - active: suscripción al día.
- * - grace: venció hace menos de `graceDays`; puede seguir usando Sortex con aviso.
+ * - grace: venció hace menos de `graceDays`; puede seguir usando Event Box con aviso.
  * - blocked: venció hace más; solo puede entrar a pagar.
  * - suspended: suspendida a mano desde el panel de SRV.
  */

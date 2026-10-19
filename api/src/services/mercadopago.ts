@@ -19,7 +19,7 @@ const mp = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    console.error('[sortex] Error de Mercado Pago', res.status, body);
+    console.error('[eventbox] Error de Mercado Pago', res.status, body);
     throw new HttpError(502, 'Mercado Pago rechazó la operación. Probá de nuevo en unos minutos.');
   }
   return body as T;
@@ -37,14 +37,14 @@ export const createCheckout = async ({ paymentId, title, amountArs, payerEmail }
   const back = `${env.appUrl}/billing`;
   const pref = await mp<{ id: string; init_point: string }>('/checkout/preferences', {
     method: 'POST',
-    headers: { 'X-Idempotency-Key': `sortex-payment-${paymentId}` },
+    headers: { 'X-Idempotency-Key': `eventbox-payment-${paymentId}` },
     body: JSON.stringify({
-      items: [{ id: 'sortex-mensual', title, quantity: 1, currency_id: 'ARS', unit_price: amountArs }],
+      items: [{ id: 'eventbox-mensual', title, quantity: 1, currency_id: 'ARS', unit_price: amountArs }],
       external_reference: String(paymentId),
       notification_url: `${env.apiPublicUrl}/billing/mercadopago/webhook`,
       back_urls: { success: back, pending: back, failure: back },
       auto_return: 'approved',
-      statement_descriptor: 'SORTEX SRV',
+      statement_descriptor: 'EVENTBOX SRV',
       ...(payerEmail ? { payer: { email: payerEmail } } : {}),
     }),
   });

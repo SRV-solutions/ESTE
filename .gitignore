@@ -140,3 +140,6 @@ backups/
 *.crt
 *.csr
 *.pem
+
+# Configuración local de Claude Code
+.claude/settings.local.json

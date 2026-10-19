@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 import './models';
 import routes from './routes';
+import { isR2Configured, LOCAL_UPLOAD_DIR } from './services/storage';
 
 const app = express();
 
@@ -26,8 +27,22 @@ app.use(
 );
 app.use(express.json({ limit: '1mb' }));
 
+// Imágenes guardadas en disco cuando R2 no está configurado (desarrollo).
+// `cross-origin` para que el front, en otro dominio o puerto, las pueda mostrar y meter en los PDF.
+if (!isR2Configured()) {
+  app.use(
+    '/uploads',
+    (_req, res, next) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      next();
+    },
+    express.static(LOCAL_UPLOAD_DIR, { maxAge: '365d', immutable: true, index: false, dotfiles: 'deny' }),
+  );
+}
+
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', app: 'sortex-api' });
+  res.json({ status: 'ok', app: 'eventbox-api' });
 });
 
 app.use(routes);

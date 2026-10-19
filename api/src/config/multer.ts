@@ -21,3 +21,9 @@ const upload = multer({
 });
 
 export default upload;
+
+/** Imágenes (logo, foto de perfil, captura de un reporte). El tipo real se valida en services/storage. */
+export const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+});

@@ -7,6 +7,7 @@ const FIELD_LABELS: Record<string, string> = {
   code: 'código',
   username: 'nombre de usuario',
   email: 'email',
+  cuit: 'CUIT',
 };
 
 export const notFound =(_req: Request, res: Response) => {
@@ -19,7 +20,12 @@ export const errorHandler = (err: unknown, _req: Request, res: Response, _next: 
     return res.status(err.status).json({ message: err.message, ...(err.details ? { errors: err.details } : {}) });
   }
   if (err instanceof MulterError) {
-    const message = err.code === 'LIMIT_FILE_SIZE' ? 'El archivo supera el tamaño máximo (5 MB).' : err.message;
+    const message =
+      err.code === 'LIMIT_FILE_SIZE'
+        ? 'El archivo supera el tamaño máximo (5 MB).'
+        : err.code === 'LIMIT_UNEXPECTED_FILE'
+          ? 'Se esperaba un solo archivo en el campo "file".'
+          : err.message;
     return res.status(400).json({ message });
   }
   if (err instanceof UniqueConstraintError) {
@@ -37,6 +43,6 @@ export const errorHandler = (err: unknown, _req: Request, res: Response, _next: 
     return res.status(400).json({ message: 'El cuerpo de la petición no es JSON válido.' });
   }
 
-  console.error('[sortex] Error no controlado:', err);
+  console.error('[eventbox] Error no controlado:', err);
   return res.status(500).json({ message: 'Error interno del servidor.' });
 };

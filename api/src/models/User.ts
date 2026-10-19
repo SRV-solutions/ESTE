@@ -13,6 +13,7 @@ class User extends Model {
   declare firstname: string | null;
   declare lastname: string | null;
   declare roleId: number;
+  declare avatarUrl: string | null;
   declare Role?: Role;
   declare Company?: Company;
 }
@@ -28,6 +29,7 @@ User.init(
     firstname: { type: DataTypes.STRING, allowNull: true },
     lastname: { type: DataTypes.STRING, allowNull: true },
     roleId: { type: DataTypes.INTEGER, references: { model: 'Role', key: 'id' } },
+    avatarUrl: { type: DataTypes.STRING(500), allowNull: true },
   },
   {
     sequelize,

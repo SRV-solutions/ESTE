@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Avatar,
   Button,
   Chip,
   Grid,
@@ -22,6 +21,7 @@ import Add from '@mui/icons-material/Add';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import FormDialog from '../../components/FormDialog';
 import PasswordField from '../../components/PasswordField';
+import UserAvatar from '../../components/UserAvatar';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
@@ -147,7 +147,7 @@ const UsersPage = () => {
     <>
       <PageHeader
         title="Usuarios"
-        subtitle="Quién entra a Sortex y qué puede hacer según su rol."
+        subtitle="Quién entra a Event Box y qué puede hacer según su rol."
         actions={
           can('users', 'create') && (
             <Button variant="contained" startIcon={<Add />} onClick={() => setEditing(EMPTY)}>
@@ -181,9 +181,7 @@ const UsersPage = () => {
                 <TableRow key={u.id} hover>
                   <TableCell>
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                      <Avatar sx={{ width: 30, height: 30, fontSize: 12, fontWeight: 800, bgcolor: u.id === me.id ? 'secondary.main' : 'primary.main' }}>
-                        {(userName(u) || '?').slice(0, 2).toUpperCase()}
-                      </Avatar>
+                      <UserAvatar user={u} size={30} sx={u.id === me.id ? { bgcolor: 'secondary.main' } : undefined} />
                       <Typography variant="body2" sx={{ fontWeight: 700 }}>
                         {userName(u)}
                         {u.id === me.id && (

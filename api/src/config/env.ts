@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const isProduction = process.env.NODE_ENV === 'production';
-const DEV_JWT_SECRET = 'sortex-dev-secret';
+const DEV_JWT_SECRET = 'eventbox-dev-secret';
 
 if (isProduction && !process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET es obligatorio en producción.');
@@ -43,6 +43,24 @@ export const env = {
     dollarApiUrl: process.env.DOLLAR_API_URL || 'https://dolarapi.com/v1/dolares/blue',
   },
 
+  /** Cloudflare R2 (compatible con S3) para logos, fotos de perfil y adjuntos. Sin configurar, se guarda en disco. */
+  r2: {
+    accountId: process.env.R2_ACCOUNT_ID || '',
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    bucket: process.env.R2_BUCKET || '',
+    /** Dominio público del bucket (r2.dev o propio), sin barra final. */
+    publicUrl: (process.env.R2_PUBLIC_URL || '').replace(/\/+$/, ''),
+  },
+
+  /** Resend para enviar mails. Sin API key, los mails se muestran en la consola. */
+  email: {
+    resendApiKey: process.env.RESEND_API_KEY || '',
+    from: process.env.EMAIL_FROM || 'Event Box <no-reply@wearesrv.com>',
+    /** Adónde llegan los reportes de problemas. */
+    supportTo: process.env.SUPPORT_EMAIL || 'marcos.costa@bue.edu.ar',
+  },
+
   mercadoPago: {
     accessToken: process.env.MP_ACCESS_TOKEN || '',
     /** Clave secreta de la sección Webhooks: valida que el aviso de pago venga de Mercado Pago. */
@@ -69,5 +87,5 @@ export const env = {
 };
 
 if (!process.env.JWT_SECRET) {
-  console.warn('[sortex] JWT_SECRET no está definido: usando un secreto de desarrollo.');
+  console.warn('[eventbox] JWT_SECRET no está definido: usando un secreto de desarrollo.');
 }

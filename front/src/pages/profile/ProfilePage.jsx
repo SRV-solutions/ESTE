@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Avatar, Box, Button, Chip, Grid, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, Chip, CircularProgress, Grid, Paper, Stack, TextField, Typography } from '@mui/material';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import LockOutlined from '@mui/icons-material/LockOutlined';
+import PhotoCameraOutlined from '@mui/icons-material/PhotoCameraOutlined';
 import FormDialog from '../../components/FormDialog';
+import ImagePicker from '../../components/ImagePicker';
 import PasswordField from '../../components/PasswordField';
+import UserAvatar from '../../components/UserAvatar';
 import { PageHeader } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
@@ -122,6 +125,61 @@ const PasswordDialog = ({ open, onClose }) => {
   );
 };
 
+/** Foto de perfil: se ve en la barra superior y en la lista de usuarios de la empresa. */
+const AvatarEditor = () => {
+  const { user, setUser } = useAuth();
+  const { notify, confirm } = useFeedback();
+  const [busy, setBusy] = useState(false);
+
+  const upload = async (file) => {
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const { data } = await api.post('/me/avatar', form);
+      setUser(data);
+      notify('Foto de perfil actualizada.');
+    } catch (err) {
+      notify(errorMessage(err, 'No se pudo subir la foto.'), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!(await confirm({ title: 'Quitar la foto de perfil', confirmLabel: 'Quitar' }))) return;
+    setBusy(true);
+    try {
+      const { data } = await api.delete('/me/avatar');
+      setUser(data);
+      notify('Foto quitada.');
+    } catch (err) {
+      notify(errorMessage(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Stack alignItems="center" spacing={1}>
+      <Box sx={{ position: 'relative' }}>
+        <UserAvatar user={user} size={96} sx={{ opacity: busy ? 0.5 : 1, border: 3, borderColor: 'background.paper', boxShadow: 2 }} />
+        {busy && <CircularProgress size={32} sx={{ position: 'absolute', top: 32, left: 32 }} />}
+      </Box>
+      <Stack direction="row" spacing={1}>
+        <ImagePicker size="small" startIcon={<PhotoCameraOutlined />} onPick={upload} onError={(m) => notify(m, 'error')} disabled={busy}>
+          {user.avatarUrl ? 'Cambiar foto' : 'Subir foto'}
+        </ImagePicker>
+        {user.avatarUrl && (
+          <Button size="small" color="inherit" onClick={remove} disabled={busy}>
+            Quitar
+          </Button>
+        )}
+      </Stack>
+    </Stack>
+  );
+};
+
 const ProfilePage = () => {
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
@@ -140,9 +198,7 @@ const ProfilePage = () => {
       <Grid container spacing={2}>
         <Grid item xs={12} md={5}>
           <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
-            <Avatar sx={{ width: 84, height: 84, mx: 'auto', fontSize: 30, fontWeight: 900, bgcolor: 'primary.main' }}>
-              {(userName(user) || '?').slice(0, 2).toUpperCase()}
-            </Avatar>
+            <AvatarEditor />
             <Typography variant="h5" sx={{ mt: 2 }}>
               {userName(user)}
             </Typography>

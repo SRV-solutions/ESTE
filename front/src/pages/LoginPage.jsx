@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Alert, Box, Button, IconButton, InputAdornment, Stack, TextField, Typography } from '@mui/material';
+import { Navigate, Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import { Alert, Box, Button, IconButton, InputAdornment, Link, Stack, TextField, Typography } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import { BySrv, SortexLogo, SortexMark } from '../components/Brand';
+import { BySrv, EventBoxLogo, EventBoxMark } from '../components/Brand';
 import { APP_TAGLINE } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { errorMessage } from '../lib/api';
@@ -49,7 +49,7 @@ const LoginPage = () => {
           overflow: 'hidden',
         }}
       >
-        <SortexLogo size={36} fontSize={22} color="#fff" />
+        <EventBoxLogo size={36} fontSize={22} color="#fff" />
         <Box sx={{ position: 'relative', zIndex: 1 }}>
           <Typography sx={{ fontWeight: 900, fontSize: 48, lineHeight: 1.05, letterSpacing: '-0.03em', maxWidth: 520 }}>
             Ordená tu stock.{' '}
@@ -67,7 +67,7 @@ const LoginPage = () => {
         </Box>
         <BySrv sx={{ color: '#a0a0a0' }} />
         <Box sx={{ position: 'absolute', right: -120, bottom: -120, opacity: 0.12 }}>
-          <SortexMark size={460} />
+          <EventBoxMark size={460} />
         </Box>
       </Box>
 
@@ -75,7 +75,7 @@ const LoginPage = () => {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: { xs: 3, sm: 6 } }}>
         <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%', maxWidth: 380 }}>
           <Box sx={{ display: { md: 'none' }, mb: 4 }}>
-            <SortexLogo size={36} fontSize={22} />
+            <EventBoxLogo size={36} fontSize={22} />
             <Typography color="text.secondary" sx={{ mt: 1.5 }}>
               {APP_TAGLINE}
             </Typography>
@@ -130,6 +130,9 @@ const LoginPage = () => {
             >
               {loading ? 'Entrando…' : 'Entrar'}
             </Button>
+            <Link component={RouterLink} to="/forgot-password" variant="body2" sx={{ alignSelf: 'center' }}>
+              ¿Olvidaste tu contraseña?
+            </Link>
           </Stack>
           <Box sx={{ display: { md: 'none' }, mt: 4, textAlign: 'center' }}>
             <BySrv />

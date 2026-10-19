@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   AppBar,
-  Avatar,
   Box,
   Divider,
   Drawer,
@@ -24,30 +23,59 @@ import DarkModeOutlined from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlined from '@mui/icons-material/LightModeOutlined';
 import PersonOutline from '@mui/icons-material/PersonOutline';
 import Logout from '@mui/icons-material/Logout';
+import BugReportOutlined from '@mui/icons-material/BugReportOutlined';
 import { useAuth } from '../context/AuthContext';
 import { useColorMode } from '../context/ColorModeContext';
 import { userName } from '../lib/format';
-import { BySrv, SortexLogo } from './Brand';
+import { BySrv, CompanyLogo, EventBoxLogo } from './Brand';
+import FeedbackDialog from './FeedbackDialog';
 import { NAV, visibleNav } from './nav';
 import SubscriptionBanner from './SubscriptionBanner';
+import UserAvatar from './UserAvatar';
 
 const DRAWER_WIDTH = 248;
 
-const initials = (user) => (userName(user) || '?').slice(0, 2).toUpperCase();
+/** Arriba a la izquierda: la empresa (su logo y nombre). El equipo de SRV sin empresa ve la marca. */
+const SidebarHeader = ({ company, isAdmin, onNavigate }) => {
+  if (!company) {
+    return (
+      <Box sx={{ px: 1, py: 1.5, mb: 1 }}>
+        <EventBoxLogo size={30} fontSize={20} />
+      </Box>
+    );
+  }
+  const content = (
+    <>
+      <CompanyLogo company={company} size={40} />
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 900, fontSize: 15, lineHeight: 1.2, letterSpacing: '-0.01em' }} noWrap title={company.name}>
+          {company.name}
+        </Typography>
+        {isAdmin && !company.logoUrl && (
+          <Typography variant="caption" color="primary.main" sx={{ fontWeight: 700 }}>
+            Subir logo
+          </Typography>
+        )}
+      </Box>
+    </>
+  );
+  const sx = { display: 'flex', alignItems: 'center', gap: 1.25, px: 1, py: 1.25, mb: 1, borderRadius: 2, color: 'inherit', textDecoration: 'none' };
+  // El admin toca su logo para cambiarlo.
+  return isAdmin ? (
+    <Box component={NavLink} to="/billing" onClick={onNavigate} sx={{ ...sx, '&:hover': { bgcolor: 'action.hover' } }}>
+      {content}
+    </Box>
+  ) : (
+    <Box sx={sx}>{content}</Box>
+  );
+};
 
 const SidebarContent = ({ onNavigate }) => {
   const auth = useAuth();
   const items = visibleNav(auth);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 1.5 }}>
-      <Box sx={{ px: 1, py: 1.5, mb: 1 }}>
-        <SortexLogo size={30} fontSize={20} />
-        {auth.company && (
-          <Typography variant="caption" color="text.secondary" noWrap component="div" sx={{ mt: 0.75, fontWeight: 700 }}>
-            {auth.company.name}
-          </Typography>
-        )}
-      </Box>
+      <SidebarHeader company={auth.company} isAdmin={auth.isAdmin} onNavigate={onNavigate} />
       <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
         {items.map(({ to, label, icon: Icon, end, section }, i) => (
           <Box key={to}>
@@ -65,7 +93,8 @@ const SidebarContent = ({ onNavigate }) => {
           </Box>
         ))}
       </List>
-      <Box sx={{ mt: 'auto', px: 1, pt: 2 }}>
+      <Box sx={{ mt: 'auto', px: 1, pt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {auth.company && <EventBoxLogo size={20} fontSize={14} />}
         <BySrv />
       </Box>
     </Box>
@@ -78,6 +107,7 @@ const AppShell = () => {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState(null);
+  const [reporting, setReporting] = useState(false);
   const { user, logout } = useAuth();
   const { mode, toggle } = useColorMode();
   const navigate = useNavigate();
@@ -120,15 +150,18 @@ const AppShell = () => {
             <Typography sx={{ fontWeight: 900, fontSize: 17, flex: 1, minWidth: 0 }} noWrap>
               {current?.short || current?.label || ''}
             </Typography>
+            <Tooltip title="Reportar un problema">
+              <IconButton onClick={() => setReporting(true)} aria-label="Reportar un problema">
+                <BugReportOutlined />
+              </IconButton>
+            </Tooltip>
             <Tooltip title={mode === 'dark' ? 'Modo claro' : 'Modo oscuro'}>
               <IconButton onClick={toggle} aria-label="Cambiar tema">
                 {mode === 'dark' ? <LightModeOutlined /> : <DarkModeOutlined />}
               </IconButton>
             </Tooltip>
             <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)} aria-label="Mi cuenta" sx={{ p: 0.5 }}>
-              <Avatar sx={{ width: 32, height: 32, fontSize: 13, fontWeight: 800, bgcolor: 'primary.main' }}>
-                {initials(user)}
-              </Avatar>
+              <UserAvatar user={user} />
             </IconButton>
             <Menu
               anchorEl={menuAnchor}
@@ -158,6 +191,17 @@ const AppShell = () => {
               <MenuItem
                 onClick={() => {
                   setMenuAnchor(null);
+                  setReporting(true);
+                }}
+              >
+                <ListItemIcon>
+                  <BugReportOutlined fontSize="small" />
+                </ListItemIcon>
+                Reportar un problema
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setMenuAnchor(null);
                   logout();
                 }}
               >
@@ -175,6 +219,7 @@ const AppShell = () => {
           <Outlet />
         </Box>
       </Box>
+      <FeedbackDialog open={reporting} onClose={() => setReporting(false)} />
     </Box>
   );
 };

@@ -10,7 +10,7 @@ const refk = (table: string, column: string, ref: string, onDelete: string) => `
     FOREIGN KEY ("${column}") REFERENCES "${ref}"(id) ON UPDATE CASCADE ON DELETE ${onDelete};`;
 
 /**
- * Sortex multiempresa:
+ * Event Box multiempresa:
  * - Empresas (clientes que alquilan la plataforma) y todo el stock separado por empresa.
  * - Suscripción mensual: pagos (Mercado Pago) y facturas electrónicas (ARCA).
  * - Índices en todas las FK, unicidad donde corresponde y borrados seguros.

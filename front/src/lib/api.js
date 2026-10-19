@@ -1,6 +1,6 @@
 import { API_URL } from '../config';
 
-const TOKEN_KEY = 'sortex.token';
+const TOKEN_KEY = 'eventbox.token';
 
 export const tokenStore = {
   get: () => localStorage.getItem(TOKEN_KEY),

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node C:/Users/Marcos/AppData/Local/Temp/claude/c--Users-Marcos-Desktop-ESTE/d2811c13-23e8-468e-b52d-02bed56a668a/scratchpad/smoke3.mjs C:/Users/Marcos/AppData/Local/Temp/claude/c--Users-Marcos-Desktop-ESTE/d2811c13-23e8-468e-b52d-02bed56a668a/tasks/b6jvfz9c5.output)",
+      "Bash(node C:/Users/Marcos/AppData/Local/Temp/claude/c--Users-Marcos-Desktop-ESTE/d2811c13-23e8-468e-b52d-02bed56a668a/scratchpad/smoke2.mjs)"
+    ]
+  }
+}

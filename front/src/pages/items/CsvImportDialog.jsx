@@ -41,7 +41,7 @@ Baúl azul,Baúl para cables,BAUL-AZUL,baul,unidad,200,15,no,si,2,0
 
 const downloadExample = () => {
   const url = URL.createObjectURL(new Blob([EXAMPLE], { type: 'text/csv;charset=utf-8' }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: 'sortex_ejemplo_items.csv' });
+  const a = Object.assign(document.createElement('a'), { href: url, download: 'eventbox_ejemplo_items.csv' });
   a.click();
   URL.revokeObjectURL(url);
 };

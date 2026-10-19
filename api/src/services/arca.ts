@@ -171,7 +171,7 @@ const fromYmd = (value: string) => `${value.slice(0, 4)}-${value.slice(4, 6)}-${
  */
 export const issueVoucher = async (req: InvoiceRequest, transaction: Transaction): Promise<IssuedVoucher> => {
   if (!isArcaConfigured()) throw new ArcaError('ARCA no está configurado (faltan ARCA_CUIT, ARCA_CERT, ARCA_KEY o ARCA_POINT_OF_SALE).');
-  if (env.arca.voucherType !== 11) throw new ArcaError('Por ahora Sortex solo emite Factura C (ARCA_VOUCHER_TYPE=11).');
+  if (env.arca.voucherType !== 11) throw new ArcaError('Por ahora Event Box solo emite Factura C (ARCA_VOUCHER_TYPE=11).');
 
   await sequelize.query('SELECT pg_advisory_xact_lock(4243)', { transaction });
 

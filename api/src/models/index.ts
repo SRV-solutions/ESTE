@@ -1,10 +1,12 @@
 import Category from './Category';
 import Company from './Company';
 import Event from './Event';
+import Feedback from './Feedback';
 import Invoice from './Invoice';
 import Item from './Item';
 import Payment from './Payment';
 import Location from './Location';
+import PasswordResetToken from './PasswordResetToken';
 import Permission from './Permission';
 import Role from './Role';
 import RolePermission from './RolePermission';
@@ -24,6 +26,9 @@ Payment.hasOne(Invoice, { foreignKey: 'paymentId' });
 Invoice.belongsTo(Payment, { foreignKey: 'paymentId' });
 Company.hasMany(Invoice, { foreignKey: 'companyId' });
 Invoice.belongsTo(Company, { foreignKey: 'companyId' });
+Feedback.belongsTo(Company, { foreignKey: 'companyId' });
+Feedback.belongsTo(User, { foreignKey: 'userId' });
+PasswordResetToken.belongsTo(User, { foreignKey: 'userId' });
 
 Role.hasMany(User, { foreignKey: 'roleId' });
 User.belongsTo(Role, { foreignKey: 'roleId' });
@@ -61,10 +66,12 @@ export {
   Category,
   Company,
   Event,
+  Feedback,
   Invoice,
   Item,
   Payment,
   Location,
+  PasswordResetToken,
   Permission,
   Role,
   RolePermission,

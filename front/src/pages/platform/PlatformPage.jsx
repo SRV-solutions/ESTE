@@ -16,6 +16,7 @@ import {
   Typography,
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
+import BugReportOutlined from '@mui/icons-material/BugReportOutlined';
 import FormDialog from '../../components/FormDialog';
 import PasswordField from '../../components/PasswordField';
 import { EmptyState, ErrorState, Loading, PageHeader, StatTile } from '../../components/ui';
@@ -118,11 +119,16 @@ const PlatformPage = () => {
       <PageHeader
         overline="SRV"
         title="Panel de la plataforma"
-        subtitle="Empresas que usan Sortex, sus suscripciones y la facturación."
+        subtitle="Empresas que usan Event Box, sus suscripciones y la facturación."
         actions={
-          <Button variant="contained" startIcon={<Add />} onClick={() => setCreating(true)}>
-            Nueva empresa
-          </Button>
+          <>
+            <Button variant="outlined" startIcon={<BugReportOutlined />} onClick={() => navigate('/platform/feedback')}>
+              Reportes{overview.openFeedback ? ` (${overview.openFeedback})` : ''}
+            </Button>
+            <Button variant="contained" startIcon={<Add />} onClick={() => setCreating(true)}>
+              Nueva empresa
+            </Button>
+          </>
         }
       />
 
@@ -151,6 +157,16 @@ const PlatformPage = () => {
           variant="outlined"
           color={overview.integrations.arca ? (overview.integrations.arcaProduction ? 'success' : 'warning') : 'default'}
           label={`ARCA: ${overview.integrations.arca ? (overview.integrations.arcaProduction ? 'producción' : 'homologación (pruebas)') : 'sin configurar'}`}
+        />
+        <Chip
+          variant="outlined"
+          color={overview.integrations.r2 ? 'success' : 'warning'}
+          label={`Archivos: ${overview.integrations.r2 ? 'Cloudflare R2' : 'disco local (solo desarrollo)'}`}
+        />
+        <Chip
+          variant="outlined"
+          color={overview.integrations.email ? 'success' : 'default'}
+          label={`Mails (Resend): ${overview.integrations.email ? 'conectado' : 'sin configurar'}`}
         />
       </Stack>
 

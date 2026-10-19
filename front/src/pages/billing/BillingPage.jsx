@@ -20,6 +20,9 @@ import {
 } from '@mui/material';
 import PictureAsPdfOutlined from '@mui/icons-material/PictureAsPdfOutlined';
 import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
+import UploadOutlined from '@mui/icons-material/UploadOutlined';
+import { CompanyLogo } from '../../components/Brand';
+import ImagePicker from '../../components/ImagePicker';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
@@ -32,7 +35,62 @@ import { BRAND } from '../../theme';
 import CompanyForm from './CompanyForm';
 import { EMPTY_COMPANY } from './companyDefaults';
 
-const SubscriptionCard = ({ data, onPay, paying }) => {
+/** Logo de la empresa: aparece arriba a la izquierda para todo el equipo y en los PDF de órdenes. */
+const LogoEditor = ({ company, onChanged }) => {
+  const { notify, confirm } = useFeedback();
+  const { refresh } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  const run = async (request, message) => {
+    setBusy(true);
+    try {
+      await request();
+      notify(message);
+      await refresh(); // La barra lateral muestra el logo nuevo al instante.
+      onChanged();
+    } catch (err) {
+      notify(errorMessage(err, 'No se pudo actualizar el logo.'), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const upload = (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    run(() => api.post('/company/logo', form), 'Logo actualizado.');
+  };
+
+  const remove = async () => {
+    if (await confirm({ title: 'Quitar el logo', confirmLabel: 'Quitar' })) run(() => api.delete('/company/logo'), 'Logo quitado.');
+  };
+
+  return (
+    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: 'surface2' }}>
+      <Box sx={{ opacity: busy ? 0.5 : 1 }}>
+        <CompanyLogo company={company} size={64} />
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 800 }}>Logo</Typography>
+        <Typography variant="body2" color="text.secondary">
+          PNG o JPG cuadrado, hasta 5 MB. Se ve arriba a la izquierda y en los PDF.
+        </Typography>
+        <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+          <ImagePicker size="small" variant="outlined" startIcon={<UploadOutlined />} onPick={upload} onError={(m) => notify(m, 'error')} disabled={busy}>
+            {company.logoUrl ? 'Cambiar logo' : 'Subir logo'}
+          </ImagePicker>
+          {company.logoUrl && (
+            <Button size="small" color="inherit" onClick={remove} disabled={busy}>
+              Quitar
+            </Button>
+          )}
+        </Stack>
+      </Box>
+    </Stack>
+  );
+};
+
+const SubscriptionCard =({ data, onPay, paying }) => {
   const { subscription, quote, company, mercadoPagoEnabled } = data;
   const state = ACCESS_STATE[subscription.state];
   return (
@@ -40,7 +98,7 @@ const SubscriptionCard = ({ data, onPay, paying }) => {
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
         <Box>
           <Typography variant="overline" color="text.disabled">
-            Suscripción a Sortex
+            Suscripción a Event Box
           </Typography>
           <Typography variant="h5">{formatUsd(company.monthlyPriceUsd)} por mes</Typography>
         </Box>
@@ -135,7 +193,10 @@ const BillingPage = () => {
     setSaving(true);
     setErrors({});
     try {
-      await api.patch('/company', form);
+      // El logo se maneja aparte (LogoEditor): no se manda acá para no pisar uno recién subido.
+      // eslint-disable-next-line no-unused-vars
+      const { logoUrl, ...companyData } = form;
+      await api.patch('/company', companyData);
       notify('Datos de la empresa guardados.');
       await refresh();
       reload();
@@ -160,6 +221,7 @@ const BillingPage = () => {
             <Typography variant="h6" sx={{ mb: 2 }}>
               Datos de la empresa
             </Typography>
+            <LogoEditor company={data.company} onChanged={reload} />
             {form && <CompanyForm value={form} onChange={setForm} errors={errors} />}
             <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
               <Button type="submit" variant="contained" disabled={saving || !form?.name?.trim()}>

@@ -3,10 +3,12 @@ import { Request, Response } from 'express';
 import { literal, Op } from 'sequelize';
 import { sequelize } from '../config/database';
 import { env } from '../config/env';
-import { Company, Invoice, Payment, Role, User } from '../models';
+import { Company, Feedback, Invoice, Payment, Role, User } from '../models';
 import { isArcaConfigured } from '../services/arca';
 import { invoicePayment, registerManualPayment } from '../services/billing';
 import { getBlueRate, usdToArs } from '../services/dollar';
+import { button, details, isEmailConfigured, paragraph, sendEmail } from '../services/email';
+import { isR2Configured } from '../services/storage';
 import { isMercadoPagoConfigured } from '../services/mercadopago';
 import { addDays, subscriptionState, todayAR } from '../services/subscription';
 import { HttpError, parseId } from '../utils/http';
@@ -24,15 +26,25 @@ export const overview = async (_req: Request, res: Response) => {
   const rate = await getBlueRate().catch(() => null);
   const mrrUsd = companies.filter((c, i) => c.status === 'active' && states[i] !== 'blocked').reduce((s, c) => s + Number(c.monthlyPriceUsd), 0);
   const since = new Date(Date.now() - 30 * 86400_000);
-  const collected = await Payment.sum('amountArs', { where: { status: 'approved', paidAt: { [Op.gte]: since } } });
+  const [collected, openFeedback] = await Promise.all([
+    Payment.sum('amountArs', { where: { status: 'approved', paidAt: { [Op.gte]: since } } }),
+    Feedback.count({ where: { status: 'open' } }),
+  ]);
   res.json({
+    openFeedback,
     companies: companies.length,
     byState: { active: 0, grace: 0, blocked: 0, suspended: 0, ...Object.fromEntries(['active', 'grace', 'blocked', 'suspended'].map((s) => [s, states.filter((x) => x === s).length])) },
     mrrUsd,
     mrrArs: rate ? usdToArs(mrrUsd, rate.sell) : null,
     collectedLast30DaysArs: Number(collected || 0),
     rate,
-    integrations: { mercadoPago: isMercadoPagoConfigured(), arca: isArcaConfigured(), arcaProduction: env.arca.production },
+    integrations: {
+      mercadoPago: isMercadoPagoConfigured(),
+      arca: isArcaConfigured(),
+      arcaProduction: env.arca.production,
+      r2: isR2Configured(),
+      email: isEmailConfigured(),
+    },
     defaultPriceUsd: env.billing.monthlyPriceUsd,
   });
 };
@@ -99,6 +111,24 @@ export const createCompany = async (req: Request, res: Response) => {
     );
     return c;
   });
+
+  // La contraseña no viaja por mail: se la pasa SRV por otro medio.
+  void sendEmail({
+    to: email,
+    subject: `Bienvenidos a Event Box, ${company.name}`,
+    title: '¡Ya tienen Event Box!',
+    body:
+      paragraph(`Hola ${String(admin.firstname || '').trim() || username}, creamos la cuenta de ${company.name} en Event Box.`) +
+      details([
+        ['Tu usuario', username],
+        ['Tu rol', 'Administrador de la empresa'],
+        ['Período de prueba', `${env.billing.trialDays} días`],
+      ]) +
+      paragraph('La contraseña inicial te la pasamos aparte. Al entrar, podés cambiarla desde Mi perfil.') +
+      button('Entrar a Event Box', `${env.appUrl}/login`) +
+      paragraph('Desde Mi empresa podés subir el logo, cargar los datos para la factura y crear los usuarios de tu equipo.'),
+  });
+
   res.status(201).json(withState(company));
 };
 

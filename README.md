@@ -1,9 +1,11 @@
-# Sortex
+# Event Box
 
 Stock y órdenes de servicio para empresas de eventos. Un producto de [SRV](https://wearesrv.com), hermano de Sentryx.
 
 - **Multiempresa**: cada empresa tiene su stock, sus contenedores, lugares, órdenes y usuarios, separados del resto.
 - **Suscripción**: USD 400 por mes, cobrados en pesos al dólar blue con Mercado Pago y facturados en ARCA (ver [docs/COBROS.md](docs/COBROS.md)).
+- **Imágenes en Cloudflare R2 y mails con Resend**: logo de cada empresa, foto de perfil, capturas de reportes, recuperación de contraseña y avisos (ver [docs/ARCHIVOS_Y_MAILS.md](docs/ARCHIVOS_Y_MAILS.md)).
+- **Reportar un problema**: botón en la barra superior; llega al Panel SRV (Reportes) y por mail a soporte.
 - `api/`: Express + Sequelize + PostgreSQL (TypeScript).
 - `front/`: React + Vite + MUI, con el sistema visual de SRV.
 
@@ -38,9 +40,9 @@ yarn dev
 
 ## Base de datos
 
-Las migraciones están en `api/src/db/migrations` y se aplican solas al iniciar la API. Cada una corre en una transacción y queda registrada en la tabla `SortexMigration`. Para aplicarlas sin levantar la API: `yarn build && yarn db:migrate`.
+Las migraciones están en `api/src/db/migrations` y se aplican solas al iniciar la API. Cada una corre en una transacción y queda registrada en la tabla `EventBoxMigration`. Para aplicarlas sin levantar la API: `yarn build && yarn db:migrate`.
 
-Una base vacía arranca con los roles y permisos de fábrica. Una base existente de E.S.T.E. pasa a ser la empresa 1.
+Una base vacía arranca con los roles y permisos de fábrica. Una base existente de E.S.T.E. pasa a ser la empresa 1. Las bases creadas cuando la app se llamaba Sortex conservan su historial: la tabla `SortexMigration` se renombra sola.
 
 ## Reglas de las órdenes
 

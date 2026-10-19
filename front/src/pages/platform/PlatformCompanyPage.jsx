@@ -56,7 +56,10 @@ const EditDialog = ({ company, onClose, onSaved }) => {
     setSaving(true);
     setErrors({});
     try {
-      await api.patch(`/platform/companies/${company.id}`, { ...form, paidUntil: form.paidUntil || null });
+      // El logo lo maneja cada empresa: no se manda para no pisar uno recién subido.
+      // eslint-disable-next-line no-unused-vars
+      const { logoUrl, ...data } = form;
+      await api.patch(`/platform/companies/${company.id}`, { ...data, paidUntil: form.paidUntil || null });
       notify('Empresa actualizada.');
       onSaved();
     } catch (err) {
@@ -124,7 +127,7 @@ const PlatformCompanyPage = () => {
     const suspend = company.status === 'active';
     const ok = await confirm({
       title: suspend ? `Suspender ${company.name}` : `Reactivar ${company.name}`,
-      message: suspend ? 'Nadie de la empresa va a poder usar Sortex hasta que la reactives. No se borra nada.' : undefined,
+      message: suspend ? 'Nadie de la empresa va a poder usar Event Box hasta que la reactives. No se borra nada.' : undefined,
       confirmLabel: suspend ? 'Suspender' : 'Reactivar',
       danger: suspend,
     });

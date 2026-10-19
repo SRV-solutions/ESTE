@@ -18,6 +18,9 @@ const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 const BillingPage = lazy(() => import('./pages/billing/BillingPage'));
 const PlatformPage = lazy(() => import('./pages/platform/PlatformPage'));
 const PlatformCompanyPage = lazy(() => import('./pages/platform/PlatformCompanyPage'));
+const FeedbackPage = lazy(() => import('./pages/platform/FeedbackPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/PasswordRecoveryPages').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/PasswordRecoveryPages').then((m) => ({ default: m.ResetPasswordPage })));
 
 const guard = (element, perm, options = {}) => (
   <RequireAuth perm={perm} {...options}>
@@ -28,6 +31,8 @@ const guard = (element, perm, options = {}) => (
 const App = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />
+    <Route path="/forgot-password" element={<Suspense fallback={<Loading />}><ForgotPasswordPage /></Suspense>} />
+    <Route path="/reset-password" element={<Suspense fallback={<Loading />}><ResetPasswordPage /></Suspense>} />
     {/* El layout se muestra aunque la suscripción esté vencida: cada pantalla decide. */}
     <Route element={guard(<AppShell />, undefined, { shell: true })}>
       <Route index element={guard(<DashboardPage />)} />
@@ -44,6 +49,7 @@ const App = () => (
       <Route path="billing" element={guard(<BillingPage />, undefined, { admin: true, allowBlocked: true })} />
       <Route path="platform" element={guard(<PlatformPage />, undefined, { superAdmin: true })} />
       <Route path="platform/companies/:id" element={guard(<PlatformCompanyPage />, undefined, { superAdmin: true })} />
+      <Route path="platform/feedback" element={guard(<FeedbackPage />, undefined, { superAdmin: true })} />
       <Route path="*" element={<EmptyState title="Página no encontrada" description="La dirección no existe o se movió." />} />
     </Route>
   </Routes>

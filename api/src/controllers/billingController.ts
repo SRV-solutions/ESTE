@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { isArcaConfigured, issuerInfo } from '../services/arca';
 import { handleMercadoPagoPayment, quoteFor, startCheckout } from '../services/billing';
 import { isMercadoPagoConfigured, isValidWebhookSignature } from '../services/mercadopago';
+import { deleteByUrl, saveImage } from '../services/storage';
 import { subscriptionState } from '../services/subscription';
 import { Company, Invoice, Payment } from '../models';
 import { HttpError, parseId } from '../utils/http';
@@ -38,6 +39,24 @@ export const updateCompany = async (req: Request, res: Response) => {
   res.json(company);
 };
 
+/** Logo de la empresa: aparece arriba a la izquierda en la app y en los PDF de órdenes. */
+export const uploadLogo = async (req: Request, res: Response) => {
+  if (!req.file) throw new HttpError(400, 'Elegí una imagen.');
+  const company = await findCompany(req);
+  const previous = company.logoUrl;
+  await company.update({ logoUrl: await saveImage(req.file.buffer, `empresas/${company.id}`, 'logo') });
+  await deleteByUrl(previous);
+  res.json(company);
+};
+
+export const deleteLogo = async (req: Request, res: Response) => {
+  const company = await findCompany(req);
+  const previous = company.logoUrl;
+  await company.update({ logoUrl: null });
+  await deleteByUrl(previous);
+  res.json(company);
+};
+
 export const checkout = async (req: Request, res: Response) => {
   const { checkoutUrl, payment, quote } = await startCheckout(await findCompany(req));
   res.status(201).json({ checkoutUrl, paymentId: payment.id, quote });
@@ -64,10 +83,10 @@ export const mercadoPagoWebhook = async (req: Request, res: Response) => {
 
   try {
     const result = await handleMercadoPagoPayment(dataId);
-    console.log('[sortex] Webhook de Mercado Pago', dataId, result);
+    console.log('[eventbox] Webhook de Mercado Pago', dataId, result);
     res.sendStatus(200);
   } catch (err) {
-    console.error('[sortex] Error procesando webhook de Mercado Pago', dataId, err);
+    console.error('[eventbox] Error procesando webhook de Mercado Pago', dataId, err);
     res.sendStatus(500); // Mercado Pago reintenta.
   }
 };

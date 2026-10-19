@@ -1,9 +1,13 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
+import { sequelize } from '../config/database';
 import { env } from '../config/env';
 import { signToken, tenant } from '../middlewares/auth';
-import { Company, Permission, Role, User } from '../models';
+import { Company, PasswordResetToken, Permission, Role, User } from '../models';
+import { button, paragraph, sendEmail } from '../services/email';
+import { deleteByUrl, saveImage } from '../services/storage';
 import { subscriptionState } from '../services/subscription';
 import { HttpError, parseId } from '../utils/http';
 
@@ -23,6 +27,7 @@ const toSession = (user: User) => ({
   email: user.email,
   firstname: user.firstname,
   lastname: user.lastname,
+  avatarUrl: user.avatarUrl,
   roleId: user.roleId,
   roleName: user.Role?.roleName ?? null,
   isAdmin: !!user.companyId && user.roleId === env.adminRoleId,
@@ -140,6 +145,80 @@ export const changeMyPassword = async (req: Request, res: Response) => {
 
   await user.update({ password: await bcrypt.hash(newPassword, BCRYPT_ROUNDS) });
   res.json({ message: 'Contraseña actualizada.' });
+};
+
+// ---------- Foto de perfil ----------
+
+export const uploadMyAvatar = async (req: Request, res: Response) => {
+  if (!req.file) throw new HttpError(400, 'Elegí una imagen.');
+  const user = await User.findByPk(req.user!.id);
+  if (!user) throw new HttpError(404, 'Usuario no encontrado.');
+  const previous = user.avatarUrl;
+  await user.update({ avatarUrl: await saveImage(req.file.buffer, `usuarios/${user.id}`, 'avatar') });
+  await deleteByUrl(previous);
+  const fresh = await User.findByPk(user.id, { include: sessionIncludes });
+  res.json(toSession(fresh!));
+};
+
+export const deleteMyAvatar = async (req: Request, res: Response) => {
+  const user = await User.findByPk(req.user!.id);
+  if (!user) throw new HttpError(404, 'Usuario no encontrado.');
+  const previous = user.avatarUrl;
+  await user.update({ avatarUrl: null });
+  await deleteByUrl(previous);
+  const fresh = await User.findByPk(user.id, { include: sessionIncludes });
+  res.json(toSession(fresh!));
+};
+
+// ---------- Recuperar contraseña ----------
+
+const RESET_TTL_MS = 60 * 60 * 1000;
+const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
+
+/**
+ * Manda un link para elegir una contraseña nueva. Responde siempre lo mismo,
+ * exista o no el usuario, para no revelar qué emails están registrados.
+ */
+export const forgotPassword = async (req: Request, res: Response) => {
+  const identifier = String(req.body.identifier || '').trim();
+  const generic = { message: 'Si el usuario existe, le mandamos un mail con un link para elegir una contraseña nueva.' };
+  if (!identifier) throw new HttpError(400, 'Ingresá tu usuario o tu email.');
+
+  const user = await User.findOne({ where: { [Op.or]: [{ username: identifier }, { email: identifier.toLowerCase() }, { email: identifier }] } });
+  if (!user) return res.json(generic);
+
+  const token = crypto.randomBytes(32).toString('hex');
+  await PasswordResetToken.create({ userId: user.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + RESET_TTL_MS) });
+
+  const link = `${env.appUrl}/reset-password?token=${token}`;
+  await sendEmail({
+    to: user.email,
+    subject: 'Elegí una contraseña nueva para Event Box',
+    title: 'Recuperar contraseña',
+    body:
+      paragraph(`Hola ${user.firstname || user.username}, pediste cambiar la contraseña de tu usuario ${user.username}.`) +
+      button('Elegir contraseña nueva', link) +
+      paragraph('El link vence en 1 hora y sirve una sola vez. Si no lo pediste vos, ignorá este mail: tu contraseña no cambia.'),
+  });
+  if (!env.isProduction) console.log(`[eventbox] Link de recuperación para ${user.username}: ${link}`);
+
+  res.json(generic);
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const token = String(req.body.token || '');
+  const record = token ? await PasswordResetToken.findOne({ where: { tokenHash: sha256(token) } }) : null;
+  if (!record || record.usedAt || record.expiresAt < new Date()) {
+    throw new HttpError(400, 'El link no es válido o ya venció. Pedí uno nuevo.');
+  }
+  assertPassword(req.body.password);
+
+  await sequelize.transaction(async (transaction) => {
+    await User.update({ password: await bcrypt.hash(req.body.password, BCRYPT_ROUNDS) }, { where: { id: record.userId }, transaction });
+    // El link usado y cualquier otro pendiente del mismo usuario dejan de servir.
+    await PasswordResetToken.update({ usedAt: new Date() }, { where: { userId: record.userId, usedAt: null }, transaction });
+  });
+  res.json({ message: 'Listo: ya podés entrar con tu contraseña nueva.' });
 };
 
 export const listUsers = async (req: Request, res: Response) => {

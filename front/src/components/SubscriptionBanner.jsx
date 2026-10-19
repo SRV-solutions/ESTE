@@ -14,7 +14,7 @@ const SubscriptionBanner = () => {
 
   const message =
     state === 'grace'
-      ? `La suscripción está vencida. Sortex se bloquea el ${formatDate(blocksOn)} si no se registra el pago.`
+      ? `La suscripción está vencida. Event Box se bloquea el ${formatDate(blocksOn)} si no se registra el pago.`
       : daysLeft === 0
         ? 'La suscripción vence hoy.'
         : `La suscripción vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'}.`;

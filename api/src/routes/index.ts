@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import upload from '../config/multer';
+import upload, { imageUpload } from '../config/multer';
 import * as billing from '../controllers/billingController';
 import * as categories from '../controllers/categoryController';
 import * as events from '../controllers/eventController';
+import * as feedback from '../controllers/feedbackController';
 import * as items from '../controllers/itemController';
 import * as locations from '../controllers/locationController';
 import * as roles from '../controllers/roleController';
@@ -29,10 +30,26 @@ const loginLimiter = rateLimit({
   message: { message: 'Demasiados intentos de inicio de sesión. Probá de nuevo en unos minutos.' },
 });
 
+// Pedidos que mandan mails: límite más estricto para que nadie los use para spamear.
+const mailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { message: 'Demasiados pedidos. Probá de nuevo en un rato.' },
+});
+
 router.post('/auth/login', loginLimiter, h(users.login));
+router.post('/auth/forgot', mailLimiter, h(users.forgotPassword));
+router.post('/auth/reset', loginLimiter, h(users.resetPassword));
 router.get('/me', isAuth, h(users.getMyProfile));
 router.patch('/me', isAuth, h(users.updateMyProfile));
 router.put('/me/password', isAuth, h(users.changeMyPassword));
+router.post('/me/avatar', isAuth, imageUpload.single('file'), h(users.uploadMyAvatar));
+router.delete('/me/avatar', isAuth, h(users.deleteMyAvatar));
+
+// Reportar un problema: cualquier usuario con sesión (aunque la suscripción esté vencida).
+router.post('/feedback', isAuth, mailLimiter, imageUpload.single('file'), h(feedback.createFeedback));
 
 // ---------- Usuarios y roles ----------
 router.get('/users', can(USERS, READ), h(users.listUsers));
@@ -99,6 +116,8 @@ router.delete(
 const companyAdmin = [isAuth, requireCompanyAdmin];
 router.get('/billing', companyAdmin, h(billing.getBilling));
 router.patch('/company', companyAdmin, h(billing.updateCompany));
+router.post('/company/logo', companyAdmin, imageUpload.single('file'), h(billing.uploadLogo));
+router.delete('/company/logo', companyAdmin, h(billing.deleteLogo));
 router.post('/billing/checkout', companyAdmin, h(billing.checkout));
 router.get('/billing/invoices/:id', isAuth, h(billing.getInvoice));
 router.post('/billing/mercadopago/webhook', h(billing.mercadoPagoWebhook)); // Público: lo valida la firma.
@@ -112,5 +131,7 @@ router.get('/platform/companies/:id', superAdmin, h(platform.getCompany));
 router.patch('/platform/companies/:id', superAdmin, h(platform.updateCompany));
 router.post('/platform/companies/:id/payments', superAdmin, h(platform.addManualPayment));
 router.post('/platform/payments/:paymentId/invoice', superAdmin, h(platform.retryInvoice));
+router.get('/platform/feedback', superAdmin, h(feedback.listFeedback));
+router.patch('/platform/feedback/:id', superAdmin, h(feedback.updateFeedback));
 
 export default router;

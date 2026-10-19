@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { CssBaseline, ThemeProvider, useMediaQuery } from '@mui/material';
 import { getTheme } from '../theme';
 
-const KEY = 'sortex.colorMode';
+const KEY = 'eventbox.colorMode';
 const ColorModeContext = createContext({ mode: 'light', toggle: () => {} });
 
 const readStored = () => {

@@ -1,14 +1,14 @@
-# Cobros y facturación de Sortex
+# Cobros y facturación de Event Box
 
 Cada empresa paga **USD 400 por mes**, cobrados en pesos al **dólar blue** del momento del pago
 (cotización de [dolarapi.com](https://dolarapi.com)). El pago se hace con **Mercado Pago** y,
-cuando se acredita, Sortex emite automáticamente la **Factura C** en ARCA a tu nombre.
+cuando se acredita, Event Box emite automáticamente la **Factura C** en ARCA a tu nombre.
 
 ## Cómo funciona
 
 1. El administrador de la empresa entra a **Mi empresa** y toca **Pagar con Mercado Pago**.
-2. Sortex fija el monto en pesos (USD × blue, redondeado a la centena) y abre el checkout de Mercado Pago.
-3. Mercado Pago avisa el pago a `POST /billing/mercadopago/webhook`. Sortex no confía en el aviso:
+2. Event Box fija el monto en pesos (USD × blue, redondeado a la centena) y abre el checkout de Mercado Pago.
+3. Mercado Pago avisa el pago a `POST /billing/mercadopago/webhook`. Event Box no confía en el aviso:
    consulta el pago real a Mercado Pago, verifica el monto y recién ahí lo aprueba.
 4. La suscripción se extiende un mes y se emite la factura en ARCA. Si ARCA falla, el pago queda
    aprobado igual y la factura se reintenta desde **Panel SRV → empresa → Pagos y facturas**.
@@ -38,7 +38,7 @@ Sin `MP_ACCESS_TOKEN`, el botón de pago aparece deshabilitado con un aviso.
 
 ## ARCA: factura electrónica
 
-ARCA tiene un servicio web oficial. Sortex lo usa directo, sin intermediarios pagos:
+ARCA tiene un servicio web oficial. Event Box lo usa directo, sin intermediarios pagos:
 
 - **WSAA**: con tu certificado digital pide un ticket de acceso (dura 12 h).
 - **WSFEv1**: con ese ticket pide el **CAE** de cada factura.
@@ -49,18 +49,18 @@ avisá y se agrega la Factura A/B con IVA.
 ### 1. Generar la clave y el pedido de certificado
 
 ```bash
-openssl genrsa -out sortex.key 2048
-openssl req -new -key sortex.key -subj "/C=AR/O=TU NOMBRE/CN=sortex/serialNumber=CUIT 20XXXXXXXXX" -out sortex.csr
+openssl genrsa -out eventbox.key 2048
+openssl req -new -key eventbox.key -subj "/C=AR/O=TU NOMBRE/CN=eventbox/serialNumber=CUIT 20XXXXXXXXX" -out eventbox.csr
 ```
 
-Guardá `sortex.key` en un lugar seguro: es tu clave privada y **nunca** se sube al repositorio.
+Guardá `eventbox.key` en un lugar seguro: es tu clave privada y **nunca** se sube al repositorio.
 
 ### 2. Probar en homologación (sin validez fiscal)
 
 1. Entrá a ARCA con clave fiscal y adherí el servicio **"WSASS - Autogestión Certificados Homologación"**.
-2. En WSASS: **Nuevo certificado** → pegá el contenido de `sortex.csr` → descargá el `.crt`.
+2. En WSASS: **Nuevo certificado** → pegá el contenido de `eventbox.csr` → descargá el `.crt`.
 3. En WSASS: **Crear autorización a servicio** → servicio `wsfe` para ese certificado.
-4. Configurá: `ARCA_CUIT`, `ARCA_CERT=ruta/al/sortex.crt`, `ARCA_KEY=ruta/a/sortex.key`,
+4. Configurá: `ARCA_CUIT`, `ARCA_CERT=ruta/al/eventbox.crt`, `ARCA_KEY=ruta/a/eventbox.key`,
    `ARCA_POINT_OF_SALE=1`, `ARCA_PRODUCTION=false`.
 5. Registrá un pago manual desde el Panel SRV: se emite una factura de prueba. El PDF dice
    "HOMOLOGACIÓN — SIN VALIDEZ FISCAL".
