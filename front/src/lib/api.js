@@ -55,6 +55,29 @@ export const api = {
   delete: (path, opts) => request('DELETE', path, undefined, opts),
 };
 
+/**
+ * Archivos privados (recibos, planos): se piden con la sesión y se abren o descargan desde memoria.
+ * `view` abre en otra pestaña (PDF e imágenes); si no, descarga con `fileName`.
+ */
+export const openPrivateFile = async (path, { view = false, fileName = 'archivo' } = {}) => {
+  // La pestaña se abre antes del pedido para que el navegador no la bloquee como popup.
+  const tab = view ? window.open('', '_blank') : null;
+  const headers = {};
+  const token = tokenStore.get();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(API_URL + path, { headers });
+  if (!res.ok) {
+    tab?.close();
+    const data = await res.json().catch(() => null);
+    if (res.status === 401) onUnauthorized();
+    throw new ApiError(res.status, data);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  if (tab) tab.location.href = url;
+  else Object.assign(document.createElement('a'), { href: url, download: fileName }).click();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+};
+
 /** Mensaje legible de cualquier error de la API. */
 export const errorMessage = (error, fallback = 'Ocurrió un error inesperado.') => {
   if (!error?.response) return error?.message === 'Network Error' ? 'No hay conexión con el servidor.' : fallback;

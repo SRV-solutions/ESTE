@@ -32,7 +32,7 @@ export const createFeedback = async (req: Request, res: Response) => {
   // El mail sale en segundo plano: si Resend tarda, el usuario no espera.
   void sendEmail({
     to: env.email.supportTo,
-    replyTo: user?.email,
+    replyTo: user?.email ?? undefined,
     subject: `[Event Box] ${TYPE_LABELS[type]} #${feedback.id} · ${user?.Company?.name ?? 'SRV'}`,
     title: `${TYPE_LABELS[type]} reportado`,
     body:

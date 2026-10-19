@@ -3,6 +3,7 @@ import { Button } from '@mui/material';
 import LockOutlined from '@mui/icons-material/LockOutlined';
 import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
 import { useAuth } from '../context/AuthContext';
+import { ComingSoonScreen, UpsellScreen } from './ModuleScreens';
 import { EmptyState, Loading } from './ui';
 
 /**
@@ -12,8 +13,8 @@ import { EmptyState, Loading } from './ui';
  * - `allowBlocked`: se puede usar aunque la suscripción esté vencida (pantalla de pago).
  * - `shell`: solo exige sesión (el layout; cada pantalla aplica sus propias reglas).
  */
-const RequireAuth = ({ children, perm, admin, superAdmin, allowBlocked, shell }) => {
-  const { status, can, isAdmin, isSuperAdmin, company, hasAccess, subscription } = useAuth();
+const RequireAuth = ({ children, perm, admin, superAdmin, allowBlocked, shell, feature }) => {
+  const { status, can, isAdmin, isSuperAdmin, company, hasAccess, subscription, hasFeature, inDevelopment } = useAuth();
   const location = useLocation();
 
   if (status === 'loading') return <Loading label="Abriendo Event Box…" />;
@@ -41,19 +42,19 @@ const RequireAuth = ({ children, perm, admin, superAdmin, allowBlocked, shell })
     return (
       <EmptyState
         icon={PaymentsOutlined}
-        title={suspended ? 'La cuenta de tu empresa está suspendida' : 'La suscripción de tu empresa está vencida'}
+        title={suspended ? 'La cuenta de tu empresa está suspendida' : 'El abono del mes está pendiente'}
         description={
           suspended
             ? 'Contactá a SRV para reactivarla.'
             : isAdmin
-              ? 'Regularizá el pago para volver a usar Event Box. Tus datos están intactos.'
-              : 'Avisale al administrador de tu empresa para que regularice el pago. Tus datos están intactos.'
+              ? 'El abono se paga a principio de mes. Coordiná el pago con SRV y apenas se registra vuelven a usar Event Box. Los datos están intactos.'
+              : 'Avisale al administrador de tu empresa: apenas se registre el pago del mes vuelven a usar Event Box. Los datos están intactos.'
         }
         action={
           isAdmin &&
           !suspended && (
             <Button variant="contained" component={RouterLink} to="/billing">
-              Ir a pagar
+              Ver abono
             </Button>
           )
         }
@@ -62,6 +63,8 @@ const RequireAuth = ({ children, perm, admin, superAdmin, allowBlocked, shell })
   }
 
   if (perm && !can(...perm)) return denied;
+  if (feature && !hasFeature(feature)) return <UpsellScreen feature={feature} />;
+  if (feature && inDevelopment(feature)) return <ComingSoonScreen feature={feature} />;
   return children;
 };
 

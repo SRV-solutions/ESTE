@@ -3,7 +3,8 @@ import { isArcaConfigured, issuerInfo } from '../services/arca';
 import { handleMercadoPagoPayment, quoteFor, startCheckout } from '../services/billing';
 import { isMercadoPagoConfigured, isValidWebhookSignature } from '../services/mercadopago';
 import { deleteByUrl, saveImage } from '../services/storage';
-import { subscriptionState } from '../services/subscription';
+import { usdToArs } from '../services/dollar';
+import { currentMonthStatus, subscriptionState } from '../services/subscription';
 import { Company, Invoice, Payment } from '../models';
 import { HttpError, parseId } from '../utils/http';
 import { parseCompanyInput } from './companyInput';
@@ -22,9 +23,18 @@ export const getBilling = async (req: Request, res: Response) => {
     Invoice.findAll({ where: { companyId: company.id, status: 'issued' }, order: [['createdAt', 'DESC']], limit: 24 }),
     quoteFor(company).catch(() => null), // Si la cotización no responde, la pantalla igual carga.
   ]);
+  // Lo que se debe del mes en curso: el abono del plan en dólares y su valor en pesos hoy.
+  const rate = quote?.rate ?? null;
+  const amountUsd = Number(company.monthlyPriceUsd);
   res.json({
     company,
     subscription: subscriptionState(company),
+    month: {
+      ...currentMonthStatus(company),
+      amountUsd,
+      amountArs: rate ? usdToArs(amountUsd, rate.sell) : null,
+      rate,
+    },
     quote,
     payments,
     invoices,

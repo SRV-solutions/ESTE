@@ -3,11 +3,13 @@ import { Request, Response } from 'express';
 import { literal, Op } from 'sequelize';
 import { sequelize } from '../config/database';
 import { env } from '../config/env';
+import { getPlan, PLANS } from '../config/plans';
 import { Company, Feedback, Invoice, Payment, Role, User } from '../models';
 import { isArcaConfigured } from '../services/arca';
 import { invoicePayment, registerManualPayment } from '../services/billing';
 import { getBlueRate, usdToArs } from '../services/dollar';
 import { button, details, isEmailConfigured, paragraph, sendEmail } from '../services/email';
+import { cloneTemplateRoles } from '../services/roles';
 import { isR2Configured } from '../services/storage';
 import { isMercadoPagoConfigured } from '../services/mercadopago';
 import { addDays, subscriptionState, todayAR } from '../services/subscription';
@@ -45,7 +47,6 @@ export const overview = async (_req: Request, res: Response) => {
       r2: isR2Configured(),
       email: isEmailConfigured(),
     },
-    defaultPriceUsd: env.billing.monthlyPriceUsd,
   });
 };
 
@@ -89,14 +90,17 @@ export const createCompany = async (req: Request, res: Response) => {
   if (!/^[a-zA-Z0-9_.-]+$/.test(username)) throw new HttpError(400, 'Usuario del administrador inválido.', { username: 'Solo letras, números, puntos y guiones.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, 'Email del administrador inválido.', { email: 'Email inválido.' });
   if (password.length < 8) throw new HttpError(400, 'La contraseña del administrador debe tener al menos 8 caracteres.', { password: 'Mínimo 8 caracteres.' });
-  const price = req.body.monthlyPriceUsd !== undefined ? Number(req.body.monthlyPriceUsd) : env.billing.monthlyPriceUsd;
+  const plan = PLANS.find((p) => p.id === req.body.plan) ?? getPlan('profesional');
+  // Precio del plan, salvo que SRV le ponga uno especial.
+  const price = req.body.monthlyPriceUsd !== undefined && req.body.monthlyPriceUsd !== '' ? Number(req.body.monthlyPriceUsd) : plan.priceUsd;
   if (!Number.isFinite(price) || price < 0) throw new HttpError(400, 'Precio mensual inválido.');
 
   const company = await sequelize.transaction(async (t) => {
     const c = await Company.create(
-      { ...data, monthlyPriceUsd: price, status: 'active', paidUntil: addDays(todayAR(), env.billing.trialDays) },
+      { ...data, plan: plan.id, monthlyPriceUsd: price, status: 'active', paidUntil: addDays(todayAR(), env.billing.trialDays) },
       { transaction: t },
     );
+    await cloneTemplateRoles(c.id, t);
     await User.create(
       {
         companyId: c.id,
@@ -122,6 +126,7 @@ export const createCompany = async (req: Request, res: Response) => {
       details([
         ['Tu usuario', username],
         ['Tu rol', 'Administrador de la empresa'],
+        ['Plan', `${plan.name} (hasta ${plan.maxUsers} usuarios)`],
         ['Período de prueba', `${env.billing.trialDays} días`],
       ]) +
       paragraph('La contraseña inicial te la pasamos aparte. Al entrar, podés cambiarla desde Mi perfil.') +
@@ -139,7 +144,13 @@ export const updateCompany = async (req: Request, res: Response) => {
     if (!['active', 'suspended'].includes(req.body.status)) throw new HttpError(400, 'Estado inválido.');
     updates.status = req.body.status;
   }
-  if (req.body.monthlyPriceUsd !== undefined) {
+  if (req.body.plan !== undefined && req.body.plan !== company.plan) {
+    const plan = PLANS.find((p) => p.id === req.body.plan);
+    if (!plan) throw new HttpError(400, 'Plan inválido.');
+    updates.plan = plan.id;
+    updates.monthlyPriceUsd = plan.priceUsd; // Si además mandan un precio especial, lo pisa abajo.
+  }
+  if (req.body.monthlyPriceUsd !== undefined && req.body.monthlyPriceUsd !== '' && (req.body.plan === undefined || req.body.plan === company.plan || Number(req.body.monthlyPriceUsd) !== Number(company.monthlyPriceUsd))) {
     const price = Number(req.body.monthlyPriceUsd);
     if (!Number.isFinite(price) || price < 0) throw new HttpError(400, 'Precio mensual inválido.');
     updates.monthlyPriceUsd = price;

@@ -19,6 +19,7 @@ import {
   TableRow,
   TextField,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
@@ -49,6 +50,7 @@ const ItemsPage = () => {
   const [importing, setImporting] = useState(false);
   const debouncedSearch = useDebounced(search);
 
+  const isPhone = useMediaQuery((t) => t.breakpoints.down('sm'));
   const canCreate = can('items', 'create');
   const canUpdate = can('items', 'update');
 
@@ -138,6 +140,38 @@ const ItemsPage = () => {
         <Loading />
       ) : (
         <Paper variant="outlined" sx={{ opacity: items.loading ? 0.6 : 1, transition: 'opacity .15s' }}>
+          {isPhone ? (
+            // En el celular: una fila compacta por ítem en vez de la tabla ancha.
+            <Box>
+              {data.items.map((item) => (
+                <Stack
+                  key={item.id}
+                  direction="row"
+                  alignItems="center"
+                  spacing={1}
+                  sx={{ px: 1.5, py: 1.25, borderBottom: 1, borderColor: 'divider', opacity: item.isActive ? 1 : 0.55 }}
+                >
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{ fontFamily: 'ui-monospace, monospace', fontWeight: 800, fontSize: 13 }} noWrap>
+                      {item.code}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap component="div">
+                      {item.Category?.name}
+                      {!item.isActive ? ' · inactivo' : ''}
+                    </Typography>
+                  </Box>
+                  {item.Category?.isContainer && (
+                    <Chip size="small" icon={<Inventory2Outlined />} label={item.contents.length} onClick={() => setContainer(item)} variant="outlined" />
+                  )}
+                  {canUpdate && (
+                    <IconButton size="small" onClick={(e) => setMenu({ anchor: e.currentTarget, item })} aria-label="Acciones">
+                      <MoreVert fontSize="small" />
+                    </IconButton>
+                  )}
+                </Stack>
+              ))}
+            </Box>
+          ) : (
           <TableContainer>
             <Table size="small" sx={{ minWidth: 720 }}>
               <TableHead>
@@ -197,6 +231,7 @@ const ItemsPage = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          )}
           {!data.items.length && (
             <EmptyState
               title="No hay ítems para mostrar"

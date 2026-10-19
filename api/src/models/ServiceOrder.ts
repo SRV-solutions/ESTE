@@ -14,6 +14,12 @@ class ServiceOrder extends Model {
   declare orderedBy: number;
   declare deployedBy: number | null;
   declare checkedBy: number | null;
+  /** Responsable del traslado (lista → despachada → en el evento → volviendo). */
+  declare logisticsBy: number | null;
+  /** Responsable de la vuelta (recibida → revisando material → desarmada). */
+  declare receptionBy: number | null;
+  /** Si el material pasó directo a otra orden sin volver al depósito. */
+  declare transferredToId: number | null;
   declare createdDate: string;
   declare incomeDate: Date | null;
   declare outcomeDate: Date | null;
@@ -25,6 +31,8 @@ class ServiceOrder extends Model {
   declare OrderedBy?: User;
   declare CheckedBy?: User;
   declare DeployedBy?: User;
+  declare LogisticsBy?: User;
+  declare ReceptionBy?: User;
 }
 
 ServiceOrder.init(
@@ -35,6 +43,9 @@ ServiceOrder.init(
     orderedBy: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'User', key: 'id' } },
     deployedBy: { type: DataTypes.INTEGER, allowNull: true, references: { model: 'User', key: 'id' } },
     checkedBy: { type: DataTypes.INTEGER, allowNull: true, references: { model: 'User', key: 'id' } },
+    logisticsBy: { type: DataTypes.INTEGER, allowNull: true },
+    receptionBy: { type: DataTypes.INTEGER, allowNull: true },
+    transferredToId: { type: DataTypes.INTEGER, allowNull: true },
     createdDate: { type: DataTypes.DATEONLY, allowNull: false },
     incomeDate: { type: DataTypes.DATE, allowNull: true },
     outcomeDate: { type: DataTypes.DATE, allowNull: true },

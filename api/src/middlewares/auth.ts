@@ -1,8 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import { Feature, PlanId, planHas, PLANS } from '../config/plans';
 import { Company, Permission, Role, User } from '../models';
 import { Action, Entity } from '../models/enums';
+import { hasLogin } from '../models/User';
 import { AccessState, canUseApp, subscriptionState } from '../services/subscription';
 import { asyncHandler, HttpError } from '../utils/http';
 
@@ -16,6 +18,7 @@ export interface AuthUser {
   isSuperAdmin: boolean;
   permissions: Array<{ entity: string; action: string }>;
   access: AccessState | null;
+  plan: PlanId | null;
 }
 
 declare module 'express-serve-static-core' {
@@ -26,6 +29,12 @@ declare module 'express-serve-static-core' {
 
 export const signToken = (user: { id: number }) =>
   jwt.sign({ id: user.id }, env.jwtSecret, { expiresIn: env.jwtExpiresIn } as jwt.SignOptions);
+
+export const assertCanLogin = (user: User) => {
+  if (hasLogin(user)) return;
+  if (user.access === 'temporary') throw new HttpError(401, 'Tu acceso temporal venció. Pedile a un administrador que lo renueve.');
+  throw new HttpError(401, 'Esta persona no tiene acceso a Event Box.');
+};
 
 /** Valida el token y carga usuario, permisos y estado de la empresa en una sola consulta. */
 export const isAuth = asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
@@ -40,13 +49,15 @@ export const isAuth = asyncHandler(async (req: Request, _res: Response, next: Ne
   }
 
   const user = await User.findByPk(Number(payload.id), {
-    attributes: ['id', 'roleId', 'companyId', 'isSuperAdmin'],
+    attributes: ['id', 'roleId', 'companyId', 'isSuperAdmin', 'access', 'accessUntil'],
     include: [
       { model: Role, include: [{ model: Permission, through: { attributes: [] } }] },
-      { model: Company, attributes: ['id', 'status', 'paidUntil'] },
+      { model: Company, attributes: ['id', 'status', 'paidUntil', 'plan'] },
     ],
   });
   if (!user) throw new HttpError(401, 'El usuario ya no existe.');
+  // Un acceso temporal que venció (o uno quitado) corta la sesión en el momento, aunque el token siga vigente.
+  assertCanLogin(user);
 
   req.user = {
     id: user.id,
@@ -56,9 +67,17 @@ export const isAuth = asyncHandler(async (req: Request, _res: Response, next: Ne
     isSuperAdmin: user.isSuperAdmin,
     permissions: (user.Role?.Permissions || []).map((p) => ({ entity: p.entity, action: p.action })),
     access: user.Company ? subscriptionState(user.Company).state : null,
+    plan: user.Company?.plan ?? null,
   };
   next();
 });
+
+/** Exige que el plan de la empresa incluya el módulo (si no, le dice qué plan lo tiene). */
+export const requireFeature = (feature: Feature) => (req: Request, _res: Response, next: NextFunction) => {
+  if (planHas(req.user?.plan, feature)) return next();
+  const needed = PLANS.find((p) => p.features.includes(feature));
+  next(new HttpError(403, `Este módulo es parte del plan ${needed?.name ?? 'superior'}. Un administrador puede cambiar el plan desde Mi empresa.`));
+};
 
 export const hasPermission = (user: AuthUser | undefined, entity: Entity, action: Action) =>
   !!user?.permissions.some((p) => p.entity === entity && p.action === action);

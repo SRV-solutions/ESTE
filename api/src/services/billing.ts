@@ -7,7 +7,7 @@ import { ArcaError, isArcaConfigured, issueVoucher } from './arca';
 import { getBlueRate, usdToArs } from './dollar';
 import { button, details, paragraph, sendEmail } from './email';
 import { createCheckout, getMpPayment, isMercadoPagoConfigured } from './mercadopago';
-import { addMonths, nextPeriod, todayAR } from './subscription';
+import { monthEnd, nextPeriod } from './subscription';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 export const periodLabel = (period: string) => `${MONTHS[Number(period.slice(5, 7)) - 1]} ${period.slice(0, 4)}`;
@@ -61,9 +61,11 @@ export const startCheckout = async (company: Company) => {
 const approve = async (payment: Payment, data: { mpPaymentId?: string; paidAt?: Date }, t: Transaction) => {
   const company = await Company.findByPk(payment.companyId, { lock: t.LOCK.UPDATE, transaction: t });
   if (!company) throw new HttpError(404, 'Empresa no encontrada.');
-  const today = todayAR();
-  const base = company.paidUntil && company.paidUntil >= today ? company.paidUntil : dayBefore(today);
-  await company.update({ paidUntil: addMonths(base, 1) }, { transaction: t });
+  // El pago cubre el mes calendario completo de su período.
+  const coveredUntil = monthEnd(payment.period);
+  if (!company.paidUntil || company.paidUntil < coveredUntil) {
+    await company.update({ paidUntil: coveredUntil }, { transaction: t });
+  }
   await payment.update(
     { status: 'approved', mpPaymentId: data.mpPaymentId ?? payment.mpPaymentId, paidAt: data.paidAt ?? new Date() },
     { transaction: t },
@@ -71,8 +73,6 @@ const approve = async (payment: Payment, data: { mpPaymentId?: string; paidAt?: 
   return company;
 };
 
-/** Ayer: si estaba vencida, el mes pago arranca hoy (paidUntil = ayer + 1 mes). */
-const dayBefore = (date: string) => new Date(Date.parse(`${date}T12:00:00Z`) - 86400_000).toISOString().slice(0, 10);
 
 /**
  * Emite (o reintenta) la factura de un pago aprobado. Si ARCA falla, queda registrada como

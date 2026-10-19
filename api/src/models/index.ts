@@ -1,5 +1,7 @@
+import Blueprint from './Blueprint';
 import Category from './Category';
 import Company from './Company';
+import Employee from './Employee';
 import Event from './Event';
 import Feedback from './Feedback';
 import Invoice from './Invoice';
@@ -7,6 +9,7 @@ import Item from './Item';
 import Payment from './Payment';
 import Location from './Location';
 import PasswordResetToken from './PasswordResetToken';
+import Payslip from './Payslip';
 import Permission from './Permission';
 import Role from './Role';
 import RolePermission from './RolePermission';
@@ -30,6 +33,15 @@ Feedback.belongsTo(Company, { foreignKey: 'companyId' });
 Feedback.belongsTo(User, { foreignKey: 'userId' });
 PasswordResetToken.belongsTo(User, { foreignKey: 'userId' });
 
+Blueprint.belongsTo(Event, { foreignKey: 'eventId' });
+Blueprint.belongsTo(User, { foreignKey: 'uploadedBy', as: 'Uploader' });
+Event.hasMany(Blueprint, { foreignKey: 'eventId' });
+
+Employee.belongsTo(User, { foreignKey: 'userId' });
+User.hasOne(Employee, { foreignKey: 'userId' });
+Employee.hasMany(Payslip, { foreignKey: 'employeeId' });
+Payslip.belongsTo(Employee, { foreignKey: 'employeeId' });
+
 Role.hasMany(User, { foreignKey: 'roleId' });
 User.belongsTo(Role, { foreignKey: 'roleId' });
 Role.belongsToMany(Permission, { through: RolePermission, foreignKey: 'roleId', otherKey: 'permissionId' });
@@ -47,6 +59,9 @@ ServiceOrder.belongsTo(Event, { foreignKey: 'eventId', as: 'Event' });
 ServiceOrder.belongsTo(User, { foreignKey: 'orderedBy', as: 'OrderedBy' });
 ServiceOrder.belongsTo(User, { foreignKey: 'checkedBy', as: 'CheckedBy' });
 ServiceOrder.belongsTo(User, { foreignKey: 'deployedBy', as: 'DeployedBy' });
+ServiceOrder.belongsTo(User, { foreignKey: 'logisticsBy', as: 'LogisticsBy' });
+ServiceOrder.belongsTo(User, { foreignKey: 'receptionBy', as: 'ReceptionBy' });
+ServiceOrder.belongsTo(ServiceOrder, { foreignKey: 'transferredToId', as: 'TransferredTo' });
 ServiceOrder.hasMany(ServiceOrderItem, { foreignKey: 'serviceOrderId' });
 ServiceOrder.hasMany(ServiceOrderStoreItem, { foreignKey: 'serviceOrderId' });
 
@@ -63,8 +78,10 @@ StoreItem.belongsTo(Item, { foreignKey: 'itemIdChild', as: 'Child' });
 Item.hasMany(StoreItem, { foreignKey: 'itemIdParent', as: 'PermanentContents' });
 
 export {
+  Blueprint,
   Category,
   Company,
+  Employee,
   Event,
   Feedback,
   Invoice,
@@ -72,6 +89,7 @@ export {
   Payment,
   Location,
   PasswordResetToken,
+  Payslip,
   Permission,
   Role,
   RolePermission,

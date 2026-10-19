@@ -49,9 +49,29 @@ export const subscriptionState = (company: Pick<Company, 'status' | 'paidUntil'>
 
 export const canUseApp = (state: AccessState) => state === 'active' || state === 'grace';
 
-/** Período que paga el próximo pago: el mes siguiente al último pago (o el actual si está vencida). */
+/** Último día del mes `YYYY-MM`. */
+export const monthEnd = (period: string) =>
+  new Date(Date.UTC(Number(period.slice(0, 4)), Number(period.slice(5, 7)), 0)).toISOString().slice(0, 10);
+
+/**
+ * El abono es por mes calendario y se paga a principio de mes.
+ * Si el mes actual ya está pago, el próximo a pagar es el siguiente; si no, el actual.
+ */
 export const nextPeriod = (company: Pick<Company, 'paidUntil'>) => {
-  const today = todayAR();
-  const start = company.paidUntil && company.paidUntil >= today ? addDays(company.paidUntil, 1) : today;
-  return { period: start.slice(0, 7), from: start, to: addDays(addMonths(start, 1), -1) };
+  const current = todayAR().slice(0, 7);
+  const coversCurrent = !!company.paidUntil && company.paidUntil >= monthEnd(current);
+  const period = coversCurrent ? addDays(company.paidUntil!, 1).slice(0, 7) : current;
+  return { period, from: `${period}-01`, to: monthEnd(period) };
+};
+
+/** Lo que la empresa debe del mes en curso (para mostrarle solo eso). */
+export const currentMonthStatus = (company: Pick<Company, 'paidUntil'>) => {
+  const period = todayAR().slice(0, 7);
+  const paid = !!company.paidUntil && company.paidUntil >= monthEnd(period);
+  return {
+    period,
+    paid,
+    /** Se paga a principio de mes: hasta este día se puede usar sin haber pagado. */
+    dueDate: `${period}-${String(Math.min(env.billing.graceDays, 28)).padStart(2, '0')}`,
+  };
 };

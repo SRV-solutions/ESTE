@@ -4,6 +4,7 @@ import {
   Button,
   Chip,
   Grid,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -18,6 +19,7 @@ import {
 import Add from '@mui/icons-material/Add';
 import BugReportOutlined from '@mui/icons-material/BugReportOutlined';
 import FormDialog from '../../components/FormDialog';
+import { PLAN_OPTIONS } from '../../lib/plans';
 import PasswordField from '../../components/PasswordField';
 import { EmptyState, ErrorState, Loading, PageHeader, StatTile } from '../../components/ui';
 import { useFeedback } from '../../context/FeedbackContext';
@@ -31,11 +33,12 @@ import { EMPTY_COMPANY } from '../billing/companyDefaults';
 
 const EMPTY_ADMIN = { firstname: '', lastname: '', username: '', email: '', password: '' };
 
-const NewCompanyDialog = ({ open, onClose, onCreated, defaultPrice }) => {
+const NewCompanyDialog = ({ open, onClose, onCreated }) => {
   const { notify } = useFeedback();
   const [company, setCompany] = useState(EMPTY_COMPANY);
   const [admin, setAdmin] = useState(EMPTY_ADMIN);
-  const [price, setPrice] = useState(defaultPrice);
+  const [plan, setPlan] = useState('profesional');
+  const [price, setPrice] = useState(1200);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
@@ -46,7 +49,7 @@ const NewCompanyDialog = ({ open, onClose, onCreated, defaultPrice }) => {
     setSaving(true);
     setErrors({});
     try {
-      const { data } = await api.post('/platform/companies', { ...company, monthlyPriceUsd: price, admin });
+      const { data } = await api.post('/platform/companies', { ...company, plan, monthlyPriceUsd: price, admin });
       notify(`${data.name} creada. Ya puede entrar con el usuario ${admin.username}.`);
       setCompany(EMPTY_COMPANY);
       setAdmin(EMPTY_ADMIN);
@@ -62,15 +65,34 @@ const NewCompanyDialog = ({ open, onClose, onCreated, defaultPrice }) => {
   return (
     <FormDialog open={open} onClose={onClose} title="Nueva empresa" onSubmit={save} saving={saving} disabled={!valid} submitLabel="Crear empresa" maxWidth="md">
       <CompanyForm value={company} onChange={setCompany} errors={errors} />
-      <TextField
-        type="number"
-        label="Precio mensual (USD)"
-        value={price}
-        onChange={(e) => setPrice(e.target.value)}
-        inputProps={{ min: 0 }}
-        helperText="Se cobra en pesos al dólar blue del día del pago. Arranca con días de prueba."
-        sx={{ maxWidth: 260 }}
-      />
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <TextField
+          select
+          label="Plan"
+          value={plan}
+          onChange={(e) => {
+            const p = PLAN_OPTIONS.find((o) => o.id === e.target.value);
+            setPlan(p.id);
+            setPrice(p.priceUsd);
+          }}
+          sx={{ minWidth: 240 }}
+        >
+          {PLAN_OPTIONS.map((p) => (
+            <MenuItem key={p.id} value={p.id}>
+              {p.name} · USD {p.priceUsd} · {p.maxUsers} usuarios
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          type="number"
+          label="Precio mensual (USD)"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          inputProps={{ min: 0 }}
+          helperText="El del plan, o uno especial. Se cobra al dólar blue y arranca con días de prueba."
+          sx={{ maxWidth: 320 }}
+        />
+      </Stack>
       <Typography variant="h6">Administrador de la empresa</Typography>
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6}>
@@ -177,7 +199,7 @@ const PlatformPage = () => {
               <TableCell>Empresa</TableCell>
               <TableCell>Estado</TableCell>
               <TableCell>Paga hasta</TableCell>
-              <TableCell align="right">Precio</TableCell>
+              <TableCell>Plan</TableCell>
               <TableCell align="right">Usuarios</TableCell>
               <TableCell align="right">Ítems</TableCell>
               <TableCell align="right">Órdenes activas</TableCell>
@@ -198,7 +220,9 @@ const PlatformPage = () => {
                   <Chip size="small" label={ACCESS_STATE[c.subscription.state].label} color={ACCESS_STATE[c.subscription.state].color} variant="outlined" />
                 </TableCell>
                 <TableCell>{formatDate(c.paidUntil)}</TableCell>
-                <TableCell align="right">{formatUsd(c.monthlyPriceUsd)}</TableCell>
+                <TableCell>
+                  {PLAN_OPTIONS.find((p) => p.id === c.plan)?.name ?? c.plan} · {formatUsd(c.monthlyPriceUsd)}
+                </TableCell>
                 <TableCell align="right">{c.userCount}</TableCell>
                 <TableCell align="right">{Number(c.itemCount).toLocaleString('es-AR')}</TableCell>
                 <TableCell align="right">{c.activeOrderCount}</TableCell>
@@ -212,7 +236,6 @@ const PlatformPage = () => {
       <NewCompanyDialog
         open={creating}
         onClose={() => setCreating(false)}
-        defaultPrice={overview.defaultPriceUsd}
         onCreated={(c) => {
           setCreating(false);
           navigate(`/platform/companies/${c.id}`);

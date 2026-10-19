@@ -5,6 +5,7 @@ import {
   Chip,
   Grid,
   IconButton,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -28,6 +29,7 @@ import { useLoader } from '../../hooks/useLoader';
 import { api, errorMessage, fieldErrors } from '../../lib/api';
 import { formatDate, userName } from '../../lib/format';
 import { downloadInvoice, voucherLabel } from '../../lib/invoices';
+import { PLAN_OPTIONS } from '../../lib/plans';
 import { ACCESS_STATE, PAYMENT_STATUS, formatArs, formatUsd, periodLabel, taxConditionLabel } from '../../lib/money';
 import CompanyForm from '../billing/CompanyForm';
 import { EMPTY_COMPANY } from '../billing/companyDefaults';
@@ -74,7 +76,25 @@ const EditDialog = ({ company, onClose, onSaved }) => {
     <FormDialog open onClose={onClose} title={`Editar ${company.name}`} onSubmit={save} saving={saving} disabled={!form.name.trim()} maxWidth="md">
       <CompanyForm value={form} onChange={setForm} errors={errors} />
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={4}>
+          <TextField
+            select
+            fullWidth
+            label="Plan"
+            value={form.plan || 'profesional'}
+            onChange={(e) => {
+              const p = PLAN_OPTIONS.find((o) => o.id === e.target.value);
+              setForm({ ...form, plan: p.id, monthlyPriceUsd: p.priceUsd });
+            }}
+          >
+            {PLAN_OPTIONS.map((p) => (
+              <MenuItem key={p.id} value={p.id}>
+                {p.name} · {p.maxUsers} usuarios
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+        <Grid item xs={12} sm={4}>
           <TextField
             fullWidth
             type="number"
@@ -82,9 +102,10 @@ const EditDialog = ({ company, onClose, onSaved }) => {
             value={form.monthlyPriceUsd}
             onChange={(e) => setForm({ ...form, monthlyPriceUsd: e.target.value })}
             inputProps={{ min: 0 }}
+            helperText="El del plan, o uno especial"
           />
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={4}>
           <TextField
             fullWidth
             type="date"
@@ -185,7 +206,7 @@ const PlatformCompanyPage = () => {
         <Grid item xs={12} sm={6} md={4}>
           <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
             <Stack spacing={1.5}>
-              <Field label="Precio" value={`${formatUsd(company.monthlyPriceUsd)} por mes`} />
+              <Field label="Plan y precio" value={`${PLAN_OPTIONS.find((p) => p.id === company.plan)?.name ?? company.plan} · ${formatUsd(company.monthlyPriceUsd)} por mes`} />
               <Field label="Paga hasta" value={formatDate(company.paidUntil)} />
               <Field label="Se bloquea" value={company.subscription.blocksOn ? formatDate(company.subscription.blocksOn) : '—'} />
               <Field label="Cliente desde" value={formatDate(company.createdAt)} />

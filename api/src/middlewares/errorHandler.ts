@@ -22,7 +22,7 @@ export const errorHandler = (err: unknown, _req: Request, res: Response, _next: 
   if (err instanceof MulterError) {
     const message =
       err.code === 'LIMIT_FILE_SIZE'
-        ? 'El archivo supera el tamaño máximo (5 MB).'
+        ? 'El archivo es demasiado grande (máximo 5 MB para imágenes y 25 MB para documentos).'
         : err.code === 'LIMIT_UNEXPECTED_FILE'
           ? 'Se esperaba un solo archivo en el campo "file".'
           : err.message;

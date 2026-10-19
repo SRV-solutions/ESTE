@@ -36,7 +36,6 @@ export const env = {
   },
 
   billing: {
-    monthlyPriceUsd: num(process.env.MONTHLY_PRICE_USD, 400),
     trialDays: num(process.env.TRIAL_DAYS, 14),
     /** Días después del vencimiento en los que la empresa sigue entrando (con aviso) antes del bloqueo. */
     graceDays: num(process.env.BILLING_GRACE_DAYS, 10),

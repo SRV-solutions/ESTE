@@ -1,13 +1,13 @@
-import { Grid, Paper, Stack, Typography } from '@mui/material';
+import { Box, Chip, Grid, Paper, Stack, Typography } from '@mui/material';
 import { formatDateTime, userName } from '../../lib/format';
-import { ORDER_DATES } from './orderDates';
+import { ORDER_DATES, RESPONSIBLES } from './orderDates';
 
 const Field = ({ label, value }) => (
   <Stack spacing={0.25} sx={{ minWidth: 0 }}>
     <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
       {label}
     </Typography>
-    <Typography variant="body2" sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
+    <Typography variant="body2" component="div" sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
       {value || '—'}
     </Typography>
   </Stack>
@@ -23,7 +23,7 @@ const Card = ({ title, children }) => (
 );
 
 /** Datos del evento, responsables y fechas de la orden. */
-const OrderInfo = ({ order }) => {
+const OrderInfo = ({ order, showStageOwners }) => {
   const event = order.Event || {};
   const location = event.Location || {};
   return (
@@ -37,10 +37,24 @@ const OrderInfo = ({ order }) => {
         </Card>
       </Grid>
       <Grid item xs={12} sm={6} md={4}>
-        <Card title="Responsables">
-          <Field label="Creada por" value={userName(order.OrderedBy)} />
-          <Field label="Chequea" value={userName(order.CheckedBy) || 'Sin asignar'} />
-          <Field label="Arma" value={userName(order.DeployedBy) || 'Sin asignar'} />
+        <Card title="Responsables por etapa">
+          {RESPONSIBLES.filter((r) => !r.stageOwner || showStageOwners || order[r.field]).map((r) => {
+            const person = order[r.relation];
+            const current = order.access?.stage?.key === r.stage;
+            return (
+              <Field
+                key={r.field}
+                label={r.label}
+                value={
+                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                    {userName(person) ||
+                      (r.field === 'orderedBy' ? '—' : r.field === 'checkedBy' ? 'Sin asignar (la revisa un administrador)' : 'Sin asignar (la avanza quien la creó)')}
+                    {current && <Chip size="small" color="secondary" label="Etapa actual" sx={{ height: 20, fontSize: 11 }} />}
+                  </Box>
+                }
+              />
+            );
+          })}
         </Card>
       </Grid>
       <Grid item xs={12} sm={6} md={4}>

@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLoader } from '../hooks/useLoader';
 import { api } from '../lib/api';
 import { eventLabel, formatDate, userName } from '../lib/format';
+import { myTurn } from '../lib/stages';
 import { isActiveStatus } from '../lib/status';
 import { BRAND } from '../theme';
 
@@ -46,14 +47,15 @@ const DashboardPage = () => {
   const { orders, categories } = data;
   const active = orders.filter((o) => isActiveStatus(o.status));
   const toReview = active.filter((o) => o.status === 'in_review' && (o.checkedBy === user.id || user.isAdmin));
-  const toBuild = active.filter((o) => ['approved', 'in_process'].includes(o.status) && (o.deployedBy === user.id || user.isAdmin));
+  const turn = myTurn(active, user.id);
   const mine = active.filter((o) => o.orderedBy === user.id);
   const totalItems = categories.reduce((sum, c) => sum + (c.activeItemCount || 0), 0);
 
-  const upcoming = [...active]
+  // Primero lo que le toca a la persona, después el resto por fecha de evento.
+  const upcoming = [...turn, ...active.filter((o) => !turn.includes(o))]
     .filter((o) => o.Event?.dateEvent)
-    .sort((a, b) => new Date(a.Event.dateEvent) - new Date(b.Event.dateEvent))
-    .slice(0, 6);
+    .sort((a, b) => (turn.includes(b) - turn.includes(a)) || new Date(a.Event.dateEvent) - new Date(b.Event.dateEvent))
+    .slice(0, 8);
 
   return (
     <>
@@ -87,10 +89,11 @@ const DashboardPage = () => {
             </Grid>
             <Grid item xs={6} md={3}>
               <StatTile
-                label="Para armar"
-                value={toBuild.length}
-                hint={user.isAdmin ? 'Aprobadas o armando' : 'Asignadas a vos'}
-                onClick={() => navigate('/service-orders?filter=toBuild')}
+                label="Te toca"
+                value={turn.length}
+                hint="Órdenes en tu etapa"
+                accent={turn.length ? BRAND.blue : undefined}
+                onClick={() => navigate('/service-orders?filter=myTurn')}
               />
             </Grid>
             <Grid item xs={6} md={3}>
@@ -122,10 +125,10 @@ const DashboardPage = () => {
             <List disablePadding>
               {upcoming.map((o) => (
                 <ListItemButton key={o.id} onClick={() => navigate(`/service-orders/${o.id}`)} sx={{ px: 2.5, borderRadius: 0 }} divider>
-                  <Box sx={{ width: 64, flexShrink: 0, color: 'text.secondary', fontWeight: 800, fontSize: 13 }}>#{o.id}</Box>
+                  <Box sx={{ width: { xs: 48, sm: 64 }, flexShrink: 0, color: 'text.secondary', fontWeight: 800, fontSize: 13 }}>#{o.id}</Box>
                   <ListItemText
                     primary={eventLabel(o.Event)}
-                    secondary={`${formatDate(o.Event.dateEvent)} · ${o.itemCount} ítem(s)`}
+                    secondary={`${turn.includes(o) ? 'Te toca · ' : ''}${formatDate(o.Event.dateEvent)} · ${o.itemCount} ítem(s)`}
                     primaryTypographyProps={{ fontWeight: 700, noWrap: true }}
                     sx={{ minWidth: 0, mr: 2 }}
                   />

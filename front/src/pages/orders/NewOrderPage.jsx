@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Autocomplete, Box, Button, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import { ErrorState, Loading, PageHeader } from '../../components/ui';
@@ -21,16 +21,20 @@ const Section = ({ title, children }) => (
 );
 
 const NewOrderPage = () => {
-  const { user } = useAuth();
+  const { user, hasFeature } = useAuth();
   const { notify } = useFeedback();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [eventDialog, setEventDialog] = useState(false);
   const [saving, setSaving] = useState(false);
+  const stageOwners = hasFeature('stageOwners');
   const [form, setForm] = useState({
-    eventId: null,
+    eventId: Number(params.get('event')) || null, // Viene preelegido desde la pantalla de Eventos.
     orderedBy: user.id,
     checkedBy: '',
     deployedBy: '',
+    logisticsBy: '',
+    receptionBy: '',
     observations: '',
     incomeDate: '',
     assemblyDate: '',
@@ -63,6 +67,10 @@ const NewOrderPage = () => {
     setSaving(true);
     try {
       const payload = { ...form };
+      if (!stageOwners) {
+        delete payload.logisticsBy;
+        delete payload.receptionBy;
+      }
       for (const { key } of ORDER_DATES) payload[key] = form[key] ? new Date(form[key]).toISOString() : null;
       const { data: order } = await api.post('/service-orders', payload);
       notify(`Orden #${order.id} creada. Ahora cargale los ítems.`);
@@ -120,16 +128,29 @@ const NewOrderPage = () => {
 
         <Section title="Responsables">
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={4}>
               {userSelect('orderedBy', 'Creada por', { required: true, disabled: !user.isAdmin })}
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={4}>
               {userSelect('checkedBy', 'Quién la chequea')}
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={4}>
               {userSelect('deployedBy', 'Quién la arma')}
             </Grid>
+            {stageOwners && (
+              <>
+                <Grid item xs={12} sm={6}>
+                  {userSelect('logisticsBy', 'Logística y traslado')}
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  {userSelect('receptionBy', 'Recepción y desarme')}
+                </Grid>
+              </>
+            )}
           </Grid>
+          <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 1.5 }}>
+            Cada responsable avanza el estado en su etapa. Si una etapa queda sin asignar, la avanza quien crea la orden.
+          </Typography>
         </Section>
 
         <Section title="Fechas">

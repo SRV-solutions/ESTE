@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { Alert, Button, Menu, MenuItem, Paper, Stack, Typography } from '@mui/material';
+import GroupOutlined from '@mui/icons-material/GroupOutlined';
+import MoveUpOutlined from '@mui/icons-material/MoveUpOutlined';
+import NotificationsActiveOutlined from '@mui/icons-material/NotificationsActiveOutlined';
 import PictureAsPdfOutlined from '@mui/icons-material/PictureAsPdfOutlined';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import ArrowForward from '@mui/icons-material/ArrowForward';
@@ -17,12 +20,16 @@ import OrderEditDialog from './OrderEditDialog';
 import OrderInfo from './OrderInfo';
 import OrderItems from './OrderItems';
 import SwapItemDialog from './SwapItemDialog';
+import TransferDialog from './TransferDialog';
 
 const OrderDetailPage = () => {
   const { id } = useParams();
-  const { can, company } = useAuth();
+  const { can, company, user, isAdmin, hasFeature } = useAuth();
+  const navigate = useNavigate();
   const { notify, confirm } = useFeedback();
   const [editing, setEditing] = useState(false);
+  const [reassigning, setReassigning] = useState(false);
+  const [transferring, setTransferring] = useState(false);
   const [swapping, setSwapping] = useState(null);
   const [statusMenu, setStatusMenu] = useState(null);
   const [stock, setStock] = useState({ all: null, storable: null, loading: false });
@@ -30,6 +37,8 @@ const OrderDetailPage = () => {
 
   const { data: order, loading, error, reload } = useLoader(() => api.get(`/service-orders/${id}`).then((r) => r.data), [id]);
   const canEdit = !!order?.access?.canEdit;
+  // Los responsables se reasignan durante todo el recorrido (admin o quien creó la orden).
+  const canReassign = !!order && !canEdit && order.status !== 'disassembled' && (isAdmin || order.orderedBy === user.id);
 
   // El stock libre solo hace falta si se puede editar la orden.
   const loadStock = useCallback(async () => {
@@ -51,8 +60,8 @@ const OrderDetailPage = () => {
   }, [canEdit, loadStock]);
 
   useEffect(() => {
-    if (canEdit && can('users', 'read')) api.get('/users').then((r) => setUsers(r.data)).catch(() => {});
-  }, [canEdit, can]);
+    if ((canEdit || canReassign) && can('users', 'read')) api.get('/users').then((r) => setUsers(r.data)).catch(() => {});
+  }, [canEdit, canReassign, can]);
 
   const refreshAll = () => {
     reload();
@@ -139,6 +148,16 @@ const OrderDetailPage = () => {
                 Editar
               </Button>
             )}
+            {canReassign && (
+              <Button variant="outlined" startIcon={<GroupOutlined />} onClick={() => setReassigning(true)}>
+                Responsables
+              </Button>
+            )}
+            {order.access.canTransfer && hasFeature('eventTools') && (
+              <Button variant="outlined" startIcon={<MoveUpOutlined />} onClick={() => setTransferring(true)}>
+                Pasar a otro evento
+              </Button>
+            )}
             {next.length === 1 && (
               <Button variant="contained" endIcon={<ArrowForward />} onClick={() => changeStatus(next[0])}>
                 {STATUS[next[0]].action}
@@ -162,13 +181,28 @@ const OrderDetailPage = () => {
         }
       />
 
+      {order.access.stage && order.access.stage.responsibleId === user.id && next.length > 0 && (
+        <Alert severity="warning" icon={<NotificationsActiveOutlined />} sx={{ mb: 2, fontWeight: 600 }}>
+          Te toca: {order.access.stage.label}. Cuando termines, tocá «{STATUS[next[0]].action}».
+        </Alert>
+      )}
+      {order.TransferredTo && (
+        <Alert severity="info" sx={{ mb: 2 }} action={<Button color="inherit" size="small" component={RouterLink} to={`/service-orders/${order.TransferredTo.id}`}>Ver</Button>}>
+          El material de esta orden pasó directo a la orden #{order.TransferredTo.id}.
+        </Alert>
+      )}
+      {order.transferredFrom?.map((o) => (
+        <Alert key={o.id} severity="info" sx={{ mb: 2 }} action={<Button color="inherit" size="small" component={RouterLink} to={`/service-orders/${o.id}`}>Ver</Button>}>
+          Recibió material directo de la orden #{o.id}{o.Event ? ` (${o.Event.eventName})` : ''}.
+        </Alert>
+      ))}
       {!canEdit && order.status === 'created' && (
         <Alert severity="info" sx={{ mb: 2 }}>
           Solo quien creó la orden puede cargar ítems mientras está en «Creada».
         </Alert>
       )}
 
-      <OrderInfo order={order} />
+      <OrderInfo order={order} showStageOwners={hasFeature('stageOwners')} />
 
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
         <Typography variant="h5">Material</Typography>
@@ -214,9 +248,35 @@ const OrderDetailPage = () => {
         }
       />
 
+      {canReassign && (
+        <OrderEditDialog
+          responsiblesOnly
+          stageOwners={hasFeature('stageOwners')}
+          open={reassigning}
+          onClose={() => setReassigning(false)}
+          order={order}
+          users={users}
+          onSaved={() => {
+            setReassigning(false);
+            reload();
+          }}
+        />
+      )}
+      {order.access.canTransfer && (
+        <TransferDialog
+          order={order}
+          open={transferring}
+          onClose={() => setTransferring(false)}
+          onDone={(targetId) => {
+            setTransferring(false);
+            navigate(`/service-orders/${targetId}`);
+          }}
+        />
+      )}
       {canEdit && (
         <>
           <OrderEditDialog
+            stageOwners={hasFeature('stageOwners')}
             open={editing}
             onClose={() => setEditing(false)}
             order={order}

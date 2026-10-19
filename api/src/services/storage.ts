@@ -1,4 +1,4 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
@@ -65,6 +65,75 @@ export const saveImage = async (buffer: Buffer, folder: string, prefix: string) 
   }
   return publicUrl(key);
 };
+
+// ---------- Documentos privados (recibos de sueldo, planos) ----------
+// Nunca tienen URL pública: se guardan con una clave y la API los entrega solo a quien tiene permiso.
+
+export const LOCAL_PRIVATE_DIR = path.join(__dirname, '..', '..', 'private-uploads');
+
+const DOCUMENT_TYPES = [
+  { mime: 'application/pdf', ext: 'pdf', test: (b: Buffer) => b.toString('ascii', 0, 5) === '%PDF-' },
+  { mime: 'image/vnd.dwg', ext: 'dwg', test: (b: Buffer) => /^AC10\d\d$/.test(b.toString('ascii', 0, 6)) },
+  ...IMAGE_TYPES.filter((t) => t.ext !== 'gif'),
+];
+
+export type DocumentKind = 'pdf' | 'plano';
+
+/** Valida el contenido real: un recibo solo puede ser PDF; un plano, PDF, imagen o DWG (AutoCAD). */
+export const detectDocument = (buffer: Buffer, kind: DocumentKind) => {
+  const allowed = kind === 'pdf' ? DOCUMENT_TYPES.filter((t) => t.ext === 'pdf') : DOCUMENT_TYPES;
+  const type = allowed.find((t) => t.test(buffer));
+  if (!type) {
+    throw new HttpError(400, kind === 'pdf' ? 'El archivo tiene que ser un PDF.' : 'El plano tiene que ser PDF, imagen (PNG/JPG/WEBP) o DWG.');
+  }
+  return type;
+};
+
+export const savePrivateFile = async (buffer: Buffer, folder: string, kind: DocumentKind) => {
+  const { mime, ext } = detectDocument(buffer, kind);
+  const key = `privado/${folder}/${crypto.randomBytes(12).toString('hex')}.${ext}`;
+  if (isR2Configured()) {
+    await r2().send(new PutObjectCommand({ Bucket: env.r2.bucket, Key: key, Body: buffer, ContentType: mime }));
+  } else {
+    const target = path.join(LOCAL_PRIVATE_DIR, key);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, buffer);
+  }
+  return { key, mime };
+};
+
+/** Lee un documento privado para mandarlo en la respuesta (ya validado el permiso). */
+export const readPrivateFile = async (key: string): Promise<Buffer> => {
+  if (key.includes('..') || !key.startsWith('privado/')) throw new HttpError(400, 'Archivo inválido.');
+  try {
+    if (isR2Configured()) {
+      const obj = await r2().send(new GetObjectCommand({ Bucket: env.r2.bucket, Key: key }));
+      return Buffer.from(await obj.Body!.transformToByteArray());
+    }
+    return await fs.readFile(path.join(LOCAL_PRIVATE_DIR, key));
+  } catch (err) {
+    console.error('[eventbox] No se pudo leer el archivo', key, err);
+    throw new HttpError(404, 'El archivo ya no está disponible.');
+  }
+};
+
+export const deletePrivateFile = async (key: string | null | undefined) => {
+  if (!key || key.includes('..') || !key.startsWith('privado/')) return;
+  try {
+    if (isR2Configured()) await r2().send(new DeleteObjectCommand({ Bucket: env.r2.bucket, Key: key }));
+    else await fs.unlink(path.join(LOCAL_PRIVATE_DIR, key));
+  } catch (err) {
+    console.warn('[eventbox] No se pudo borrar el archivo privado', key, err);
+  }
+};
+
+/** Nombre de archivo seguro para el encabezado Content-Disposition. */
+export const safeFileName = (name: string) =>
+  name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^\w.\- ]+/g, '_')
+    .slice(0, 150) || 'archivo';
 
 /** Borra un archivo que subimos nosotros (si la URL es de otro lado, no hace nada). */
 export const deleteByUrl = async (url: string | null | undefined) => {

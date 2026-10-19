@@ -12,10 +12,11 @@ import {
   StoreItem,
   User,
 } from '../models';
+import { planHas } from '../config/plans';
 import { tenant } from '../middlewares/auth';
 import { ServiceOrderStatus } from '../models/enums';
 import { findAvailableItems, pickAvailableItems } from '../services/itemService';
-import { accessFor, assertCanEdit, canChangeStatus } from '../services/serviceOrderPolicy';
+import { accessFor, assertCanEdit, canChangeStatus, canEditOrder, canTransfer } from '../services/serviceOrderPolicy';
 import { HttpError, parseId, parsePositiveInt } from '../utils/http';
 import { compareCodes } from '../utils/itemCode';
 
@@ -27,7 +28,30 @@ const orderIncludes = [
   { model: User, as: 'OrderedBy', attributes: USER_BRIEF },
   { model: User, as: 'CheckedBy', attributes: USER_BRIEF },
   { model: User, as: 'DeployedBy', attributes: USER_BRIEF },
+  { model: User, as: 'LogisticsBy', attributes: USER_BRIEF },
+  { model: User, as: 'ReceptionBy', attributes: USER_BRIEF },
+  { model: ServiceOrder, as: 'TransferredTo', attributes: ['id', 'status'] },
 ];
+
+/** Responsables que se pueden asignar en cada orden (los dos últimos, solo en planes con responsables por etapa). */
+const RESPONSIBLES = [
+  { field: 'checkedBy', label: 'quien chequea' },
+  { field: 'deployedBy', label: 'quien arma' },
+  { field: 'logisticsBy', label: 'responsable de logística', feature: true },
+  { field: 'receptionBy', label: 'responsable de recepción', feature: true },
+] as const;
+
+const parseResponsibles = async (req: Request, companyId: number) => {
+  const out: Record<string, number | null> = {};
+  for (const r of RESPONSIBLES) {
+    if (req.body[r.field] === undefined) continue;
+    if ('feature' in r && req.body[r.field] && !planHas(req.user!.plan, 'stageOwners')) {
+      throw new HttpError(403, 'Los responsables de logística y recepción son parte del plan Profesional.');
+    }
+    out[r.field] = await assertUser(companyId, req.body[r.field], r.label);
+  }
+  return out;
+};
 
 const DATE_FIELDS = ['incomeDate', 'assemblyDate', 'disassemblyDate', 'outcomeDate'] as const;
 const DATE_LABELS: Record<(typeof DATE_FIELDS)[number], string> = {
@@ -68,6 +92,7 @@ const assertUser = async (companyId: number, id: unknown, label: string) => {
   if (id === null || id === '' || id === undefined) return null;
   const user = await User.findOne({ where: { id: parseId(id, label), companyId } });
   if (!user) throw new HttpError(404, `El usuario elegido como ${label} no existe.`);
+  if (user.access === 'none') throw new HttpError(400, `${user.firstname || 'Esa persona'} no usa la app: no puede ser ${label}.`);
   return user.id;
 };
 
@@ -108,8 +133,7 @@ export const createServiceOrder = async (req: Request, res: Response) => {
     companyId,
     eventId: event.id,
     orderedBy,
-    checkedBy: await assertUser(companyId, req.body.checkedBy, 'quien chequea'),
-    deployedBy: await assertUser(companyId, req.body.deployedBy, 'quien arma'),
+    ...(await parseResponsibles(req, companyId)),
     createdDate: req.body.createdDate || new Date().toISOString().slice(0, 10),
     observations: req.body.observations?.trim() || null,
     status: ServiceOrderStatus.Created,
@@ -162,17 +186,32 @@ export const getServiceOrder = async (req: Request, res: Response) => {
     })
     .sort((a, b) => compareCodes(a.code, b.code));
 
-  res.json({ ...order.toJSON(), items, access: accessFor(req.user!, order) });
+  // Órdenes que le pasaron su material a esta (traspaso directo entre eventos).
+  const transferredFrom = await ServiceOrder.findAll({
+    where: { transferredToId: order.id, companyId: order.companyId },
+    attributes: ['id'],
+    include: [{ model: Event, as: 'Event', attributes: ['id', 'eventName'] }],
+  });
+
+  res.json({ ...order.toJSON(), items, transferredFrom, access: accessFor(req.user!, order) });
 };
 
-/** Edita responsables, observaciones y fechas. El estado se cambia con PATCH /:id/status. */
+/**
+ * Edita responsables, observaciones y fechas. El estado se cambia con PATCH /:id/status.
+ * Los responsables se pueden reasignar durante todo el recorrido (admin o quien creó la orden);
+ * fechas y observaciones, solo mientras la orden se puede editar.
+ */
 export const updateServiceOrder = async (req: Request, res: Response) => {
   const order = await findOrder(req);
-  assertCanEdit(req.user!, order);
+  const user = req.user!;
+  const onlyResponsibles = Object.keys(req.body).every((k) => RESPONSIBLES.some((r) => r.field === k));
+  const canReassign = order.status !== ServiceOrderStatus.Disassembled && (user.isAdmin || order.orderedBy === user.id);
+  if (!(onlyResponsibles && canReassign)) assertCanEdit(user, order);
 
-  const updates: Record<string, unknown> = parseDates(req.body, order.get({ plain: true }));
-  if (req.body.checkedBy !== undefined) updates.checkedBy = await assertUser(order.companyId, req.body.checkedBy, 'quien chequea');
-  if (req.body.deployedBy !== undefined) updates.deployedBy = await assertUser(order.companyId, req.body.deployedBy, 'quien arma');
+  const updates: Record<string, unknown> = {
+    ...parseDates(req.body, order.get({ plain: true })),
+    ...(await parseResponsibles(req, order.companyId)),
+  };
   if (req.body.observations !== undefined) updates.observations = String(req.body.observations).trim() || null;
 
   await order.update(updates);
@@ -364,4 +403,63 @@ export const emptyContainer = async (req: Request, res: Response) => {
 
   const deleted = await ServiceOrderStoreItem.destroy({ where: { serviceOrderId: order.id, itemIdParent: containerId } });
   res.json({ message: deleted ? `Se sacaron ${deleted} ítem(s) del contenedor.` : 'El contenedor no tenía ítems cargados en esta orden.' });
+};
+
+/**
+ * Pasa todo el material de una orden que ya está en un evento (o volviendo) directo a otra orden,
+ * sin volver al depósito. La orden de origen queda cerrada como "desarmada" con el enlace al destino;
+ * su historial de ítems se conserva.
+ */
+export const transferMaterial = async (req: Request, res: Response) => {
+  const user = req.user!;
+  const targetId = parseId(req.body.targetOrderId, 'orden de destino');
+
+  const result = await sequelize.transaction(async (transaction) => {
+    const source = await ServiceOrder.findOne({
+      where: { id: parseId(req.params.id, 'id de la orden'), companyId: tenant(req) },
+      lock: transaction.LOCK.UPDATE,
+      transaction,
+    });
+    if (!source) throw new HttpError(404, 'Orden de servicio no encontrada.');
+    if (!canTransfer(user, source)) {
+      throw new HttpError(403, 'El material se puede pasar cuando la orden ya está en el evento o volviendo, y solo lo hace su responsable.');
+    }
+    if (targetId === source.id) throw new HttpError(400, 'Elegí otra orden de destino.');
+
+    const target = await ServiceOrder.findOne({ where: { id: targetId, companyId: source.companyId }, lock: transaction.LOCK.UPDATE, transaction });
+    if (!target) throw new HttpError(404, 'La orden de destino no existe.');
+    if (target.status === ServiceOrderStatus.Disassembled) throw new HttpError(409, 'La orden de destino ya está desarmada.');
+    // Quien pasa el material tiene que participar también de la orden que lo recibe.
+    const targetPeople = [target.orderedBy, target.checkedBy, target.deployedBy, target.logisticsBy, target.receptionBy];
+    if (!user.isAdmin && !canEditOrder(user, target) && !targetPeople.includes(user.id)) {
+      throw new HttpError(403, 'Solo podés pasar el material a una orden en la que también seas responsable.');
+    }
+
+    const [items, stored] = await Promise.all([
+      ServiceOrderItem.findAll({ where: { serviceOrderId: source.id }, transaction }),
+      ServiceOrderStoreItem.findAll({ where: { serviceOrderId: source.id }, transaction }),
+    ]);
+    const already = new Set(
+      (await ServiceOrderItem.findAll({ where: { serviceOrderId: target.id }, attributes: ['itemId'], transaction })).map((r) => r.itemId),
+    );
+
+    const newItems = items.filter((r) => !already.has(r.itemId));
+    await ServiceOrderItem.bulkCreate(newItems.map((r) => ({ serviceOrderId: target.id, itemId: r.itemId })), { transaction });
+    await ServiceOrderStoreItem.bulkCreate(
+      stored.map((s) => ({ serviceOrderId: target.id, itemIdParent: s.itemIdParent, itemIdChild: s.itemIdChild })),
+      { transaction, ignoreDuplicates: true },
+    );
+
+    // El origen se cierra: sus ítems ya están ocupados por el destino.
+    await source.update({ status: ServiceOrderStatus.Disassembled, transferredToId: target.id }, { transaction });
+    await ServiceOrderItem.update({ isActive: false }, { where: { serviceOrderId: source.id }, transaction });
+    await ServiceOrderStoreItem.update({ isActive: false }, { where: { serviceOrderId: source.id }, transaction });
+
+    return { moved: newItems.length, stored: stored.length, targetId: target.id };
+  });
+
+  res.json({
+    message: `Se pasaron ${result.moved} ítem(s)${result.stored ? ` y ${result.stored} guardado(s) en contenedores` : ''} a la orden #${result.targetId}.`,
+    ...result,
+  });
 };

@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   AppBar,
   Box,
+  Chip,
   Divider,
   Drawer,
   IconButton,
@@ -24,6 +25,7 @@ import LightModeOutlined from '@mui/icons-material/LightModeOutlined';
 import PersonOutline from '@mui/icons-material/PersonOutline';
 import Logout from '@mui/icons-material/Logout';
 import BugReportOutlined from '@mui/icons-material/BugReportOutlined';
+import LockOutlined from '@mui/icons-material/LockOutlined';
 import { useAuth } from '../context/AuthContext';
 import { useColorMode } from '../context/ColorModeContext';
 import { userName } from '../lib/format';
@@ -77,18 +79,20 @@ const SidebarContent = ({ onNavigate }) => {
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 1.5 }}>
       <SidebarHeader company={auth.company} isAdmin={auth.isAdmin} onNavigate={onNavigate} />
       <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-        {items.map(({ to, label, icon: Icon, end, section }, i) => (
+        {items.map(({ to, label, icon: Icon, end, section, locked, soon }, i) => (
           <Box key={to}>
             {section && items[i - 1]?.section !== section && (
               <Typography variant="overline" color="text.disabled" component="div" sx={{ px: 1.5, pt: 2, pb: 0.5, lineHeight: 1.5 }}>
                 {section}
               </Typography>
             )}
-            <ListItemButton component={NavLink} to={to} end={end} onClick={onNavigate}>
-              <ListItemIcon sx={{ minWidth: 38 }}>
+            <ListItemButton component={NavLink} to={to} end={end} onClick={onNavigate} sx={locked ? { color: 'text.disabled' } : undefined}>
+              <ListItemIcon sx={{ minWidth: 38, color: locked ? 'text.disabled' : undefined }}>
                 <Icon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary={label} primaryTypographyProps={{ fontWeight: 600, fontSize: 14 }} />
+              {locked && <LockOutlined sx={{ fontSize: 15 }} titleAccess="No incluido en tu plan" />}
+              {soon && <Chip label="Pronto" size="small" color="secondary" sx={{ height: 18, fontSize: 10 }} />}
             </ListItemButton>
           </Box>
         ))}

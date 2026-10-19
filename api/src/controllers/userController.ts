@@ -4,14 +4,17 @@ import { Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/database';
 import { env } from '../config/env';
-import { signToken, tenant } from '../middlewares/auth';
+import { assertCanLogin, signToken, tenant } from '../middlewares/auth';
+import { getPlan, IN_DEVELOPMENT } from '../config/plans';
 import { Company, PasswordResetToken, Permission, Role, User } from '../models';
+import { hasLogin } from '../models/User';
+import { countAppUsers } from '../services/team';
 import { button, paragraph, sendEmail } from '../services/email';
 import { deleteByUrl, saveImage } from '../services/storage';
 import { subscriptionState } from '../services/subscription';
 import { HttpError, parseId } from '../utils/http';
 
-const BCRYPT_ROUNDS = 10;
+export const BCRYPT_ROUNDS = 10;
 const MIN_PASSWORD = 6;
 const USERNAME_RE = /^[a-zA-Z0-9_.-]+$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -21,13 +24,26 @@ const sessionIncludes = [roleWithPermissions, { model: Company }];
 const ROLE_BRIEF = { model: Role, attributes: ['id', 'roleName'] };
 
 /** Forma única del usuario autenticado (login y perfil devuelven lo mismo). */
-const toSession = (user: User) => ({
+const toSession = async (user: User) => {
+  const plan = user.Company ? getPlan(user.Company.plan) : null;
+  const userCount = user.companyId ? await countAppUsers(user.companyId) : 0;
+  return {
+    ...baseSession(user),
+    plan: plan
+      ? { id: plan.id, name: plan.name, features: plan.features, inDevelopment: IN_DEVELOPMENT, maxUsers: plan.maxUsers, maxTemporary: plan.maxTemporary, userCount }
+      : null,
+  };
+};
+
+const baseSession = (user: User) => ({
   id: user.id,
   username: user.username,
   email: user.email,
   firstname: user.firstname,
   lastname: user.lastname,
   avatarUrl: user.avatarUrl,
+  access: user.access,
+  accessUntil: user.accessUntil,
   roleId: user.roleId,
   roleName: user.Role?.roleName ?? null,
   isAdmin: !!user.companyId && user.roleId === env.adminRoleId,
@@ -48,7 +64,7 @@ const toSession = (user: User) => ({
 type FieldErrors = Record<string, string>;
 
 /** Valida username/email/nombres y que username y email no estén tomados por otro usuario. */
-const validateProfile = async (
+export const validateProfile = async (
   data: { username?: string; email?: string; firstname?: string; lastname?: string },
   currentUserId?: number,
 ) => {
@@ -76,7 +92,7 @@ const validateProfile = async (
   if (Object.keys(errors).length) throw new HttpError(400, 'Revisá los datos del formulario.', errors);
 };
 
-const assertPassword = (password: unknown, field = 'password') => {
+export const assertPassword = (password: unknown, field = 'password') => {
   if (typeof password !== 'string' || password.length < MIN_PASSWORD) {
     throw new HttpError(400, `La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.`, {
       [field]: `Mínimo ${MIN_PASSWORD} caracteres.`,
@@ -85,14 +101,9 @@ const assertPassword = (password: unknown, field = 'password') => {
 };
 
 /** Cada empresa tiene que conservar al menos un administrador. */
-const assertNotLastAdmin = async (user: User) => {
-  const admins = await User.count({ where: { companyId: user.companyId, roleId: env.adminRoleId } });
+export const assertNotLastAdmin = async (user: User) => {
+  const admins = await User.count({ where: { companyId: user.companyId, roleId: env.adminRoleId, access: 'app' } });
   if (admins <= 1) throw new HttpError(409, 'Es el único administrador de la empresa: asigná otro antes de cambiarle el rol.');
-};
-
-const assertRole = async (roleId: unknown) => {
-  const role = await Role.findByPk(parseId(roleId, 'rol'));
-  if (!role) throw new HttpError(404, 'El rol no existe.');
 };
 
 export const login = async (req: Request, res: Response) => {
@@ -101,17 +112,18 @@ export const login = async (req: Request, res: Response) => {
 
   const user = await User.scope('withPassword').findOne({ where: { username }, include: sessionIncludes });
   // Mismo mensaje para usuario inexistente y contraseña incorrecta: no revela qué usuarios existen.
-  if (!user || !(await bcrypt.compare(String(password), user.password))) {
+  if (!user?.password || !(await bcrypt.compare(String(password), user.password))) {
     throw new HttpError(401, 'Usuario o contraseña incorrectos.');
   }
+  assertCanLogin(user);
 
-  res.json({ token: signToken(user), user: toSession(user) });
+  res.json({ token: signToken(user), user: await toSession(user) });
 };
 
 export const getMyProfile = async (req: Request, res: Response) => {
   const user = await User.findByPk(req.user!.id, { include: sessionIncludes });
   if (!user) throw new HttpError(404, 'Usuario no encontrado.');
-  res.json(toSession(user));
+  res.json(await toSession(user));
 };
 
 export const updateMyProfile = async (req: Request, res: Response) => {
@@ -130,7 +142,7 @@ export const updateMyProfile = async (req: Request, res: Response) => {
   });
 
   const fresh = await User.findByPk(user.id, { include: sessionIncludes });
-  res.json(toSession(fresh!));
+  res.json(await toSession(fresh!));
 };
 
 export const changeMyPassword = async (req: Request, res: Response) => {
@@ -157,7 +169,7 @@ export const uploadMyAvatar = async (req: Request, res: Response) => {
   await user.update({ avatarUrl: await saveImage(req.file.buffer, `usuarios/${user.id}`, 'avatar') });
   await deleteByUrl(previous);
   const fresh = await User.findByPk(user.id, { include: sessionIncludes });
-  res.json(toSession(fresh!));
+  res.json(await toSession(fresh!));
 };
 
 export const deleteMyAvatar = async (req: Request, res: Response) => {
@@ -167,7 +179,7 @@ export const deleteMyAvatar = async (req: Request, res: Response) => {
   await user.update({ avatarUrl: null });
   await deleteByUrl(previous);
   const fresh = await User.findByPk(user.id, { include: sessionIncludes });
-  res.json(toSession(fresh!));
+  res.json(await toSession(fresh!));
 };
 
 // ---------- Recuperar contraseña ----------
@@ -185,7 +197,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
   if (!identifier) throw new HttpError(400, 'Ingresá tu usuario o tu email.');
 
   const user = await User.findOne({ where: { [Op.or]: [{ username: identifier }, { email: identifier.toLowerCase() }, { email: identifier }] } });
-  if (!user) return res.json(generic);
+  if (!user?.email || !hasLogin(user)) return res.json(generic);
 
   const token = crypto.randomBytes(32).toString('hex');
   await PasswordResetToken.create({ userId: user.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + RESET_TTL_MS) });
@@ -221,9 +233,10 @@ export const resetPassword = async (req: Request, res: Response) => {
   res.json({ message: 'Listo: ya podés entrar con tu contraseña nueva.' });
 };
 
+/** Personas que entran a la app (para elegir responsables). El equipo completo está en /team. */
 export const listUsers = async (req: Request, res: Response) => {
   const users = await User.findAll({
-    where: { companyId: tenant(req) },
+    where: { companyId: tenant(req), access: { [Op.ne]: 'none' } },
     include: [ROLE_BRIEF],
     order: [['username', 'ASC']],
   });
@@ -237,49 +250,4 @@ export const getUser = async (req: Request, res: Response) => {
   const user = await findCompanyUser(req, { include: [roleWithPermissions] });
   if (!user) throw new HttpError(404, 'Usuario no encontrado.');
   res.json(user);
-};
-
-export const createUser = async (req: Request, res: Response) => {
-  const { username, email, password, roleId, firstname, lastname } = req.body;
-  if (!username || !email) throw new HttpError(400, 'Usuario y email son obligatorios.');
-  await validateProfile({ username, email, firstname, lastname });
-  assertPassword(password);
-  await assertRole(roleId);
-
-  const user = await User.create({
-    companyId: tenant(req),
-    username,
-    email,
-    firstname: firstname?.trim() || null,
-    lastname: lastname?.trim() || null,
-    password: await bcrypt.hash(password, BCRYPT_ROUNDS),
-    roleId,
-  });
-  const created = await User.findByPk(user.id, { include: [ROLE_BRIEF] });
-  res.status(201).json(created);
-};
-
-export const updateUser = async (req: Request, res: Response) => {
-  const user = await findCompanyUser(req);
-  if (!user) throw new HttpError(404, 'Usuario no encontrado.');
-
-  const { username, email, password, roleId, firstname, lastname } = req.body;
-  await validateProfile({ username, email, firstname, lastname }, user.id);
-  if (roleId !== undefined && roleId !== user.roleId) {
-    await assertRole(roleId);
-    if (user.roleId === env.adminRoleId) await assertNotLastAdmin(user);
-  }
-  if (password) assertPassword(password);
-
-  await user.update({
-    username: username ?? user.username,
-    email: email ?? user.email,
-    firstname: firstname === undefined ? user.firstname : firstname?.trim() || null,
-    lastname: lastname === undefined ? user.lastname : lastname?.trim() || null,
-    roleId: roleId ?? user.roleId,
-    ...(password ? { password: await bcrypt.hash(password, BCRYPT_ROUNDS) } : {}),
-  });
-
-  const updated = await User.findByPk(user.id, { include: [ROLE_BRIEF] });
-  res.json(updated);
 };

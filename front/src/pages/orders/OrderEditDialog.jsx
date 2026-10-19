@@ -1,37 +1,46 @@
 import { useEffect, useState } from 'react';
-import { Grid, MenuItem, TextField } from '@mui/material';
+import { Grid, MenuItem, TextField, Typography } from '@mui/material';
 import FormDialog from '../../components/FormDialog';
 import { useFeedback } from '../../context/FeedbackContext';
 import { api, errorMessage } from '../../lib/api';
 import { toDateTimeInput, userName } from '../../lib/format';
-import { ORDER_DATES, validateOrderDates } from './orderDates';
+import { ORDER_DATES, RESPONSIBLES, validateOrderDates } from './orderDates';
 
-/** Edita responsables, fechas y observaciones de una orden. */
-const OrderEditDialog = ({ open, onClose, order, users, onSaved }) => {
+/**
+ * Edita una orden. Con `responsiblesOnly` solo reasigna responsables (se puede durante todo el
+ * recorrido); si no, también fechas y observaciones (solo mientras la orden se puede editar).
+ */
+const OrderEditDialog = ({ open, onClose, order, users, onSaved, responsiblesOnly = false, stageOwners = false }) => {
   const { notify } = useFeedback();
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
+  const fields = RESPONSIBLES.filter((r) => r.field !== 'orderedBy' && (!r.stageOwner || stageOwners));
 
   useEffect(() => {
     if (!open) return;
     setForm({
-      checkedBy: order.checkedBy ?? '',
-      deployedBy: order.deployedBy ?? '',
-      observations: order.observations ?? '',
-      ...Object.fromEntries(ORDER_DATES.map(({ key }) => [key, toDateTimeInput(order[key])])),
+      ...Object.fromEntries(fields.map((r) => [r.field, order[r.field] ?? ''])),
+      ...(responsiblesOnly
+        ? {}
+        : {
+            observations: order.observations ?? '',
+            ...Object.fromEntries(ORDER_DATES.map(({ key }) => [key, toDateTimeInput(order[key])])),
+          }),
     });
-  }, [open, order]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, order, responsiblesOnly, stageOwners]);
 
-  const errors = validateOrderDates(form);
+  const errors = responsiblesOnly ? {} : validateOrderDates(form);
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
   const save = async () => {
     setSaving(true);
     try {
-      const payload = { ...form, checkedBy: form.checkedBy || null, deployedBy: form.deployedBy || null };
-      for (const { key } of ORDER_DATES) payload[key] = form[key] ? new Date(form[key]).toISOString() : null;
+      const payload = { ...form };
+      for (const r of fields) payload[r.field] = form[r.field] || null;
+      if (!responsiblesOnly) for (const { key } of ORDER_DATES) payload[key] = form[key] ? new Date(form[key]).toISOString() : null;
       await api.patch(`/service-orders/${order.id}`, payload);
-      notify('Orden actualizada.');
+      notify(responsiblesOnly ? 'Responsables actualizados.' : 'Orden actualizada.');
       onSaved();
     } catch (err) {
       notify(errorMessage(err), 'error');
@@ -57,44 +66,45 @@ const OrderEditDialog = ({ open, onClose, order, users, onSaved }) => {
     <FormDialog
       open={open}
       onClose={onClose}
-      title={`Editar orden #${order.id}`}
+      title={responsiblesOnly ? `Responsables de la orden #${order.id}` : `Editar orden #${order.id}`}
       onSubmit={save}
       saving={saving}
       disabled={!!Object.keys(errors).length}
       maxWidth="md"
     >
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={6}>
-          {userSelect('checkedBy', 'Quién la chequea')}
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          {userSelect('deployedBy', 'Quién la arma')}
-        </Grid>
-        {ORDER_DATES.map(({ key, label }) => (
-          <Grid item xs={12} sm={6} key={key}>
-            <TextField
-              fullWidth
-              type="datetime-local"
-              label={label}
-              value={form[key] ?? ''}
-              onChange={set(key)}
-              InputLabelProps={{ shrink: true }}
-              error={!!errors[key]}
-              helperText={errors[key]}
-            />
+        {fields.map((r) => (
+          <Grid item xs={12} sm={6} key={r.field}>
+            {userSelect(r.field, r.label)}
           </Grid>
         ))}
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
-            label="Observaciones"
-            value={form.observations ?? ''}
-            onChange={set('observations')}
-            inputProps={{ maxLength: 255 }}
-          />
-        </Grid>
+        {responsiblesOnly ? (
+          <Grid item xs={12}>
+            <Typography variant="body2" color="text.secondary">
+              Cada responsable avanza el estado en su etapa. Si una etapa queda sin asignar, la avanza quien creó la orden.
+            </Typography>
+          </Grid>
+        ) : (
+          <>
+            {ORDER_DATES.map(({ key, label }) => (
+              <Grid item xs={12} sm={6} key={key}>
+                <TextField
+                  fullWidth
+                  type="datetime-local"
+                  label={label}
+                  value={form[key] ?? ''}
+                  onChange={set(key)}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors[key]}
+                  helperText={errors[key]}
+                />
+              </Grid>
+            ))}
+            <Grid item xs={12}>
+              <TextField fullWidth multiline minRows={2} label="Observaciones" value={form.observations ?? ''} onChange={set('observations')} />
+            </Grid>
+          </>
+        )}
       </Grid>
     </FormDialog>
   );

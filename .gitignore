@@ -143,3 +143,6 @@ backups/
 
 # Configuración local de Claude Code
 .claude/settings.local.json
+
+# Documentos privados en desarrollo (recibos, planos)
+private-uploads/

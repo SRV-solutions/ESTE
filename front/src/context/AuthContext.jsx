@@ -57,6 +57,11 @@ export const AuthProvider = ({ children }) => {
     [user],
   );
 
+  /** El plan de la empresa incluye el módulo. */
+  const hasFeature = useCallback((feature) => !!user?.plan?.features?.includes(feature), [user]);
+  /** Módulo contratado pero todavía en construcción. */
+  const inDevelopment = useCallback((feature) => !!user?.plan?.inDevelopment?.includes(feature), [user]);
+
   const subscription = user?.company?.subscription ?? null;
   const value = useMemo(
     () => ({
@@ -67,6 +72,9 @@ export const AuthProvider = ({ children }) => {
       refresh,
       setUser,
       can,
+      hasFeature,
+      inDevelopment,
+      plan: user?.plan ?? null,
       isAdmin: !!user?.isAdmin,
       isSuperAdmin: !!user?.isSuperAdmin,
       company: user?.company ?? null,
@@ -74,7 +82,7 @@ export const AuthProvider = ({ children }) => {
       /** La empresa puede usar la app (al día o en período de gracia). */
       hasAccess: !!user?.company && ['active', 'grace'].includes(subscription?.state),
     }),
-    [user, status, login, logout, refresh, can, subscription],
+    [user, status, login, logout, refresh, can, hasFeature, inDevelopment, subscription],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
