@@ -1,73 +1,43 @@
-import { Model, DataTypes } from 'sequelize';
+import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database';
-import bcrypt from 'bcrypt';
-import Role from './Role';
-import ServiceOrder from './ServiceOrder';
+import type Company from './Company';
+import type Role from './Role';
 
 class User extends Model {
-  public id!: number;
-  public username!: string;
-  public email!: string;
-  public password!: string; // Campo para almacenar la contraseña
-  public firstname?: string;  // agregado
-  public lastname?: string;   // agregado
-  public roleId!: number;
-  public Role!: Role
-  public DeployedBy!: [ServiceOrder]
-  public CheckedBy!: [ServiceOrder]
-  public OrderedBy!: [ServiceOrder]
-  // Asociaciones con otros modelos
-  public static associate() {
-    User.belongsTo(Role, { foreignKey: 'roleId' });
-    User.hasMany(ServiceOrder, { foreignKey: 'checkedBy', as: 'CheckedBy' });
-    User.hasMany(ServiceOrder, { foreignKey: 'deployedBy', as: 'DeployedBy' });
-    User.hasMany(ServiceOrder, { foreignKey: 'orderedBy', as: 'OrderedBy' });
-  }
+  declare id: number;
+  declare companyId: number | null;
+  declare isSuperAdmin: boolean;
+  declare username: string;
+  declare email: string;
+  declare password: string;
+  declare firstname: string | null;
+  declare lastname: string | null;
+  declare roleId: number;
+  declare Role?: Role;
+  declare Company?: Company;
 }
 
 User.init(
   {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    username: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,        // <- lo agrego para que sea único
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-    },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false, // Contraseña es obligatoria
-    },
-    firstname: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    lastname: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    roleId: {
-      type: DataTypes.INTEGER,
-      references: {
-        model: 'Role',
-        key: 'id',
-      },
-    },
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    companyId: { type: DataTypes.INTEGER, allowNull: true, references: { model: 'Company', key: 'id' } },
+    isSuperAdmin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    username: { type: DataTypes.STRING, allowNull: false, unique: true },
+    email: { type: DataTypes.STRING, allowNull: false, unique: true },
+    password: { type: DataTypes.STRING, allowNull: false },
+    firstname: { type: DataTypes.STRING, allowNull: true },
+    lastname: { type: DataTypes.STRING, allowNull: true },
+    roleId: { type: DataTypes.INTEGER, references: { model: 'Role', key: 'id' } },
   },
   {
     sequelize,
     modelName: 'User',
     tableName: 'User',
     timestamps: false,
-  }
+    // El hash nunca sale en una respuesta: solo el login lo pide explícitamente.
+    defaultScope: { attributes: { exclude: ['password'] } },
+    scopes: { withPassword: { attributes: { include: ['password'] } } },
+  },
 );
 
 export default User;

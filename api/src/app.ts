@@ -1,93 +1,37 @@
-import express, { Request, NextFunction } from 'express';
-import { sequelize } from './config/database';
-
-import userRoutes from './routes/userRoutes';
-import roleRoutes from './routes/roleRoutes';
-import itemRoutes from './routes/itemRoutes';
-import serviceOrderRoutes from './routes/serviceOrderRoutes';
-import serviceOrderItemRoutes from './routes/serviceOrderItemRoutes';
-import serviceOrderStoreItemRoutes from './routes/serviceOrderStoreItemRoutes';
-import eventRoutes from './routes/eventRoutes';
-import categoryRoutes from './routes/categoryRoutes';
-import locationRoutes from './routes/locationRoutes';
-import storeItemRoutes from './routes/storeItemRoutes';
-// import reportsRouts from './routes/reportsRoute'
-
-// import orderItemRoutes from './routes/orderItemRoutes';
-// import itemRoutes from './routes/itemRoutes';
-// import storeItemRoutes from './routes/storeItemRoutes';
-
-import Role from './models/Role';
-import User from './models/User';
-import Location from './models/Location';
-import Event from './models/Event';
-import ServiceOrder from './models/ServiceOrder';
-import ServiceOrderItem from './models/ServiceOrderItem';
-import Item from './models/Item';
-import StoreItem from './models/StoreItem';
-import ServiceOrderStoreItem from './models/ServiceOrderStoreItem';
-import Category from './models/Category';
-import Permission from './models/Permission';
-
-
-User.associate();
-Role.associate();
-Location.associate()
-Event.associate()
-ServiceOrder.associate()
-ServiceOrderItem.associate()
-Item.associate()
-StoreItem.associate()
-ServiceOrderStoreItem.associate()
-Category.associate()
-Permission.associate();
+import compression from 'compression';
+import cors from 'cors';
+import express from 'express';
+import helmet from 'helmet';
+import { env } from './config/env';
+import { errorHandler, notFound } from './middlewares/errorHandler';
+import './models';
+import routes from './routes';
 
 const app = express();
 
-app.use(express.json());
+app.disable('x-powered-by');
+app.set('trust proxy', 1); // Detrás de Caddy/Nginx: el rate limit usa la IP real.
+app.use(helmet());
+app.use(compression());
+// En desarrollo se acepta cualquier puerto de localhost (Vite cambia de puerto si el 5173 está ocupado).
+const LOCALHOST = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const isAllowedOrigin = (origin?: string) =>
+  !origin || env.corsOrigins.includes(origin) || (!env.isProduction && LOCALHOST.test(origin));
 
-app.use((req: Request, res: any, next: NextFunction) => {
-  const allowedOrigins = ['http://localhost:5174', 'http://localhost:5173', 'https://este.wearesrv.com'];
-  const origin: any = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
+app.use(
+  cors({
+    origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  }),
+);
+app.use(express.json({ limit: '1mb' }));
 
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-
-  next();
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', app: 'sortex-api' });
 });
 
-
-app.get('/hola', (_req, res) => {
-  res.send('Hola Mundo')
-});
-
-app.use('/users', userRoutes);
-app.use('/roles', roleRoutes);
-app.use('/items', itemRoutes);
-app.use('/store-items', storeItemRoutes);
-app.use('/service-orders', serviceOrderRoutes);//orden de servicios para eventos
-app.use('/service-order-items', serviceOrderItemRoutes);//items para eventos
-app.use('/service-order-store-items', serviceOrderStoreItemRoutes);//baules de cables para eventos
-app.use('/events', eventRoutes);
-app.use('/categories', categoryRoutes);
-app.use('/locations', locationRoutes);
-// app.use('/reports', reportsRouts)
-// app.use('/order-items', orderItemRoutes);
-// app.use('/items', itemRoutes);
-// app.use('/store-items', storeItemRoutes);
-
-const forceSync = process.env.FORCE_SYNC === "true";
-sequelize.sync({ force: forceSync }).then(() => {
-  console.log('Database connected and synchronized');
-}).catch(err => {
-  console.error('Unable to connect to the database:', err);
-});
+app.use(routes);
+app.use(notFound);
+app.use(errorHandler);
 
 export default app;

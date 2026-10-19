@@ -1,42 +1,22 @@
 import { Request, Response } from 'express';
-import Role from '../models/Role';
-import User from '../models/User';
+import { Permission, Role } from '../models';
+import { HttpError, parseId } from '../utils/http';
 
-export const getRole = async (req: Request, res: any) => {
-  const { id } = req.params;
-  try {
-    const role = await Role.findByPk(id, {
-      include: [User],
-    });
-    if (!role) {
-      return res.status(404).json({ message: 'Role not found' });
-    }
-    return res.json(role);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching role', error });
-  }
-}
+export const listRoles = async (_req: Request, res: Response) => {
+  res.json(await Role.findAll({ order: [['id', 'ASC']] }));
+};
 
-export const getRoles = async (req: Request, res: any) => {
-  try {
-    const roles: any = await Role.findAll();
-    if (!roles && roles.length !== 0) {
-      return res.status(404).json({ message: 'Role not found' });
-    }
-    return res.json(roles);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching role', error });
-  }
-}
+export const getRole = async (req: Request, res: Response) => {
+  const role = await Role.findByPk(parseId(req.params.id), {
+    include: [{ model: Permission, through: { attributes: [] } }],
+  });
+  if (!role) throw new HttpError(404, 'Rol no encontrado.');
+  res.json(role);
+};
 
-
-// Crear un nuevo rol
 export const createRole = async (req: Request, res: Response) => {
-  const { name } = req.body;
-  try {
-    const role = await Role.create({ name });
-    res.status(201).json(role);
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating role', error });
-  }
+  const { roleName, description } = req.body;
+  if (!roleName?.trim()) throw new HttpError(400, 'El nombre del rol es obligatorio.');
+  const role = await Role.create({ roleName: roleName.trim(), description: description?.trim() || null });
+  res.status(201).json(role);
 };

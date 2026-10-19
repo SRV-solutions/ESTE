@@ -1,13 +1,13 @@
-// config/database.ts
-import { Sequelize } from 'sequelize-typescript';
-import dotenv from 'dotenv';
-dotenv.config();
+import { Sequelize } from 'sequelize';
+import { env } from './env';
 
 export const sequelize = new Sequelize({
-    dialect: 'postgres',
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || '1234',
-    host: process.env.DB_HOST || 'localhost',
-    database: process.env.DB_NAME || 'este',
-    logging: false,
+  dialect: 'postgres',
+  host: env.db.host,
+  port: env.db.port,
+  username: env.db.username,
+  password: env.db.password,
+  database: env.db.database,
+  logging: false,
+  dialectOptions: env.db.ssl ? { ssl: { require: true, rejectUnauthorized: false } } : {},
 });

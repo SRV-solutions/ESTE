@@ -1,55 +1,32 @@
 import { Request, Response } from 'express';
-import Location from '../models/Location';
+import { tenant } from '../middlewares/auth';
+import { Location } from '../models';
+import { HttpError, parseId, pick } from '../utils/http';
 
-// Obtener todas las ubicaciones
-export const getLocations = async (req: Request, res: any) => {
-  try {
-    const locations = await Location.findAll();
-    res.json(locations);
-  } catch (error) {
-    res.status(500).json({ message: 'Error al obtener las ubicaciones', error });
-  }
+const FIELDS = ['locationName', 'address', 'city', 'country'] as const;
+
+const clean = (body: Record<string, unknown>) => {
+  const data = pick(body, FIELDS);
+  for (const key of Object.keys(data)) data[key] = String(data[key] ?? '').trim();
+  return data;
 };
 
-// Crear una nueva ubicación
-export const createLocation = async (req: Request, res: any) => {
-  try {
-    const { locationName, address, city, country } = req.body;
-    if (!locationName || !address || !city || !country) {
-      return res.status(400).json({ message: 'Todos los campos son obligatorios' });
-    }
-
-    const newLocation = await Location.create({ locationName, address, city, country });
-    res.status(201).json(newLocation);
-  } catch (error) {
-    res.status(500).json({ message: 'Error al crear la ubicación', error });
-  }
+export const listLocations = async (req: Request, res: Response) => {
+  res.json(await Location.findAll({ where: { companyId: tenant(req) }, order: [['locationName', 'ASC']] }));
 };
 
-// Actualizar una ubicación
-export const updateLocation = async (req: Request, res: any) => {
-  try {
-    const { id } = req.params;
-
-    const location = await Location.findByPk(id);
-    if (!location) {
-      return res.status(404).json({ message: 'Ubicación no encontrada' });
-    }
-
-    // Filtrar solo las propiedades que realmente vinieron en el body
-    const fieldsToUpdate: any = {};
-    const updatableFields = ['locationName', 'address', 'city', 'country'];
-
-    updatableFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        fieldsToUpdate[field] = req.body[field];
-      }
-    });
-
-    await location.update(fieldsToUpdate);
-    res.json(location);
-  } catch (error) {
-    res.status(500).json({ message: 'Error al actualizar la ubicación', error });
-  }
+export const createLocation = async (req: Request, res: Response) => {
+  const data = clean(req.body);
+  if (FIELDS.some((f) => !data[f])) throw new HttpError(400, 'Todos los campos de la ubicación son obligatorios.');
+  res.status(201).json(await Location.create({ ...data, companyId: tenant(req) }));
 };
 
+export const updateLocation = async (req: Request, res: Response) => {
+  const location = await Location.findOne({ where: { id: parseId(req.params.id), companyId: tenant(req) } });
+  if (!location) throw new HttpError(404, 'Ubicación no encontrada.');
+
+  const data = clean(req.body);
+  if (Object.values(data).some((v) => !v)) throw new HttpError(400, 'Los campos de la ubicación no pueden quedar vacíos.');
+  await location.update(data);
+  res.json(location);
+};

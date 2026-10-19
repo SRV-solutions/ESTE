@@ -1,71 +1,50 @@
-import { Request, Response } from "express";
-import StoreItem from "../models/StoreItem";
-import Item from "../models/Item"; // Asegúrate de importar el modelo de Item
+import { Request, Response } from 'express';
+import { tenant } from '../middlewares/auth';
+import { StoreItem } from '../models';
+import { findAvailableItems, findCompanyItem, getBusyItemIds } from '../services/itemService';
+import { HttpError, parseId } from '../utils/http';
 
-export const createStoreItems = async (req: Request, res: any) => {
-  try {
-    const { itemIdsChild, itemIdParent } = req.body;
-
-    if (!itemIdsChild || !Array.isArray(itemIdsChild) || itemIdsChild.length === 0 || !itemIdParent) {
-      return res.status(400).json({ error: "Both itemIdsChild (array) and itemIdParent are required." });
-    }
-
-    // Validar si el parent existe
-    const parentItem = await Item.findByPk(itemIdParent);
-    if (!parentItem) {
-      return res.status(404).json({ error: "Parent item does not exist." });
-    }
-
-    // Validar si todos los child items existen
-    const existingChildItems = await Item.findAll({ where: { id: itemIdsChild } });
-    const existingChildIds = existingChildItems.map(item => item.id);
-    const missingChildIds = itemIdsChild.filter(id => !existingChildIds.includes(id));
-
-    if (missingChildIds.length > 0) {
-      return res.status(404).json({ error: `Some child items do not exist: ${missingChildIds.join(", ")}` });
-    }
-
-    // Crear múltiples relaciones en StoreItem
-    const storeItems = itemIdsChild.map(childId => ({
-      itemIdChild: childId,
-      itemIdParent
-    }));
-
-    await StoreItem.bulkCreate(storeItems);
-
-    return res.status(201).json({
-      message: "StoreItems created successfully",
-      data: storeItems,
-    });
-  } catch (error) {
-    return res.status(500).json({ error: "Internal server error" });
+/** El contenido fijo solo se cambia con el contenedor en el depósito (no en una orden activa). */
+const findIdleContainer = async (companyId: number, id: number) => {
+  const container = await findCompanyItem(companyId, id);
+  if (!container.Category?.isContainer) throw new HttpError(400, 'Ese ítem no es un contenedor.');
+  if ((await getBusyItemIds(companyId)).has(id)) {
+    throw new HttpError(409, 'El contenedor está en una orden activa: cambiá su contenido cuando vuelva al depósito.');
   }
+  return container;
 };
 
+/** Asigna contenido fijo a un contenedor (los hijos viajan siempre dentro de él). */
+export const assignToContainer = async (req: Request, res: Response) => {
+  const companyId = tenant(req);
+  const parentId = parseId(req.body.itemIdParent, 'contenedor');
+  const childIds: number[] = Array.isArray(req.body.itemIdsChild) ? req.body.itemIdsChild.map((id: unknown) => parseId(id)) : [];
+  if (!childIds.length) throw new HttpError(400, 'Elegí al menos un ítem para guardar.');
+  if (childIds.includes(parentId)) throw new HttpError(400, 'Un contenedor no puede guardarse a sí mismo.');
 
-export const deleteStoreItem = async (req: Request, res: any) => {
-  try {
-    // Se espera que el primer parámetro sea el id del parent y el segundo el id del child
-    const { parentId, childId } = req.params;
-
-    if (!parentId || !childId) {
-      return res.status(400).json({ error: "Se requieren ambos parámetros: parentId y childId." });
-    }
-
-    // Eliminar la relación en StoreItem que cumpla con ambos ids
-    const deleteCount = await StoreItem.destroy({
-      where: {
-        itemIdParent: parentId,
-        itemIdChild: childId,
-      },
-    });
-
-    if (deleteCount === 0) {
-      return res.status(404).json({ error: "No se encontró la asociación para eliminar." });
-    }
-
-    return res.status(200).json({ message: "StoreItem eliminado correctamente." });
-  } catch (error) {
-    return res.status(500).json({ error: "Error interno del servidor." });
+  const parent = await findIdleContainer(companyId, parentId);
+  const available = new Set(
+    (await findAvailableItems(companyId, { storableOnly: true, excludePermanentParents: true })).map((i) => i.id),
+  );
+  if (childIds.some((id) => !available.has(id))) {
+    throw new HttpError(409, 'Algunos ítems ya están en uso, dentro de otro contenedor o no son almacenables.');
   }
+
+  await StoreItem.bulkCreate(childIds.map((itemIdChild) => ({ itemIdParent: parentId, itemIdChild })));
+  res.status(201).json({ message: `${childIds.length} ítem(s) guardado(s) en ${parent.code}.` });
+};
+
+export const removeFromContainer = async (req: Request, res: Response) => {
+  const parentId = parseId(req.params.parentId);
+  await findIdleContainer(tenant(req), parentId);
+  const deleted = await StoreItem.destroy({ where: { itemIdParent: parentId, itemIdChild: parseId(req.params.childId) } });
+  if (!deleted) throw new HttpError(404, 'Ese ítem no está guardado en el contenedor.');
+  res.json({ message: 'Ítem quitado del contenedor.' });
+};
+
+/** Vacía el contenedor: todo su contenido fijo queda suelto en el depósito. */
+export const emptyContainer = async (req: Request, res: Response) => {
+  const parent = await findIdleContainer(tenant(req), parseId(req.params.parentId));
+  const deleted = await StoreItem.destroy({ where: { itemIdParent: parent.id } });
+  res.json({ message: deleted ? `${parent.code} quedó vacío: ${deleted} ítem(s) volvieron al depósito.` : `${parent.code} ya estaba vacío.` });
 };

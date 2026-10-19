@@ -131,3 +131,12 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Backups locales de la base
+backups/
+
+# Certificados de ARCA (nunca al repositorio)
+*.key
+*.crt
+*.csr
+*.pem

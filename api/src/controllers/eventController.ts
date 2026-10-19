@@ -1,81 +1,63 @@
-import { Request } from 'express';
-import Event from '../models/Event';
-import Location from '../models/Location';
+import { Request, Response } from 'express';
+import { tenant } from '../middlewares/auth';
+import { Event, Location } from '../models';
+import { HttpError, parseId } from '../utils/http';
 
-export const getEvents = async (req: Request, res: any) => {
-  try {
-    const searchedEvents = await Event.findAll({
-      include: [Location]
-    })
+const TEXT_FIELDS = ['eventName', 'organizer', 'producer', 'finalClient'] as const;
 
-    return res.json(searchedEvents);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching items', error });
-  }
+const parseDate = (value: unknown) => {
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) throw new HttpError(400, 'La fecha del evento es inválida.');
+  return date;
 };
 
-export const createEvent = async (req: Request, res: any) => {
-  try {
-    const { eventName, dateEvent, locationId, organizer, producer, finalClient } = req.body;
-
-    if (!eventName || !dateEvent || !locationId) {
-      return res.status(400).json({ message: "Faltan datos obligatorios." });
-    }
-
-    const formattedDate = new Date(dateEvent);
-    if (isNaN(formattedDate.getTime())) {
-      return res.status(400).json({ message: "Formato de fecha inválido." });
-    }
-
-    const newEvent = await Event.create({
-      eventName,
-      dateEvent: formattedDate,
-      locationId,
-      organizer,
-      producer,
-      finalClient
-    });
-    const searchedEvent = await Event.findByPk(newEvent.id, {
-      include: [Location]
-    })
-    return res.status(201).json(searchedEvent);
-  } catch (error) {
-    res.status(500).json({ message: "Error al crear el evento.", error });
-  }
+const assertLocation = async (companyId: number, locationId: unknown) => {
+  const location = await Location.findOne({ where: { id: parseId(locationId, 'lugar'), companyId } });
+  if (!location) throw new HttpError(404, 'El lugar no existe.');
 };
 
-export const updateEvent = async (req: Request, res: any) => {
-  try {
-    const { id } = req.params;
-    const { eventName, dateEvent, locationId, organizer, producer, finalClient } = req.body;
+export const listEvents = async (req: Request, res: Response) => {
+  res.json(await Event.findAll({ where: { companyId: tenant(req) }, include: [Location], order: [['dateEvent', 'DESC']] }));
+};
 
-    // Verificar si el evento existe
-    const existingEvent = await Event.findByPk(id);
-    if (!existingEvent) {
-      return res.status(404).json({ message: "Evento no encontrado." });
-    }
-
-    // Validar la fecha si es proporcionada
-    let formattedDate = existingEvent.dateEvent;
-    if (dateEvent) {
-      formattedDate = new Date(dateEvent);
-      if (isNaN(formattedDate.getTime())) {
-        return res.status(400).json({ message: "Formato de fecha inválido." });
-      }
-    }
-
-    // Actualizar el evento
-    await existingEvent.update({
-      eventName: eventName ?? existingEvent.eventName,
-      dateEvent: formattedDate,
-      locationId: locationId ?? existingEvent.locationId,
-      organizer: organizer ?? existingEvent.organizer,
-      producer: producer ?? existingEvent.producer,
-      finalClient: finalClient ?? existingEvent.finalClient,
-    });
-
-    return res.status(200).json(existingEvent);
-  } catch (error) {
-    res.status(500).json({ message: "Error al actualizar el evento.", error });
+export const createEvent = async (req: Request, res: Response) => {
+  const { dateEvent, locationId } = req.body;
+  const missing = TEXT_FIELDS.filter((f) => !String(req.body[f] ?? '').trim());
+  if (!dateEvent || !locationId || missing.length) {
+    throw new HttpError(400, 'Completá nombre, fecha, lugar, organizador, productor y cliente final.');
   }
+  await assertLocation(tenant(req), locationId);
+
+  const event = await Event.create({
+    companyId: tenant(req),
+    eventName: req.body.eventName.trim(),
+    organizer: req.body.organizer.trim(),
+    producer: req.body.producer.trim(),
+    finalClient: req.body.finalClient.trim(),
+    dateEvent: parseDate(dateEvent),
+    locationId,
+  });
+  res.status(201).json(await Event.findByPk(event.id, { include: [Location] }));
+};
+
+export const updateEvent = async (req: Request, res: Response) => {
+  const event = await Event.findOne({ where: { id: parseId(req.params.id), companyId: tenant(req) } });
+  if (!event) throw new HttpError(404, 'Evento no encontrado.');
+
+  const updates: Record<string, unknown> = {};
+  for (const field of TEXT_FIELDS) {
+    if (req.body[field] !== undefined) {
+      const value = String(req.body[field]).trim();
+      if (!value) throw new HttpError(400, 'Los datos del evento no pueden quedar vacíos.');
+      updates[field] = value;
+    }
+  }
+  if (req.body.dateEvent !== undefined) updates.dateEvent = parseDate(req.body.dateEvent);
+  if (req.body.locationId !== undefined) {
+    await assertLocation(tenant(req), req.body.locationId);
+    updates.locationId = req.body.locationId;
+  }
+
+  await event.update(updates);
+  res.json(await Event.findByPk(event.id, { include: [Location] }));
 };

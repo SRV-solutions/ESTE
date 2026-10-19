@@ -1,8 +1,17 @@
-import dotenv from 'dotenv';
 import app from './app';
-dotenv.config();
-const PORT = process.env.PORT || 3000;
+import { sequelize } from './config/database';
+import { env } from './config/env';
+import { migrate } from './db/migrate';
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+const start = async () => {
+  await sequelize.authenticate();
+  await migrate();
+  app.listen(env.port, () => {
+    console.log(`[sortex] API escuchando en el puerto ${env.port}`);
+  });
+};
+
+start().catch((err) => {
+  console.error('[sortex] No se pudo iniciar la API:', err);
+  process.exit(1);
 });

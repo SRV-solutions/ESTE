@@ -1,41 +1,19 @@
-import { Model, DataTypes } from 'sequelize';
+import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database';
-import Role from './Role';
-import RolePermission from './RolePermission';
 
 class Permission extends Model {
-  public id!: number;
-  public entity!: string;
-  public action!: string;
-
-  public static associate() {
-    Permission.belongsToMany(Role, {
-      through: RolePermission,
-      foreignKey: 'permissionId',
-      otherKey: 'roleId',
-    });
-  }
+  declare id: number;
+  declare entity: string;
+  declare action: string;
 }
 
-Permission.init({
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
+Permission.init(
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    entity: { type: DataTypes.STRING, allowNull: false },
+    action: { type: DataTypes.STRING, allowNull: false },
   },
-  entity: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  action: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-}, {
-  sequelize,
-  modelName: 'Permission',
-  tableName: 'Permission',
-  timestamps: false,
-});
+  { sequelize, modelName: 'Permission', tableName: 'Permission', timestamps: false },
+);
 
 export default Permission;

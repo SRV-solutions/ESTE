@@ -1,34 +1,23 @@
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
+import { HttpError } from '../utils/http';
 
-// Ruta absoluta del directorio de uploads
-const uploadDir = path.join(__dirname, '..', 'uploads');
+const MAX_CSV_BYTES = 5 * 1024 * 1024;
 
-// Crear la carpeta si no existe
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configuración de almacenamiento de multer
-const storage = multer.diskStorage({
-  destination: (req: any, file: any, cb) => {
-    cb(null, uploadDir); // Usar ruta absoluta segura
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}_${file.originalname}`);
+/**
+ * El CSV se procesa en memoria: no quedan archivos temporales en disco.
+ * Se valida por extensión porque Windows suele mandar los .csv como application/vnd.ms-excel.
+ */
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_CSV_BYTES },
+  fileFilter: (_req, file, cb) => {
+    if (path.extname(file.originalname).toLowerCase() === '.csv') {
+      cb(null, true);
+    } else {
+      cb(new HttpError(400, 'Solo se permiten archivos .csv'));
+    }
   },
 });
-
-// Filtrar los archivos para asegurarse de que sea un archivo CSV
-const fileFilter = (req: any, file: any, cb: any) => {
-  if (file.mimetype === 'text/csv') {
-    cb(null, true);
-  } else {
-    cb(new Error('Solo se permiten archivos CSV'), false);
-  }
-};
-
-const upload = multer({ storage, fileFilter });
 
 export default upload;
