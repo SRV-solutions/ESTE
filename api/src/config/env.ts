@@ -42,13 +42,18 @@ export const env = {
     dollarApiUrl: process.env.DOLLAR_API_URL || 'https://dolarapi.com/v1/dolares/blue',
   },
 
-  /** Cloudflare R2 (compatible con S3) para logos, fotos de perfil y adjuntos. Sin configurar, se guarda en disco. */
+  /**
+   * Cloudflare R2 (compatible con S3). Sin configurar, todo se guarda en disco (solo para desarrollo).
+   * - Bucket público: logos, fotos de perfil y capturas de reportes (se sirven desde publicUrl).
+   * - Bucket privado: recibos de sueldo y planos. Sin acceso público: los entrega la API a quien tiene permiso.
+   */
   r2: {
     accountId: process.env.R2_ACCOUNT_ID || '',
     accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
-    bucket: process.env.R2_BUCKET || '',
-    /** Dominio público del bucket (r2.dev o propio), sin barra final. */
+    publicBucket: process.env.R2_PUBLIC_BUCKET || '',
+    privateBucket: process.env.R2_PRIVATE_BUCKET || '',
+    /** Dominio público del bucket público (propio o r2.dev), sin barra final. */
     publicUrl: (process.env.R2_PUBLIC_URL || '').replace(/\/+$/, ''),
   },
 

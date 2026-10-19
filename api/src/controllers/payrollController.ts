@@ -5,9 +5,9 @@ import { Employee, Payslip, User } from '../models';
 import { hasLogin } from '../models/User';
 import { PAYSLIP_KINDS } from '../models/Payslip';
 import { button, details, paragraph, sendEmail } from '../services/email';
-import { deletePrivateFile, readPrivateFile, safeFileName, savePrivateFile } from '../services/storage';
+import { deletePrivateFile, savePrivateFile, sendPrivateFile } from '../services/storage';
 import { HttpError, parseId } from '../utils/http';
-import { fichaOf, findTeamMember } from './teamController';
+import { fichaOf, findTeamMember } from '../services/team';
 
 const KIND_LABELS: Record<string, string> = {
   mensual: 'Sueldo mensual',
@@ -175,10 +175,10 @@ export const downloadPayslip = async (req: Request, res: Response) => {
   const canManage = req.user!.permissions.some((p) => p.entity === 'users' && p.action === 'update');
   if (!isOwner && !canManage) throw new HttpError(403, 'No podés ver este recibo.');
 
-  const file = await readPrivateFile(payslip.fileKey);
-  const name = `recibo_${payslip.period}_${payslip.Employee?.User?.lastname || payslip.Employee?.User?.username || ''}.pdf`;
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `${req.query.view === '1' ? 'inline' : 'attachment'}; filename="${safeFileName(name)}"`);
-  res.setHeader('Cache-Control', 'private, no-store');
-  res.send(file);
+  const person = payslip.Employee?.User;
+  await sendPrivateFile(res, payslip.fileKey, {
+    contentType: 'application/pdf',
+    fileName: `recibo_${payslip.period}_${person?.lastname || person?.username || ''}.pdf`,
+    inline: req.query.view === '1',
+  });
 };

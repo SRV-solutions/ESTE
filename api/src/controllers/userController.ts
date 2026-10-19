@@ -1,4 +1,3 @@
-import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
@@ -9,15 +8,11 @@ import { getPlan, IN_DEVELOPMENT } from '../config/plans';
 import { Company, PasswordResetToken, Permission, Role, User } from '../models';
 import { hasLogin } from '../models/User';
 import { countAppUsers } from '../services/team';
+import { assertPassword, checkPassword, hashPassword, validateProfile } from '../services/users';
 import { button, paragraph, sendEmail } from '../services/email';
 import { deleteByUrl, saveImage } from '../services/storage';
 import { subscriptionState } from '../services/subscription';
 import { HttpError, parseId } from '../utils/http';
-
-export const BCRYPT_ROUNDS = 10;
-const MIN_PASSWORD = 6;
-const USERNAME_RE = /^[a-zA-Z0-9_.-]+$/;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const roleWithPermissions = { model: Role, include: [{ model: Permission, through: { attributes: [] } }] };
 const sessionIncludes = [roleWithPermissions, { model: Company }];
@@ -61,58 +56,13 @@ const baseSession = (user: User) => ({
     : null,
 });
 
-type FieldErrors = Record<string, string>;
-
-/** Valida username/email/nombres y que username y email no estén tomados por otro usuario. */
-export const validateProfile = async (
-  data: { username?: string; email?: string; firstname?: string; lastname?: string },
-  currentUserId?: number,
-) => {
-  const errors: FieldErrors = {};
-  if (data.username !== undefined && !USERNAME_RE.test(data.username)) {
-    errors.username = 'Solo letras, números, puntos, guiones y guiones bajos.';
-  }
-  if (data.email !== undefined && !EMAIL_RE.test(data.email)) {
-    errors.email = 'Email inválido.';
-  }
-  if (data.firstname && data.firstname.trim().length < 2) errors.firstname = 'Mínimo 2 caracteres.';
-  if (data.lastname && data.lastname.trim().length < 2) errors.lastname = 'Mínimo 2 caracteres.';
-
-  const lookups = [];
-  if (data.username && !errors.username) lookups.push({ username: data.username });
-  if (data.email && !errors.email) lookups.push({ email: data.email });
-  if (lookups.length) {
-    const taken = await User.findAll({
-      where: { [Op.or]: lookups, ...(currentUserId ? { id: { [Op.ne]: currentUserId } } : {}) },
-    });
-    if (taken.some((u) => u.username === data.username)) errors.username = 'Ese nombre de usuario ya está en uso.';
-    if (taken.some((u) => u.email === data.email)) errors.email = 'Ese email ya está registrado.';
-  }
-
-  if (Object.keys(errors).length) throw new HttpError(400, 'Revisá los datos del formulario.', errors);
-};
-
-export const assertPassword = (password: unknown, field = 'password') => {
-  if (typeof password !== 'string' || password.length < MIN_PASSWORD) {
-    throw new HttpError(400, `La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.`, {
-      [field]: `Mínimo ${MIN_PASSWORD} caracteres.`,
-    });
-  }
-};
-
-/** Cada empresa tiene que conservar al menos un administrador. */
-export const assertNotLastAdmin = async (user: User) => {
-  const admins = await User.count({ where: { companyId: user.companyId, roleId: env.adminRoleId, access: 'app' } });
-  if (admins <= 1) throw new HttpError(409, 'Es el único administrador de la empresa: asigná otro antes de cambiarle el rol.');
-};
-
 export const login = async (req: Request, res: Response) => {
   const { username, password } = req.body;
   if (!username || !password) throw new HttpError(400, 'Ingresá usuario y contraseña.');
 
   const user = await User.scope('withPassword').findOne({ where: { username }, include: sessionIncludes });
   // Mismo mensaje para usuario inexistente y contraseña incorrecta: no revela qué usuarios existen.
-  if (!user?.password || !(await bcrypt.compare(String(password), user.password))) {
+  if (!user?.password || !(await checkPassword(password, user.password))) {
     throw new HttpError(401, 'Usuario o contraseña incorrectos.');
   }
   assertCanLogin(user);
@@ -150,12 +100,12 @@ export const changeMyPassword = async (req: Request, res: Response) => {
   const user = await User.scope('withPassword').findByPk(req.user!.id);
   if (!user) throw new HttpError(404, 'Usuario no encontrado.');
 
-  if (!currentPassword || !(await bcrypt.compare(String(currentPassword), user.password))) {
+  if (!currentPassword || !(await checkPassword(currentPassword, user.password))) {
     throw new HttpError(400, 'La contraseña actual es incorrecta.', { currentPassword: 'Contraseña incorrecta.' });
   }
   assertPassword(newPassword, 'newPassword');
 
-  await user.update({ password: await bcrypt.hash(newPassword, BCRYPT_ROUNDS) });
+  await user.update({ password: await hashPassword(newPassword) });
   res.json({ message: 'Contraseña actualizada.' });
 };
 
@@ -226,7 +176,7 @@ export const resetPassword = async (req: Request, res: Response) => {
   assertPassword(req.body.password);
 
   await sequelize.transaction(async (transaction) => {
-    await User.update({ password: await bcrypt.hash(req.body.password, BCRYPT_ROUNDS) }, { where: { id: record.userId }, transaction });
+    await User.update({ password: await hashPassword(req.body.password) }, { where: { id: record.userId }, transaction });
     // El link usado y cualquier otro pendiente del mismo usuario dejan de servir.
     await PasswordResetToken.update({ usedAt: new Date() }, { where: { userId: record.userId, usedAt: null }, transaction });
   });

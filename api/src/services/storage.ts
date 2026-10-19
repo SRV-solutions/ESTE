@@ -1,20 +1,25 @@
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, NoSuchKey, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
+import type { Response } from 'express';
+import { createReadStream } from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import { env } from '../config/env';
 import { HttpError } from '../utils/http';
 
 /**
- * Archivos (logos, fotos de perfil, capturas de reportes).
- * - Con R2 configurado se suben a Cloudflare R2 y se sirven desde su dominio público.
- * - Sin R2 (desarrollo) se guardan en `api/uploads` y los sirve la propia API.
+ * Archivos.
+ * - Imágenes públicas (logos, fotos de perfil, capturas): bucket público de R2, servidas desde su dominio.
+ * - Documentos privados (recibos, planos): bucket privado de R2, los entrega la API con permiso.
+ * - Sin R2 (desarrollo): `api/uploads` y `api/private-uploads`.
  */
 
 export const LOCAL_UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 export const isR2Configured = () =>
-  !!(env.r2.accountId && env.r2.accessKeyId && env.r2.secretAccessKey && env.r2.bucket && env.r2.publicUrl);
+  !!(env.r2.accountId && env.r2.accessKeyId && env.r2.secretAccessKey && env.r2.publicBucket && env.r2.privateBucket && env.r2.publicUrl);
 
 let client: S3Client | null = null;
 const r2 = () =>
@@ -51,7 +56,7 @@ export const saveImage = async (buffer: Buffer, folder: string, prefix: string) 
   if (isR2Configured()) {
     await r2().send(
       new PutObjectCommand({
-        Bucket: env.r2.bucket,
+        Bucket: env.r2.publicBucket,
         Key: key,
         Body: buffer,
         ContentType: mime,
@@ -93,7 +98,7 @@ export const savePrivateFile = async (buffer: Buffer, folder: string, kind: Docu
   const { mime, ext } = detectDocument(buffer, kind);
   const key = `privado/${folder}/${crypto.randomBytes(12).toString('hex')}.${ext}`;
   if (isR2Configured()) {
-    await r2().send(new PutObjectCommand({ Bucket: env.r2.bucket, Key: key, Body: buffer, ContentType: mime }));
+    await r2().send(new PutObjectCommand({ Bucket: env.r2.privateBucket, Key: key, Body: buffer, ContentType: mime }));
   } else {
     const target = path.join(LOCAL_PRIVATE_DIR, key);
     await fs.mkdir(path.dirname(target), { recursive: true });
@@ -102,25 +107,45 @@ export const savePrivateFile = async (buffer: Buffer, folder: string, kind: Docu
   return { key, mime };
 };
 
-/** Lee un documento privado para mandarlo en la respuesta (ya validado el permiso). */
-export const readPrivateFile = async (key: string): Promise<Buffer> => {
+/** Abre un documento privado como stream (sin cargarlo entero en memoria). */
+const openPrivateFile = async (key: string): Promise<{ stream: Readable; size?: number }> => {
   if (key.includes('..') || !key.startsWith('privado/')) throw new HttpError(400, 'Archivo inválido.');
   try {
     if (isR2Configured()) {
-      const obj = await r2().send(new GetObjectCommand({ Bucket: env.r2.bucket, Key: key }));
-      return Buffer.from(await obj.Body!.transformToByteArray());
+      const obj = await r2().send(new GetObjectCommand({ Bucket: env.r2.privateBucket, Key: key }));
+      return { stream: obj.Body as Readable, size: obj.ContentLength };
     }
-    return await fs.readFile(path.join(LOCAL_PRIVATE_DIR, key));
+    const file = path.join(LOCAL_PRIVATE_DIR, key);
+    const { size } = await fs.stat(file);
+    return { stream: createReadStream(file), size };
   } catch (err) {
-    console.error('[eventbox] No se pudo leer el archivo', key, err);
+    const missing = err instanceof NoSuchKey || (err as NodeJS.ErrnoException).code === 'ENOENT';
+    if (!missing) console.error('[eventbox] No se pudo leer el archivo', key, err);
     throw new HttpError(404, 'El archivo ya no está disponible.');
   }
+};
+
+/**
+ * Manda un documento privado en la respuesta (el permiso ya lo validó el controller).
+ * `inline` lo muestra en el navegador; si no, se descarga. Nunca se cachea.
+ */
+export const sendPrivateFile = async (
+  res: Response,
+  key: string,
+  { contentType, fileName, inline }: { contentType: string; fileName: string; inline: boolean },
+) => {
+  const { stream, size } = await openPrivateFile(key);
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename="${safeFileName(fileName)}"`);
+  res.setHeader('Cache-Control', 'private, no-store');
+  if (size) res.setHeader('Content-Length', String(size));
+  await pipeline(stream, res);
 };
 
 export const deletePrivateFile = async (key: string | null | undefined) => {
   if (!key || key.includes('..') || !key.startsWith('privado/')) return;
   try {
-    if (isR2Configured()) await r2().send(new DeleteObjectCommand({ Bucket: env.r2.bucket, Key: key }));
+    if (isR2Configured()) await r2().send(new DeleteObjectCommand({ Bucket: env.r2.privateBucket, Key: key }));
     else await fs.unlink(path.join(LOCAL_PRIVATE_DIR, key));
   } catch (err) {
     console.warn('[eventbox] No se pudo borrar el archivo privado', key, err);
@@ -143,7 +168,7 @@ export const deleteByUrl = async (url: string | null | undefined) => {
   const key = url.slice(base.length);
   if (key.includes('..')) return;
   try {
-    if (isR2Configured()) await r2().send(new DeleteObjectCommand({ Bucket: env.r2.bucket, Key: key }));
+    if (isR2Configured()) await r2().send(new DeleteObjectCommand({ Bucket: env.r2.publicBucket, Key: key }));
     else await fs.unlink(path.join(LOCAL_UPLOAD_DIR, key));
   } catch (err) {
     // Si el archivo viejo no se puede borrar, no se corta la operación del usuario.

@@ -7,7 +7,7 @@ import { usdToArs } from '../services/dollar';
 import { currentMonthStatus, subscriptionState } from '../services/subscription';
 import { Company, Invoice, Payment } from '../models';
 import { HttpError, parseId } from '../utils/http';
-import { parseCompanyInput } from './companyInput';
+import { parseCompanyInput } from '../utils/companyInput';
 
 const findCompany = async (req: Request) => {
   const company = await Company.findByPk(req.user!.companyId!);

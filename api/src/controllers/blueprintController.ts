@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { tenant } from '../middlewares/auth';
 import { Blueprint, Event, User } from '../models';
-import { deletePrivateFile, readPrivateFile, safeFileName, savePrivateFile } from '../services/storage';
+import { deletePrivateFile, savePrivateFile, sendPrivateFile } from '../services/storage';
 import { HttpError, parseId } from '../utils/http';
 
 /** Planos de la empresa (los ve todo el equipo con acceso a eventos). */
@@ -57,12 +57,11 @@ const findBlueprint = async (req: Request) => {
 /** Descarga (o vista en el navegador, para PDF e imágenes). */
 export const downloadBlueprint = async (req: Request, res: Response) => {
   const blueprint = await findBlueprint(req);
-  const file = await readPrivateFile(blueprint.fileKey);
-  const inline = req.query.view === '1' && blueprint.mimeType !== 'image/vnd.dwg';
-  res.setHeader('Content-Type', blueprint.mimeType);
-  res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename="${safeFileName(blueprint.fileName)}"`);
-  res.setHeader('Cache-Control', 'private, no-store');
-  res.send(file);
+  await sendPrivateFile(res, blueprint.fileKey, {
+    contentType: blueprint.mimeType,
+    fileName: blueprint.fileName,
+    inline: req.query.view === '1' && blueprint.mimeType !== 'image/vnd.dwg',
+  });
 };
 
 export const deleteBlueprint = async (req: Request, res: Response) => {

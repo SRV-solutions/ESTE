@@ -8,7 +8,7 @@ import { Category, Item, StoreItem } from '../models';
 import { createItemsForCategory, findAvailableItems, findCompanyItem } from '../services/itemService';
 import { HttpError, parseId, parsePositiveInt } from '../utils/http';
 import { naturalCodeOrder } from '../utils/itemCode';
-import { parseCategoryInput } from './categoryController';
+import { parseCategoryInput } from '../utils/categoryInput';
 
 const MAX_PAGE_SIZE = 100;
 const MAX_PER_BATCH = 1000;

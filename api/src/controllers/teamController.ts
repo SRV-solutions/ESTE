@@ -1,4 +1,3 @@
-import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
 import { literal, Op, Transaction } from 'sequelize';
 import { sequelize } from '../config/database';
@@ -7,10 +6,10 @@ import { getPlan, planHas, TEMPORARY_MAX_DAYS } from '../config/plans';
 import { tenant } from '../middlewares/auth';
 import { Employee, Role, User } from '../models';
 import { hasLogin, UserAccess } from '../models/User';
-import { countActiveTemporary, countAppUsers } from '../services/team';
+import { countActiveTemporary, countAppUsers, fichaOf, personName } from '../services/team';
 import { HttpError, parseId, pick } from '../utils/http';
-import { isValidCuit } from './companyInput';
-import { assertNotLastAdmin, assertPassword, BCRYPT_ROUNDS, validateProfile } from './userController';
+import { isValidCuit } from '../utils/companyInput';
+import { assertNotLastAdmin, assertPassword, hashPassword, validateProfile } from '../services/users';
 
 /**
  * Equipo: todas las personas de la empresa en un solo lugar.
@@ -20,9 +19,6 @@ import { assertNotLastAdmin, assertPassword, BCRYPT_ROUNDS, validateProfile } fr
 
 const ACCESS: UserAccess[] = ['app', 'temporary', 'none'];
 const FICHA_FIELDS = ['cuil', 'position', 'area', 'startDate', 'phone', 'isActive'] as const;
-
-type Named = { username: string | null; firstname: string | null; lastname: string | null };
-export const personName = (u?: Named | null) => (u ? [u.firstname, u.lastname].filter(Boolean).join(' ') || u.username || '' : '');
 
 const trimOrNull = (v: unknown) => (v === undefined ? undefined : String(v ?? '').trim() || null);
 
@@ -43,18 +39,6 @@ const assertCuilFree = async (companyId: number, cuil: unknown, userId?: number)
   if (!cuil) return;
   const other = await Employee.findOne({ where: { companyId, cuil, ...(userId ? { userId: { [Op.ne]: userId } } : {}) }, include: [User] });
   if (other) throw new HttpError(409, `Ese CUIL ya es de ${personName(other.User)}.`, { cuil: 'CUIL repetido.' });
-};
-
-/** La ficha laboral de la persona; se crea la primera vez que hace falta. */
-export const fichaOf = async (user: User, transaction?: Transaction) => {
-  const [ficha] = await Employee.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id, companyId: user.companyId }, transaction });
-  return ficha;
-};
-
-export const findTeamMember = async (companyId: number, id: unknown) => {
-  const user = await User.findOne({ where: { id: parseId(id, 'persona'), companyId } });
-  if (!user) throw new HttpError(404, 'Esa persona no es de tu empresa.');
-  return user;
 };
 
 /** El rol tiene que ser de la empresa (o el Administrador), y solo un administrador puede darlo. */
@@ -202,7 +186,7 @@ export const createPerson = async (req: Request, res: Response) => {
         firstname,
         lastname,
         roleId,
-        password: login ? await bcrypt.hash(String(req.body.password), BCRYPT_ROUNDS) : null,
+        password: login ? await hashPassword(req.body.password) : null,
       },
       { transaction },
     );
@@ -278,7 +262,7 @@ export const updatePerson = async (req: Request, res: Response) => {
         firstname: firstname === undefined ? user.firstname : firstname,
         lastname: lastname === undefined ? user.lastname : lastname,
         roleId,
-        ...(password ? { password: await bcrypt.hash(password, BCRYPT_ROUNDS) } : {}),
+        ...(password ? { password: await hashPassword(password) } : {}),
       },
       { transaction },
     );

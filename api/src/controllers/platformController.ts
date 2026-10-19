@@ -1,4 +1,3 @@
-import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
 import { literal, Op } from 'sequelize';
 import { sequelize } from '../config/database';
@@ -14,7 +13,8 @@ import { isR2Configured } from '../services/storage';
 import { isMercadoPagoConfigured } from '../services/mercadopago';
 import { addDays, subscriptionState, todayAR } from '../services/subscription';
 import { HttpError, parseId } from '../utils/http';
-import { parseCompanyInput } from './companyInput';
+import { parseCompanyInput } from '../utils/companyInput';
+import { EMAIL_RE, hashPassword } from '../services/users';
 
 const count = (table: string, extra = '') =>
   literal(`(SELECT COUNT(*) FROM "${table}" x WHERE x."companyId" = "Company"."id" ${extra})::int`);
@@ -88,7 +88,7 @@ export const createCompany = async (req: Request, res: Response) => {
   const email = String(admin.email || '').trim();
   const password = String(admin.password || '');
   if (!/^[a-zA-Z0-9_.-]+$/.test(username)) throw new HttpError(400, 'Usuario del administrador inválido.', { username: 'Solo letras, números, puntos y guiones.' });
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, 'Email del administrador inválido.', { email: 'Email inválido.' });
+  if (!EMAIL_RE.test(email)) throw new HttpError(400, 'Email del administrador inválido.', { email: 'Email inválido.' });
   if (password.length < 8) throw new HttpError(400, 'La contraseña del administrador debe tener al menos 8 caracteres.', { password: 'Mínimo 8 caracteres.' });
   const plan = PLANS.find((p) => p.id === req.body.plan) ?? getPlan('profesional');
   // Precio del plan, salvo que SRV le ponga uno especial.
@@ -108,7 +108,7 @@ export const createCompany = async (req: Request, res: Response) => {
         email,
         firstname: String(admin.firstname || '').trim() || null,
         lastname: String(admin.lastname || '').trim() || null,
-        password: await bcrypt.hash(password, 10),
+        password: await hashPassword(password),
         roleId: env.adminRoleId,
       },
       { transaction: t },

@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import upload, { documentUpload, imageUpload } from '../config/multer';
 import * as billing from '../controllers/billingController';
 import * as blueprints from '../controllers/blueprintController';
 import * as payroll from '../controllers/payrollController';
@@ -24,6 +23,7 @@ import {
   requireFeature,
   requireSuperAdmin,
 } from '../middlewares/auth';
+import { blueprintUpload, csvUpload, imageUpload, pdfUpload } from '../middlewares/upload';
 import { Action, Entity } from '../models/enums';
 import { asyncHandler as h } from '../utils/http';
 
@@ -56,11 +56,11 @@ router.post('/auth/reset', loginLimiter, h(users.resetPassword));
 router.get('/me', isAuth, h(users.getMyProfile));
 router.patch('/me', isAuth, h(users.updateMyProfile));
 router.put('/me/password', isAuth, h(users.changeMyPassword));
-router.post('/me/avatar', isAuth, imageUpload.single('file'), h(users.uploadMyAvatar));
+router.post('/me/avatar', isAuth, imageUpload, h(users.uploadMyAvatar));
 router.delete('/me/avatar', isAuth, h(users.deleteMyAvatar));
 
 // Reportar un problema: cualquier usuario con sesión (aunque la suscripción esté vencida).
-router.post('/feedback', isAuth, mailLimiter, imageUpload.single('file'), h(feedback.createFeedback));
+router.post('/feedback', isAuth, mailLimiter, imageUpload, h(feedback.createFeedback));
 
 // ---------- Usuarios y roles ----------
 router.get('/users', can(USERS, READ), h(users.listUsers));
@@ -89,7 +89,7 @@ router.get('/items/available/summary', can(ITEMS, READ), h(items.listAvailableSu
 router.get('/items/available/storable',can(ITEMS, READ), h(items.listAvailableStorableItems));
 router.post('/items', can(ITEMS, CREATE), h(items.createItems));
 // El token se valida antes de aceptar el archivo.
-router.post('/items/import', can(ITEMS, CREATE), upload.single('file'), h(items.importItemsCsv));
+router.post('/items/import', can(ITEMS, CREATE), csvUpload, h(items.importItemsCsv));
 router.patch('/items/:id', can(ITEMS, UPDATE), h(items.updateItem));
 router.delete('/items/:id', can(ITEMS, DELETE), h(items.deleteItem));
 
@@ -106,7 +106,7 @@ router.post('/events/:id/duplicate', can(SERVICE_ORDERS, CREATE), requireFeature
 
 // ---------- Planos (plan Profesional) ----------
 router.get('/blueprints', can(SERVICE_ORDERS, READ), requireFeature('blueprints'), h(blueprints.listBlueprints));
-router.post('/blueprints', can(SERVICE_ORDERS, UPDATE), requireFeature('blueprints'), documentUpload.single('file'), h(blueprints.uploadBlueprint));
+router.post('/blueprints', can(SERVICE_ORDERS, UPDATE), requireFeature('blueprints'), blueprintUpload, h(blueprints.uploadBlueprint));
 router.get('/blueprints/:id/file', can(SERVICE_ORDERS, READ), requireFeature('blueprints'), h(blueprints.downloadBlueprint));
 router.delete('/blueprints/:id', can(SERVICE_ORDERS, UPDATE), requireFeature('blueprints'), h(blueprints.deleteBlueprint));
 
@@ -115,7 +115,7 @@ router.delete('/blueprints/:id', can(SERVICE_ORDERS, UPDATE), requireFeature('bl
 const payrollAdmin = [...can(USERS, UPDATE), requireFeature('payroll')];
 const payrollSelf = [isAuth, requireCompany, requireFeature('payroll')];
 router.get('/payslips', payrollAdmin, h(payroll.listPayslips));
-router.post('/payslips', payrollAdmin, documentUpload.single('file'), h(payroll.uploadPayslip));
+router.post('/payslips', payrollAdmin, pdfUpload, h(payroll.uploadPayslip));
 router.delete('/payslips/:id', payrollAdmin, h(payroll.deletePayslip));
 router.post('/payslips/:id/paper', payrollAdmin, h(payroll.markPayslipSignedOnPaper));
 router.get('/payslips/:id/file', payrollSelf, h(payroll.downloadPayslip));
@@ -152,7 +152,7 @@ router.delete(
 const companyAdmin = [isAuth, requireCompanyAdmin];
 router.get('/billing', companyAdmin, h(billing.getBilling));
 router.patch('/company', companyAdmin, h(billing.updateCompany));
-router.post('/company/logo', companyAdmin, imageUpload.single('file'), h(billing.uploadLogo));
+router.post('/company/logo', companyAdmin, imageUpload, h(billing.uploadLogo));
 router.delete('/company/logo', companyAdmin, h(billing.deleteLogo));
 router.patch('/company/plan', companyAdmin, h(plans.changeMyPlan));
 router.get('/plans', isAuth, plans.listPlans);
