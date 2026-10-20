@@ -9,6 +9,7 @@ Stock y órdenes de servicio para empresas de eventos. Un producto de [SRV](http
 - `api/`: Express + Sequelize + PostgreSQL (TypeScript).
 - `front/`: React + Vite + MUI, con el sistema visual de SRV.
 
+
 ## Planes
 
 | | Básico | Profesional | Empresa |
