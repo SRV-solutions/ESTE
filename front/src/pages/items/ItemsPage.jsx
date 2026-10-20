@@ -1,39 +1,102 @@
-import { useState } from 'react';
-import {
-  Autocomplete,
-  Box,
-  Button,
-  Chip,
-  IconButton,
-  ListItemIcon,
-  Menu,
-  MenuItem,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-  useMediaQuery,
-} from '@mui/material';
+import { useMemo, useState } from 'react';
+import { Autocomplete, Box, Button, Chip, IconButton, ListItemIcon, Menu, MenuItem, Paper, Stack, TablePagination, TextField, Typography, useMediaQuery } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
 import ToggleOffOutlined from '@mui/icons-material/ToggleOffOutlined';
 import ToggleOnOutlined from '@mui/icons-material/ToggleOnOutlined';
+import DataTable, { ColumnsButton } from '../../components/DataTable';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
+import { useColumns } from '../../hooks/useColumns';
 import { useDebounced } from '../../hooks/useDebounced';
 import { useLoader } from '../../hooks/useLoader';
 import { api, errorMessage } from '../../lib/api';
+import { userName } from '../../lib/format';
+import { formatArs } from '../../lib/money';
 import ContainerDialog from './ContainerDialog';
+
+const mono = {
+  fontFamily: 'ui-monospace, monospace',
+  fontWeight: 800,
+  whiteSpace: 'nowrap',
+};
+const dash = (
+  <Typography variant="body2" color="text.disabled">
+    —
+  </Typography>
+);
+
+/** Columnas de la tabla de stock. Las marcadas `hidden` se pueden agregar desde "Columnas". */
+const columnsFor = ({ setContainer }) => [
+  { id: 'code', label: 'Código', sx: mono, render: (i) => i.code },
+  {
+    id: 'category',
+    label: 'Categoría',
+    sx: { maxWidth: 280 },
+    render: (i) => (
+      <>
+        <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+          {i.Category?.name}
+        </Typography>
+        {i.Category?.description && (
+          <Typography variant="caption" color="text.secondary" noWrap component="div">
+            {i.Category.description}
+          </Typography>
+        )}
+      </>
+    ),
+  },
+  {
+    id: 'categoryCode',
+    label: 'Código de categoría',
+    hidden: true,
+    sx: mono,
+    render: (i) => i.Category?.code,
+  },
+  { id: 'type', label: 'Tipo', render: (i) => i.Category?.type },
+  {
+    id: 'unity',
+    label: 'Unidad',
+    hidden: true,
+    render: (i) => i.Category?.unity,
+  },
+  {
+    id: 'value',
+    label: 'Valor',
+    hidden: true,
+    align: 'right',
+    render: (i) => formatArs(i.Category?.value),
+  },
+  {
+    id: 'weight',
+    label: 'Peso',
+    hidden: true,
+    align: 'right',
+    hint: 'kg',
+    render: (i) => i.Category?.weight ?? '—',
+  },
+  { id: 'uses', label: 'Usos', align: 'right', render: (i) => i.uses ?? 0 },
+  {
+    id: 'owner',
+    label: 'Responsable',
+    hidden: true,
+    render: (i) => userName(i.Owner) || dash,
+  },
+  {
+    id: 'status',
+    label: 'Estado',
+    render: (i) => <Chip size="small" label={i.isActive ? 'Activo' : 'Inactivo'} color={i.isActive ? 'success' : 'default'} variant="outlined" />,
+  },
+  {
+    id: 'contents',
+    label: 'Contenido',
+    render: (i) =>
+      i.Category?.isContainer ? <Chip size="small" icon={<Inventory2Outlined />} label={`${i.contents.length} fijos`} onClick={() => setContainer(i)} variant="outlined" /> : dash,
+  },
+];
 import CsvImportDialog from './CsvImportDialog';
 import ItemFormDialog from './ItemFormDialog';
 
@@ -53,12 +116,23 @@ const ItemsPage = () => {
   const isPhone = useMediaQuery((t) => t.breakpoints.down('sm'));
   const canCreate = can('items', 'create');
   const canUpdate = can('items', 'update');
+  const columns = useColumns(
+    'items',
+    useMemo(() => columnsFor({ setContainer }), []),
+  );
 
   const categories = useLoader(() => api.get('/categories').then((r) => r.data), []);
   const items = useLoader(
     () =>
       api
-        .get('/items', { params: { page: page + 1, limit, search: debouncedSearch || undefined, category: category?.id } })
+        .get('/items', {
+          params: {
+            page: page + 1,
+            limit,
+            search: debouncedSearch || undefined,
+            category: category?.id,
+          },
+        })
         .then((r) => r.data),
     [page, limit, debouncedSearch, category],
   );
@@ -132,6 +206,7 @@ const ItemsPage = () => {
           isOptionEqualToValue={(a, b) => a.id === b.id}
           renderInput={(params) => <TextField {...params} label="Filtrar por categoría" />}
         />
+        {!isPhone && <ColumnsButton columns={columns} />}
       </Stack>
 
       {items.error ? (
@@ -149,10 +224,23 @@ const ItemsPage = () => {
                   direction="row"
                   alignItems="center"
                   spacing={1}
-                  sx={{ px: 1.5, py: 1.25, borderBottom: 1, borderColor: 'divider', opacity: item.isActive ? 1 : 0.55 }}
+                  sx={{
+                    px: 1.5,
+                    py: 1.25,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                    opacity: item.isActive ? 1 : 0.55,
+                  }}
                 >
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ fontFamily: 'ui-monospace, monospace', fontWeight: 800, fontSize: 13 }} noWrap>
+                    <Typography
+                      sx={{
+                        fontFamily: 'ui-monospace, monospace',
+                        fontWeight: 800,
+                        fontSize: 13,
+                      }}
+                      noWrap
+                    >
                       {item.code}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" noWrap component="div">
@@ -172,71 +260,26 @@ const ItemsPage = () => {
               ))}
             </Box>
           ) : (
-          <TableContainer>
-            <Table size="small" sx={{ minWidth: 720 }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Código</TableCell>
-                  <TableCell>Categoría</TableCell>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell align="right">Usos</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell>Contenido</TableCell>
-                  <TableCell align="right" />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.items.map((item) => (
-                  <TableRow key={item.id} hover sx={{ opacity: item.isActive ? 1 : 0.55 }}>
-                    <TableCell sx={{ fontFamily: 'ui-monospace, monospace', fontWeight: 800, whiteSpace: 'nowrap' }}>{item.code}</TableCell>
-                    <TableCell sx={{ maxWidth: 280 }}>
-                      <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                        {item.Category?.name}
-                      </Typography>
-                      {item.Category?.description && (
-                        <Typography variant="caption" color="text.secondary" noWrap component="div">
-                          {item.Category.description}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>{item.Category?.type}</TableCell>
-                    <TableCell align="right">{item.uses ?? 0}</TableCell>
-                    <TableCell>
-                      <Chip size="small" label={item.isActive ? 'Activo' : 'Inactivo'} color={item.isActive ? 'success' : 'default'} variant="outlined" />
-                    </TableCell>
-                    <TableCell>
-                      {item.Category?.isContainer ? (
-                        <Chip
-                          size="small"
-                          icon={<Inventory2Outlined />}
-                          label={`${item.contents.length} fijos`}
-                          onClick={() => setContainer(item)}
-                          variant="outlined"
-                        />
-                      ) : (
-                        <Typography variant="body2" color="text.disabled">
-                          —
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell align="right" sx={{ width: 48 }}>
-                      {canUpdate && (
-                        <IconButton size="small" onClick={(e) => setMenu({ anchor: e.currentTarget, item })} aria-label="Acciones">
-                          <MoreVert fontSize="small" />
-                        </IconButton>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+            <DataTable
+              columns={columns}
+              rows={data.items}
+              minWidth={720}
+              rowProps={(item) => ({
+                sx: { opacity: item.isActive ? 1 : 0.55 },
+              })}
+              actions={
+                canUpdate
+                  ? (item) => (
+                      <IconButton size="small" onClick={(e) => setMenu({ anchor: e.currentTarget, item })} aria-label="Acciones">
+                        <MoreVert fontSize="small" />
+                      </IconButton>
+                    )
+                  : undefined
+              }
+            />
           )}
           {!data.items.length && (
-            <EmptyState
-              title="No hay ítems para mostrar"
-              description={search || category ? 'Probá con otra búsqueda.' : 'Agregá ítems o importalos desde un CSV.'}
-            />
+            <EmptyState title="No hay ítems para mostrar" description={search || category ? 'Probá con otra búsqueda.' : 'Agregá ítems o importalos desde un CSV.'} />
           )}
           <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
             <TablePagination

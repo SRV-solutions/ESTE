@@ -1,35 +1,115 @@
-import { useMemo, useState } from 'react';
-import {
-  Button,
-  Chip,
-  IconButton,
-  MenuItem,
-  Paper,
-  Stack,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { useCallback, useMemo, useState } from 'react';
+import { Button, Chip, IconButton, MenuItem, Paper, Stack, Switch, TablePagination, TextField, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import EditOutlined from '@mui/icons-material/EditOutlined';
+import DataTable, { ColumnsButton } from '../../components/DataTable';
 import FormDialog from '../../components/FormDialog';
 import { EmptyState, ErrorState, Loading, PageHeader, YesNo } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
+import { useColumns } from '../../hooks/useColumns';
 import { useLoader } from '../../hooks/useLoader';
 import { api, errorMessage } from '../../lib/api';
+import { formatArs } from '../../lib/money';
 import CategoryFields from './CategoryFields';
 import { EMPTY_CATEGORY, isCategoryComplete } from './categoryForm';
 
 const PAGE_SIZE = 25;
+
+/** Columnas de la tabla. Las `hidden` se agregan desde "Columnas". */
+const columnsFor = ({ toggle, canToggle }) => [
+  {
+    id: 'code',
+    label: 'Código',
+    sx: { fontFamily: 'ui-monospace, monospace', fontWeight: 800 },
+    render: (c) => c.code,
+  },
+  {
+    id: 'name',
+    label: 'Nombre',
+    sx: { maxWidth: 300 },
+    render: (c) => (
+      <>
+        <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+          {c.name}
+        </Typography>
+        {c.description && (
+          <Typography variant="caption" color="text.secondary" noWrap component="div">
+            {c.description}
+          </Typography>
+        )}
+      </>
+    ),
+  },
+  {
+    id: 'description',
+    label: 'Descripción',
+    hidden: true,
+    sx: { maxWidth: 320 },
+    render: (c) => c.description || '—',
+  },
+  {
+    id: 'type',
+    label: 'Tipo',
+    render: (c) => <Chip size="small" label={c.type} variant="outlined" />,
+  },
+  { id: 'unity', label: 'Unidad', hidden: true, render: (c) => c.unity },
+  {
+    id: 'value',
+    label: 'Valor',
+    hidden: true,
+    align: 'right',
+    hint: 'por unidad',
+    render: (c) => formatArs(c.value),
+  },
+  {
+    id: 'weight',
+    label: 'Peso',
+    hidden: true,
+    align: 'right',
+    hint: 'kg',
+    render: (c) => c.weight,
+  },
+  {
+    id: 'items',
+    label: 'Ítems',
+    align: 'right',
+    render: (c) => (
+      <>
+        {c.activeItemCount}
+        {c.itemCount !== c.activeItemCount && (
+          <Typography component="span" variant="caption" color="text.disabled">
+            {' '}
+            / {c.itemCount}
+          </Typography>
+        )}
+      </>
+    ),
+  },
+  {
+    id: 'totalValue',
+    label: 'Valor del stock',
+    hidden: true,
+    align: 'right',
+    hint: 'valor × ítems activos',
+    render: (c) => formatArs(c.value * c.activeItemCount),
+  },
+  {
+    id: 'storable',
+    label: 'Almacenable',
+    render: (c) => <YesNo value={c.isStorable} />,
+  },
+  {
+    id: 'container',
+    label: 'Contenedor',
+    render: (c) => <YesNo value={c.isContainer} />,
+  },
+  {
+    id: 'active',
+    label: 'Activa',
+    render: (c) => <Switch size="small" checked={c.isActive} disabled={!canToggle} onChange={() => toggle(c)} />,
+  },
+];
 
 const CategoriesPage = () => {
   const { can } = useAuth();
@@ -46,9 +126,7 @@ const CategoriesPage = () => {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (data || []).filter(
-      (c) =>
-        (show === 'all' || (show === 'active' ? c.isActive : !c.isActive)) &&
-        (!q || `${c.code} ${c.name} ${c.type} ${c.description ?? ''}`.toLowerCase().includes(q)),
+      (c) => (show === 'all' || (show === 'active' ? c.isActive : !c.isActive)) && (!q || `${c.code} ${c.name} ${c.type} ${c.description ?? ''}`.toLowerCase().includes(q)),
     );
   }, [data, search, show]);
 
@@ -67,26 +145,35 @@ const CategoriesPage = () => {
     }
   };
 
-  const toggle = async (category) => {
-    if (category.isActive) {
-      const ok = await confirm({
-        title: `Desactivar ${category.name}`,
-        message: `También se desactivan sus ${category.itemCount} ítem(s): dejan de poder cargarse en órdenes. No se borra nada y se puede volver a activar.`,
-        confirmLabel: 'Desactivar',
-        danger: true,
-      });
-      if (!ok) return;
-    }
-    try {
-      const { data: res } = await api.patch(`/categories/${category.id}/toggle`);
-      notify(res.message);
-      reload();
-    } catch (err) {
-      notify(errorMessage(err), 'error');
-    }
-  };
+  const toggle = useCallback(
+    async (category) => {
+      if (category.isActive) {
+        const ok = await confirm({
+          title: `Desactivar ${category.name}`,
+          message: `También se desactivan sus ${category.itemCount} ítem(s): dejan de poder cargarse en órdenes. No se borra nada y se puede volver a activar.`,
+          confirmLabel: 'Desactivar',
+          danger: true,
+        });
+        if (!ok) return;
+      }
+      try {
+        const { data: res } = await api.patch(`/categories/${category.id}/toggle`);
+        notify(res.message);
+        reload();
+      } catch (err) {
+        notify(errorMessage(err), 'error');
+      }
+    },
+    [confirm, notify, reload],
+  );
 
   const rows = visible.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+  const isPhone = useMediaQuery((t) => t.breakpoints.down('sm'));
+  const canToggle = can('categories', 'delete');
+  const columns = useColumns(
+    'categories',
+    useMemo(() => columnsFor({ toggle, canToggle }), [toggle, canToggle]),
+  );
 
   return (
     <>
@@ -126,6 +213,7 @@ const CategoriesPage = () => {
           <MenuItem value="inactive">Desactivadas</MenuItem>
           <MenuItem value="all">Todas</MenuItem>
         </TextField>
+        {!isPhone && <ColumnsButton columns={columns} />}
       </Stack>
 
       {loading && !data ? (
@@ -134,69 +222,23 @@ const CategoriesPage = () => {
         <ErrorState message={error} onRetry={reload} />
       ) : (
         <Paper variant="outlined">
-          <TableContainer>
-            <Table size="small" sx={{ minWidth: 820 }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Código</TableCell>
-                  <TableCell>Nombre</TableCell>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell align="right">Ítems</TableCell>
-                  <TableCell>Almacenable</TableCell>
-                  <TableCell>Contenedor</TableCell>
-                  <TableCell>Activa</TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map((c) => (
-                  <TableRow key={c.id} hover sx={{ opacity: c.isActive ? 1 : 0.55 }}>
-                    <TableCell sx={{ fontFamily: 'ui-monospace, monospace', fontWeight: 800 }}>{c.code}</TableCell>
-                    <TableCell sx={{ maxWidth: 300 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
-                        {c.name}
-                      </Typography>
-                      {c.description && (
-                        <Typography variant="caption" color="text.secondary" noWrap component="div">
-                          {c.description}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Chip size="small" label={c.type} variant="outlined" />
-                    </TableCell>
-                    <TableCell align="right">
-                      {c.activeItemCount}
-                      {c.itemCount !== c.activeItemCount && (
-                        <Typography component="span" variant="caption" color="text.disabled">
-                          {' '}
-                          / {c.itemCount}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <YesNo value={c.isStorable} />
-                    </TableCell>
-                    <TableCell>
-                      <YesNo value={c.isContainer} />
-                    </TableCell>
-                    <TableCell>
-                      <Switch size="small" checked={c.isActive} disabled={!can('categories', 'delete')} onChange={() => toggle(c)} />
-                    </TableCell>
-                    <TableCell align="right" sx={{ width: 48 }}>
-                      {can('categories', 'update') && (
-                        <Tooltip title="Editar">
-                          <IconButton size="small" onClick={() => setEditing({ ...c, description: c.description ?? '' })}>
-                            <EditOutlined fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            columns={columns}
+            rows={rows}
+            minWidth={820}
+            rowProps={(c) => ({ sx: { opacity: c.isActive ? 1 : 0.55 } })}
+            actions={
+              can('categories', 'update')
+                ? (c) => (
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => setEditing({ ...c, description: c.description ?? '' })}>
+                        <EditOutlined fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )
+                : undefined
+            }
+          />
           {!visible.length && <EmptyState title="No hay categorías para mostrar" />}
           <TablePagination
             component="div"
