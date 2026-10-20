@@ -50,7 +50,13 @@
           "backgroundColor": "#000000"
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Event Box usa tu ubicación para verificar que el check-in se hace en el lugar del evento."
+        }
+      ]
     ],
     "extra": {
       "apiUrl": "http://192.168.0.222:3000"

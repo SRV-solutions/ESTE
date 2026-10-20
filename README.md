@@ -21,21 +21,22 @@ Stock y órdenes de servicio para empresas de eventos. Un producto de [SRV](http
 
 | | Básico | Profesional | Empresa |
 |---|---|---|---|
-| Abono mensual | USD 520 | USD 1.200 | USD 1.400 |
+| Abono mensual | USD 550 | USD 750 | USD 900 |
 | Usuarios de la app | 30 | 100 | 250 |
 | Accesos temporales a la vez (hasta 10 días, renovables) | 10 | 40 | 100 |
-| Por usuario | USD 17,33 | USD 12 | USD 5,60 |
+| Por usuario | USD 18,33 | USD 7,50 | USD 3,60 |
 | Stock, contenedores, eventos, órdenes, PDF, CSV | ✓ | ✓ | ✓ |
 | Duplicar eventos y pasar material entre eventos | | ✓ | ✓ |
 | Responsables por etapa (logística, recepción) | | ✓ | ✓ |
 | Planos compartidos | | ✓ | ✓ |
 | Personal y recibos de sueldo con firma | | ✓ | ✓ |
-| Check-in / check-out en el evento *(en desarrollo)* | | | ✓ |
-| Reportes, varios depósitos, API *(en desarrollo)* | | | ✓ |
+| Check-in / check-out en el evento con geolocalización | | | ✓ |
+| Reportes y estadísticas de uso del stock | | | ✓ |
+| Varios depósitos, API *(en desarrollo)* | | | ✓ |
 | Soporte prioritario | | | ✓ |
 
-La lógica: de Básico a Profesional se pagan las funciones, y el costo por usuario baja de USD 17,33
-a USD 12; de Profesional a Empresa la diferencia es de USD 200, pero suma 150 usuarios y la operación
+La lógica: de Básico a Profesional se pagan las funciones, y el costo por usuario baja de USD 18,33
+a USD 7,50; de Profesional a Empresa la diferencia es de USD 150, pero suma 150 usuarios y la operación
 en el evento, así que el costo por usuario baja a menos de la mitad. Los planes viven en `api/src/config/plans.ts`. La API bloquea los módulos que
 el plan no incluye y el límite de usuarios. En el menú aparecen con candado, o con "Pronto" si están
 en desarrollo.
@@ -93,7 +94,7 @@ Todas las personas de la empresa están en **Equipo**, cada una con un tipo de a
 
 Con el módulo de sueldos, cada persona suma sus datos laborales (CUIL, puesto, área, ingreso) y en **Sueldos** se cargan los recibos del mes.
 
-**Roles y permisos** (pestaña de Equipo): cada empresa tiene sus propios roles y define qué puede ver, crear, editar y borrar cada uno en órdenes, stock, categorías y equipo. Los modifica solo el Administrador. El rol Administrador es fijo (todos los permisos). Una empresa nueva arranca con una copia de los roles de fábrica. Solo un administrador puede dar el rol Administrador o modificar a otro administrador, y nadie cambia su propio rol ni su propio acceso.
+**Roles y permisos** (pestaña de Equipo): cada empresa tiene sus propios roles y define qué puede ver, crear, editar y borrar cada uno en órdenes, eventos, lugares, stock, categorías, equipo, planos, sueldos, check-in y reportes. Los módulos que el plan no incluye se muestran con candado: el permiso se guarda y se activa al cambiar de plan. Los modifica solo el Administrador. El rol Administrador es fijo (todos los permisos). Una empresa nueva arranca con una copia de los roles de fábrica. Solo un administrador puede dar el rol Administrador o modificar a otro administrador, y nadie cambia su propio rol ni su propio acceso.
 
 ## Base de datos
 
@@ -127,3 +128,16 @@ Las reglas se validan en la API (`api/src/services/serviceOrderPolicy.ts`).
 ## Contenedores
 
 Un contenedor (baúl, rack, caja) puede tener **contenido fijo**, que viaja siempre con él (Stock → Contenido fijo), o recibir ítems **solo para una orden**. Los contenedores pueden ir uno dentro de otro, y todo lo que está adentro queda ocupado mientras el de afuera está en una orden. Los dos tipos de contenido se pueden vaciar de una vez.
+
+## Check-in / out y reportes (plan Empresa)
+
+- **Check-in / out**: desde la app móvil o la web, la persona registra cuándo el material llega al evento (check-in) y cuándo se retira (check-out). Si el lugar tiene coordenadas (se cargan en Lugares con "Estoy acá" o desde Google Maps), la API calcula la distancia: dentro del radio (`CHECKIN_RADIUS_M`, 300 m por defecto) queda "en el lugar"; si está lejos, avisa y pide confirmación.
+- **Reportes**: órdenes por mes y por estado, categorías más pedidas, ítems más usados, lugares con más eventos, quién pide más, ítems nunca usados, ciclo promedio de una orden y check-ins del período.
+
+## Equipo: desactivar y eliminar
+
+Desde la ficha de una persona: **Desactivar** la deja sin acceso y sin contar para el plan, conservando todo (se revierte cuando quieras). **Eliminar definitivamente** (solo administradores) borra el usuario y sus recibos; las órdenes que creó quedan sin creador.
+
+## Llevar Event Box al celular
+
+El botón **Llevar al celular**, abajo del menú, muestra un QR con la dirección del sitio; en el teléfono, el mismo botón explica cómo agregarla a la pantalla de inicio (abre a pantalla completa con el ícono de Event Box). La app nativa está en `mobile/`.

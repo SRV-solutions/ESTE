@@ -69,6 +69,7 @@ const EMPTY = {
 
 /** Chip con el estado del acceso de la persona. */
 const AccessChip = ({ person }) => {
+  if (person.disabledAt) return <Chip size="small" color="warning" variant="outlined" label="Desactivado" />;
   if (person.access === 'none') return <Chip size="small" label="Sin acceso" />;
   if (person.access === 'temporary') {
     return person.canLogin ? (
@@ -81,8 +82,40 @@ const AccessChip = ({ person }) => {
 };
 
 const PersonDialog = ({ person, roles: allRoles, payroll, limits, onClose, onSaved }) => {
-  const { notify } = useFeedback();
-  const { user: me, isAdmin } = useAuth();
+  const { notify, confirm } = useFeedback();
+  const { user: me, isAdmin, can } = useAuth();
+  const [acting, setActing] = useState(false);
+
+  const act = async ({ title, message, confirmLabel, request }) => {
+    if (!(await confirm({ title, message, confirmLabel, danger: true }))) return;
+    setActing(true);
+    try {
+      const { data } = await request();
+      notify(data.message);
+      onSaved();
+    } catch (err) {
+      notify(errorMessage(err), 'error');
+    } finally {
+      setActing(false);
+    }
+  };
+  const disabled = !!person.disabledAt;
+  const toggleDisabled = () =>
+    act({
+      title: disabled ? `Activar a ${userName(person)}` : `Desactivar a ${userName(person)}`,
+      message: disabled
+        ? 'Vuelve a poder entrar y a contar para el límite de usuarios del plan.'
+        : 'No va a poder entrar y deja de contar para el plan. Sus órdenes, recibos y datos quedan guardados; se puede volver a activar cuando quieras.',
+      confirmLabel: disabled ? 'Activar' : 'Desactivar',
+      request: () => api.patch(`/team/${person.id}/disabled`, { disabled: !disabled }),
+    });
+  const remove = () =>
+    act({
+      title: `Eliminar a ${userName(person)} definitivamente`,
+      message: 'Se borra el usuario y sus recibos de sueldo. Las órdenes que creó quedan sin creador y el material a su cargo sin responsable. No se puede deshacer.',
+      confirmLabel: 'Eliminar definitivamente',
+      request: () => api.delete(`/team/${person.id}`),
+    });
   const isNew = !person.id;
   const isMe = person.id === me.id;
   const [form, setForm] = useState(() => ({
@@ -275,6 +308,28 @@ const PersonDialog = ({ person, roles: allRoles, payroll, limits, onClose, onSav
             </Grid>
           </>
         )}
+        {!isNew && !isMe && (
+          <Grid item xs={12}>
+            <Box sx={{ mt: 1, p: 2, borderRadius: 2, border: 1, borderColor: 'divider' }}>
+              <Typography variant="subtitle2">{disabled ? 'Usuario desactivado' : 'Desactivar o eliminar'}</Typography>
+              <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 1.5 }}>
+                {disabled
+                  ? `Desactivado el ${formatDateTime(person.disabledAt)}: no entra ni cuenta para el plan.`
+                  : 'Desactivar conserva todo y se puede revertir. Eliminar es definitivo.'}
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Button variant="outlined" color={disabled ? 'primary' : 'warning'} size="small" onClick={toggleDisabled} disabled={acting || saving}>
+                  {disabled ? 'Volver a activar' : 'Desactivar'}
+                </Button>
+                {isAdmin && can('users', 'delete') && (
+                  <Button variant="outlined" color="error" size="small" onClick={remove} disabled={acting || saving}>
+                    Eliminar definitivamente
+                  </Button>
+                )}
+              </Stack>
+            </Box>
+          </Grid>
+        )}
       </Grid>
     </FormDialog>
   );
@@ -388,7 +443,7 @@ const TeamPage = () => {
                       alignItems: 'center',
                       height: '100%',
                       cursor: can('users', 'update') ? 'pointer' : 'default',
-                      opacity: p.access === 'none' || p.canLogin ? 1 : 0.6,
+                      opacity: p.disabledAt ? 0.5 : p.access === 'none' || p.canLogin ? 1 : 0.6,
                       '&:hover': can('users', 'update') ? { borderColor: 'primary.main' } : undefined,
                     }}
                   >

@@ -5,6 +5,7 @@ import * as blueprints from '../controllers/blueprintController';
 import * as payroll from '../controllers/payrollController';
 import * as plans from '../controllers/planController';
 import * as categories from '../controllers/categoryController';
+import * as checkins from '../controllers/checkinController';
 import * as events from '../controllers/eventController';
 import * as feedback from '../controllers/feedbackController';
 import * as items from '../controllers/itemController';
@@ -12,6 +13,7 @@ import * as locations from '../controllers/locationController';
 import * as roles from '../controllers/roleController';
 import * as orders from '../controllers/serviceOrderController';
 import * as platform from '../controllers/platformController';
+import * as reports from '../controllers/reportController';
 import * as storeItems from '../controllers/storeItemController';
 import * as team from '../controllers/teamController';
 import * as users from '../controllers/userController';
@@ -28,7 +30,7 @@ import { Action, Entity } from '../models/enums';
 import { asyncHandler as h } from '../utils/http';
 
 const { CREATE, READ, UPDATE, DELETE } = Action;
-const { USERS, CATEGORIES, ITEMS, SERVICE_ORDERS } = Entity;
+const { USERS, CATEGORIES, ITEMS, SERVICE_ORDERS, EVENTS, LOCATIONS, BLUEPRINTS, PAYROLL, CHECKIN, REPORTS } = Entity;
 
 const router = Router();
 
@@ -69,6 +71,8 @@ router.get('/users/:id', can(USERS, READ), h(users.getUser));
 router.get('/team', can(USERS, READ), h(team.listTeam));
 router.post('/team', can(USERS, CREATE), h(team.createPerson));
 router.patch('/team/:id', can(USERS, UPDATE), h(team.updatePerson));
+router.patch('/team/:id/disabled', can(USERS, UPDATE), h(team.setDisabled));
+router.delete('/team/:id', can(USERS, DELETE), requireCompanyAdmin, h(team.deletePerson));
 
 router.get('/roles', can(USERS, READ), h(roles.listRoles));
 router.get('/roles/:id', can(USERS, READ), h(roles.getRole));
@@ -99,32 +103,37 @@ router.delete('/containers/:parentId/contents', can(ITEMS, UPDATE), h(storeItems
 router.delete('/containers/:parentId/contents/:childId', can(ITEMS, UPDATE), h(storeItems.removeFromContainer));
 
 // ---------- Eventos y lugares ----------
-router.get('/events', can(SERVICE_ORDERS, READ), h(events.listEvents));
-router.post('/events', can(SERVICE_ORDERS, CREATE), h(events.createEvent));
-router.patch('/events/:id', can(SERVICE_ORDERS, UPDATE), h(events.updateEvent));
-router.post('/events/:id/duplicate', can(SERVICE_ORDERS, CREATE), requireFeature('eventTools'), h(events.duplicateEvent));
+router.get('/events', can(EVENTS, READ), h(events.listEvents));
+router.post('/events', can(EVENTS, CREATE), h(events.createEvent));
+router.patch('/events/:id', can(EVENTS, UPDATE), h(events.updateEvent));
+router.post('/events/:id/duplicate', can(EVENTS, CREATE), requireFeature('eventTools'), h(events.duplicateEvent));
 
 // ---------- Planos (plan Profesional) ----------
-router.get('/blueprints', can(SERVICE_ORDERS, READ), requireFeature('blueprints'), h(blueprints.listBlueprints));
-router.post('/blueprints', can(SERVICE_ORDERS, UPDATE), requireFeature('blueprints'), blueprintUpload, h(blueprints.uploadBlueprint));
-router.get('/blueprints/:id/file', can(SERVICE_ORDERS, READ), requireFeature('blueprints'), h(blueprints.downloadBlueprint));
-router.delete('/blueprints/:id', can(SERVICE_ORDERS, UPDATE), requireFeature('blueprints'), h(blueprints.deleteBlueprint));
+router.get('/blueprints', can(BLUEPRINTS, READ), requireFeature('blueprints'), h(blueprints.listBlueprints));
+router.post('/blueprints', can(BLUEPRINTS, CREATE), requireFeature('blueprints'), blueprintUpload, h(blueprints.uploadBlueprint));
+router.get('/blueprints/:id/file', can(BLUEPRINTS, READ), requireFeature('blueprints'), h(blueprints.downloadBlueprint));
+router.delete('/blueprints/:id', can(BLUEPRINTS, DELETE), requireFeature('blueprints'), h(blueprints.deleteBlueprint));
 
 // ---------- Personal y recibos de sueldo (plan Profesional) ----------
-// Gestiona quien puede editar usuarios (admin y asistente de usuarios); cada empleado ve los suyos.
-const payrollAdmin = [...can(USERS, UPDATE), requireFeature('payroll')];
+// Gestiona quien tiene el permiso de sueldos; cada empleado ve los suyos.
 const payrollSelf = [isAuth, requireCompany, requireFeature('payroll')];
-router.get('/payslips', payrollAdmin, h(payroll.listPayslips));
-router.post('/payslips', payrollAdmin, pdfUpload, h(payroll.uploadPayslip));
-router.delete('/payslips/:id', payrollAdmin, h(payroll.deletePayslip));
-router.post('/payslips/:id/paper', payrollAdmin, h(payroll.markPayslipSignedOnPaper));
+router.get('/payslips', can(PAYROLL, READ), requireFeature('payroll'), h(payroll.listPayslips));
+router.post('/payslips', can(PAYROLL, CREATE), requireFeature('payroll'), pdfUpload, h(payroll.uploadPayslip));
+router.delete('/payslips/:id', can(PAYROLL, DELETE), requireFeature('payroll'), h(payroll.deletePayslip));
+router.post('/payslips/:id/paper', can(PAYROLL, UPDATE), requireFeature('payroll'), h(payroll.markPayslipSignedOnPaper));
 router.get('/payslips/:id/file', payrollSelf, h(payroll.downloadPayslip));
 router.get('/me/payslips', payrollSelf, h(payroll.listMyPayslips));
 router.post('/me/payslips/:id/sign', payrollSelf, h(payroll.signMyPayslip));
 
-router.get('/locations', can(SERVICE_ORDERS, READ), h(locations.listLocations));
-router.post('/locations', can(SERVICE_ORDERS, CREATE), h(locations.createLocation));
-router.patch('/locations/:id', can(SERVICE_ORDERS, UPDATE), h(locations.updateLocation));
+router.get('/locations', can(LOCATIONS, READ), h(locations.listLocations));
+router.post('/locations', can(LOCATIONS, CREATE), h(locations.createLocation));
+router.patch('/locations/:id', can(LOCATIONS, UPDATE), h(locations.updateLocation));
+
+// ---------- Check-in / check-out en el evento y reportes (plan Empresa) ----------
+router.get('/checkins', can(CHECKIN, READ), requireFeature('checkin'), h(checkins.listCheckIns));
+router.get('/service-orders/:id/checkins', can(CHECKIN, READ), requireFeature('checkin'), h(checkins.listOrderCheckIns));
+router.post('/service-orders/:id/checkins', can(CHECKIN, CREATE), requireFeature('checkin'), h(checkins.createCheckIn));
+router.get('/reports/overview', can(REPORTS, READ), requireFeature('reports'), h(reports.overview));
 
 // ---------- Órdenes de servicio ----------
 router.get('/service-orders', can(SERVICE_ORDERS, READ), h(orders.listServiceOrders));

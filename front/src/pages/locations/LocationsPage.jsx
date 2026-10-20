@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, IconButton, Paper, Stack, TextField, Tooltip, useMediaQuery } from '@mui/material';
+import { Button, IconButton, Link, Paper, Stack, TextField, Tooltip, Typography, useMediaQuery } from '@mui/material';
+import MyLocationOutlined from '@mui/icons-material/MyLocationOutlined';
 import Add from '@mui/icons-material/Add';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import DataTable, { ColumnsButton } from '../../components/DataTable';
@@ -11,7 +12,7 @@ import { useColumns } from '../../hooks/useColumns';
 import { useLoader } from '../../hooks/useLoader';
 import { api, errorMessage } from '../../lib/api';
 
-const EMPTY = { locationName: '', address: '', city: '', country: '' };
+const EMPTY = { locationName: '', address: '', city: '', country: '', lat: '', lng: '' };
 const FIELDS = [
   ['locationName', 'Nombre del lugar'],
   ['address', 'Dirección'],
@@ -29,6 +30,20 @@ const COLUMNS = [
   { id: 'address', label: 'Dirección', render: (l) => l.address },
   { id: 'city', label: 'Ciudad', render: (l) => l.city },
   { id: 'country', label: 'País', render: (l) => l.country },
+  {
+    id: 'coords',
+    label: 'Coordenadas',
+    render: (l) =>
+      l.lat != null ? (
+        <Link href={`https://www.google.com/maps?q=${l.lat},${l.lng}`} target="_blank" rel="noopener" variant="body2">
+          Ver en el mapa
+        </Link>
+      ) : (
+        <Typography variant="body2" color="text.disabled">
+          Sin cargar
+        </Typography>
+      ),
+  },
 ];
 
 const LocationsPage = () => {
@@ -40,13 +55,24 @@ const LocationsPage = () => {
   const columns = useColumns('locations', COLUMNS);
   const { data, loading, error, reload } = useLoader(() => api.get('/locations').then((r) => r.data), []);
 
-  const valid = editing && FIELDS.every(([k]) => String(editing[k] ?? '').trim());
+  const valid = editing && FIELDS.every(([k]) => String(editing[k] ?? '').trim()) && !!String(editing.lat ?? '').trim() === !!String(editing.lng ?? '').trim();
+
+  // Coordenadas desde el navegador (hay que estar en el lugar) para el check-in por geolocalización.
+  const useMyPosition = () => {
+    if (!navigator.geolocation) return notify('Este navegador no tiene geolocalización.', 'error');
+    navigator.geolocation.getCurrentPosition(
+      (p) => setEditing((e) => ({ ...e, lat: p.coords.latitude.toFixed(6), lng: p.coords.longitude.toFixed(6) })),
+      () => notify('No se pudo obtener la ubicación. Revisá el permiso del navegador.', 'error'),
+      { enableHighAccuracy: true, timeout: 12000 },
+    );
+  };
 
   const save = async () => {
     setSaving(true);
     try {
-      if (editing.id) await api.patch(`/locations/${editing.id}`, editing);
-      else await api.post('/locations', editing);
+      const payload = { ...editing, lat: String(editing.lat ?? '').trim() || null, lng: String(editing.lng ?? '').trim() || null };
+      if (editing.id) await api.patch(`/locations/${editing.id}`, payload);
+      else await api.post('/locations', payload);
       notify(editing.id ? 'Lugar actualizado.' : 'Lugar creado.');
       setEditing(null);
       reload();
@@ -65,7 +91,7 @@ const LocationsPage = () => {
         actions={
           <Stack direction="row" spacing={1}>
             {!isPhone && <ColumnsButton columns={columns} />}
-            {can('serviceOrders', 'create') && (
+            {can('locations', 'create') && (
               <Button variant="contained" startIcon={<Add />} onClick={() => setEditing(EMPTY)}>
                 Nuevo lugar
               </Button>
@@ -84,10 +110,10 @@ const LocationsPage = () => {
             columns={columns}
             rows={data}
             actions={
-              can('serviceOrders', 'update')
+              can('locations', 'update')
                 ? (l) => (
                     <Tooltip title="Editar">
-                      <IconButton size="small" onClick={() => setEditing(l)}>
+                      <IconButton size="small" onClick={() => setEditing({ ...l, lat: l.lat ?? '', lng: l.lng ?? '' })}>
                         <EditOutlined fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -104,6 +130,23 @@ const LocationsPage = () => {
           FIELDS.map(([key, label], i) => (
             <TextField key={key} label={label} value={editing[key]} onChange={(e) => setEditing({ ...editing, [key]: e.target.value })} required autoFocus={i === 0} />
           ))}
+        {editing && (
+          <>
+            <Typography variant="subtitle2" sx={{ mt: 1 }}>
+              Coordenadas (para el check-in)
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <TextField label="Latitud" value={editing.lat ?? ''} onChange={(e) => setEditing({ ...editing, lat: e.target.value })} inputProps={{ inputMode: 'decimal' }} sx={{ flex: 1 }} />
+              <TextField label="Longitud" value={editing.lng ?? ''} onChange={(e) => setEditing({ ...editing, lng: e.target.value })} inputProps={{ inputMode: 'decimal' }} sx={{ flex: 1 }} />
+              <Button variant="outlined" startIcon={<MyLocationOutlined />} onClick={useMyPosition} sx={{ whiteSpace: 'nowrap' }}>
+                Estoy acá
+              </Button>
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+              Con las coordenadas, el check-in verifica que la persona esté en el lugar. Se cargan estando ahí con “Estoy acá”, o copiándolas de Google Maps (clic derecho sobre el lugar).
+            </Typography>
+          </>
+        )}
       </FormDialog>
     </>
   );

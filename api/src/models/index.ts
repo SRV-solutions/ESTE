@@ -1,5 +1,6 @@
 import Blueprint from './Blueprint';
 import Category from './Category';
+import CheckIn from './CheckIn';
 import Company from './Company';
 import Employee from './Employee';
 import Event from './Event';
@@ -36,6 +37,10 @@ PasswordResetToken.belongsTo(User, { foreignKey: 'userId' });
 Blueprint.belongsTo(Event, { foreignKey: 'eventId' });
 Blueprint.belongsTo(User, { foreignKey: 'uploadedBy', as: 'Uploader' });
 Event.hasMany(Blueprint, { foreignKey: 'eventId' });
+
+CheckIn.belongsTo(ServiceOrder, { foreignKey: 'serviceOrderId' });
+CheckIn.belongsTo(User, { foreignKey: 'userId' });
+ServiceOrder.hasMany(CheckIn, { foreignKey: 'serviceOrderId' });
 
 Employee.belongsTo(User, { foreignKey: 'userId' });
 User.hasOne(Employee, { foreignKey: 'userId' });
@@ -80,6 +85,7 @@ Item.hasMany(StoreItem, { foreignKey: 'itemIdParent', as: 'PermanentContents' })
 export {
   Blueprint,
   Category,
+  CheckIn,
   Company,
   Employee,
   Event,

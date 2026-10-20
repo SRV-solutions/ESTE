@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { fileUrl } from '../lib/api';
@@ -60,6 +61,35 @@ export const Field = ({ label, error, style, ...props }) => (
     {error && <Text style={[type.small, { color: C.danger, marginTop: 4 }]}>{error}</Text>}
   </View>
 );
+
+/** Campo de contraseña con el ojo para mostrarla u ocultarla. */
+export const PasswordField = ({ label, error, style, ...props }) => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={[{ marginBottom: 12 }, style]}>
+      {label && <Text style={s.label}>{label}</Text>}
+      <View>
+        <TextInput
+          placeholderTextColor={C.text3}
+          style={[s.input, { paddingRight: 48 }, error && { borderColor: C.danger }]}
+          secureTextEntry={!visible}
+          autoCapitalize="none"
+          autoCorrect={false}
+          {...props}
+        />
+        <Pressable
+          onPress={() => setVisible((v) => !v)}
+          hitSlop={10}
+          accessibilityLabel={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          style={{ position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center' }}
+        >
+          <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={22} color={C.text3} />
+        </Pressable>
+      </View>
+      {error && <Text style={[type.small, { color: C.danger, marginTop: 4 }]}>{error}</Text>}
+    </View>
+  );
+};
 
 export const Loading = ({ label = 'Cargando…' }) => (
   <View style={s.center}>

@@ -4,7 +4,7 @@ import { HttpError, parseId } from '../utils/http';
 
 /** Usuarios que cuentan para el límite del plan: los que entran a la app de forma permanente. */
 export const countAppUsers = (companyId: number, transaction?: Transaction) =>
-  User.count({ where: { companyId, access: 'app' }, transaction });
+  User.count({ where: { companyId, access: 'app', disabledAt: null }, transaction });
 
 /** Accesos temporales vigentes (tienen tope por plan). */
 export const countActiveTemporary = (companyId: number, exceptUserId?: number, transaction?: Transaction) =>
@@ -12,6 +12,7 @@ export const countActiveTemporary = (companyId: number, exceptUserId?: number, t
     where: {
       companyId,
       access: 'temporary',
+      disabledAt: null,
       accessUntil: { [Op.gt]: new Date() },
       ...(exceptUserId ? { id: { [Op.ne]: exceptUserId } } : {}),
     },

@@ -23,6 +23,8 @@ const EventsPage = lazy(() => import('./pages/events/EventsPage'));
 const BlueprintsPage = lazy(() => import('./pages/blueprints/BlueprintsPage'));
 const PayrollPage = lazy(() => import('./pages/payroll/PayrollPage'));
 const MyPayslipsPage = lazy(() => import('./pages/payroll/MyPayslipsPage'));
+const CheckinPage = lazy(() => import('./pages/checkin/CheckinPage'));
+const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/PasswordRecoveryPages').then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./pages/PasswordRecoveryPages').then((m) => ({ default: m.ResetPasswordPage })));
 
@@ -45,17 +47,17 @@ const App = () => (
       <Route path="service-orders/:id" element={guard(<OrderDetailPage />, ['serviceOrders', 'read'])} />
       {/* Ruta vieja, por si quedaron enlaces guardados */}
       <Route path="service-orders/:id/items" element={<LegacyOrderRedirect />} />
-      <Route path="events" element={guard(<EventsPage />, ['serviceOrders', 'read'])} />
-      <Route path="blueprints" element={guard(<BlueprintsPage />, ['serviceOrders', 'read'], { feature: 'blueprints' })} />
-      <Route path="payroll" element={guard(<PayrollPage />, ['users', 'update'], { feature: 'payroll' })} />
+      <Route path="events" element={guard(<EventsPage />, ['events', 'read'])} />
+      <Route path="blueprints" element={guard(<BlueprintsPage />, ['blueprints', 'read'], { feature: 'blueprints' })} />
+      <Route path="payroll" element={guard(<PayrollPage />, ['payroll', 'read'], { feature: 'payroll' })} />
       <Route path="staff" element={<Navigate to="/payroll" replace />} />
       <Route path="my-payslips" element={guard(<MyPayslipsPage />, undefined, { feature: 'payroll' })} />
       {/* Módulos en desarrollo: la protección muestra "Pronto" o el plan que los incluye. */}
-      <Route path="checkin" element={guard(<EmptyState title="Check-in / out" />, ['serviceOrders', 'read'], { feature: 'checkin' })} />
-      <Route path="reports" element={guard(<EmptyState title="Reportes" />, ['serviceOrders', 'read'], { feature: 'reports' })} />
+      <Route path="checkin" element={guard(<CheckinPage />, ['checkin', 'read'], { feature: 'checkin' })} />
+      <Route path="reports" element={guard(<ReportsPage />, ['reports', 'read'], { feature: 'reports' })} />
       <Route path="items" element={guard(<ItemsPage />, ['items', 'read'])} />
       <Route path="categories" element={guard(<CategoriesPage />, ['categories', 'read'])} />
-      <Route path="locations" element={guard(<LocationsPage />, ['serviceOrders', 'read'])} />
+      <Route path="locations" element={guard(<LocationsPage />, ['locations', 'read'])} />
       <Route path="team" element={guard(<TeamPage />, ['users', 'read'])} />
       <Route path="users" element={<Navigate to="/team" replace />} />
       <Route path="profile" element={guard(<ProfilePage />, undefined, { allowBlocked: true })} />

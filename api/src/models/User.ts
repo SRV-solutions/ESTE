@@ -8,8 +8,8 @@ import type Role from './Role';
 export type UserAccess = 'app' | 'temporary' | 'none';
 
 /** Si la persona puede entrar ahora a Event Box. */
-export const hasLogin = (u: { access: UserAccess; accessUntil: Date | null }) =>
-  u.access === 'app' || (u.access === 'temporary' && !!u.accessUntil && new Date(u.accessUntil) > new Date());
+export const hasLogin = (u: { access: UserAccess; accessUntil: Date | null; disabledAt?: Date | null }) =>
+  !u.disabledAt && (u.access === 'app' || (u.access === 'temporary' && !!u.accessUntil && new Date(u.accessUntil) > new Date()));
 
 class User extends Model {
   declare id: number;
@@ -21,6 +21,8 @@ class User extends Model {
   declare password: string;
   declare access: UserAccess;
   declare accessUntil: Date | null;
+  /** Desactivado: no entra ni cuenta para el plan, pero conserva su historial. */
+  declare disabledAt: Date | null;
   declare firstname: string | null;
   declare lastname: string | null;
   declare roleId: number;
@@ -40,6 +42,7 @@ User.init(
     password: { type: DataTypes.STRING, allowNull: true },
     access: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'app' },
     accessUntil: { type: DataTypes.DATE, allowNull: true },
+    disabledAt: { type: DataTypes.DATE, allowNull: true },
     firstname: { type: DataTypes.STRING, allowNull: true },
     lastname: { type: DataTypes.STRING, allowNull: true },
     roleId: { type: DataTypes.INTEGER, references: { model: 'Role', key: 'id' } },

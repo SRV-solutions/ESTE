@@ -32,6 +32,7 @@ export const signToken = (user: { id: number }) =>
 
 export const assertCanLogin = (user: User) => {
   if (hasLogin(user)) return;
+  if (user.disabledAt) throw new HttpError(401, 'Tu usuario está desactivado. Hablá con el administrador de tu empresa.');
   if (user.access === 'temporary') throw new HttpError(401, 'Tu acceso temporal venció. Pedile a un administrador que lo renueve.');
   throw new HttpError(401, 'Esta persona no tiene acceso a Event Box.');
 };
@@ -49,7 +50,7 @@ export const isAuth = asyncHandler(async (req: Request, _res: Response, next: Ne
   }
 
   const user = await User.findByPk(Number(payload.id), {
-    attributes: ['id', 'roleId', 'companyId', 'isSuperAdmin', 'access', 'accessUntil'],
+    attributes: ['id', 'roleId', 'companyId', 'isSuperAdmin', 'access', 'accessUntil', 'disabledAt'],
     include: [
       { model: Role, include: [{ model: Permission, through: { attributes: [] } }] },
       { model: Company, attributes: ['id', 'status', 'paidUntil', 'plan'] },

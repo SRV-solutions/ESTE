@@ -10,6 +10,12 @@ export enum Entity {
   USERS = 'users',
   CATEGORIES = 'categories',
   ITEMS = 'items',
+  EVENTS = 'events',
+  LOCATIONS = 'locations',
+  BLUEPRINTS = 'blueprints',
+  PAYROLL = 'payroll',
+  CHECKIN = 'checkin',
+  REPORTS = 'reports',
 }
 
 export enum ServiceOrderStatus {

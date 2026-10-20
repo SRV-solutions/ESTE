@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import CheckInCard from '../../src/components/CheckInCard';
 import { Button, Card, Chip, Divider, EmptyState, ErrorState, Loading, Overline, Row } from '../../src/components/ui';
 import { useAuth } from '../../src/context/AuthContext';
 import { api, errorMessage } from '../../src/lib/api';
@@ -27,7 +28,7 @@ const Info = ({ label, value }) => (
 
 export default function OrderDetail() {
   const { id } = useLocalSearchParams();
-  const { user } = useAuth();
+  const { user, can, hasFeature } = useAuth();
   const [busy, setBusy] = useState(null);
   const { data: order, loading, error, reload } = useLoader(() => api.get(`/service-orders/${id}`), [id]);
 
@@ -90,6 +91,8 @@ export default function OrderDetail() {
           )}
         </Card>
       )}
+
+      {hasFeature('checkin') && can('checkin', 'read') && order.status !== 'disassembled' && <CheckInCard order={order} canCreate={can('checkin', 'create')} />}
 
       <Text style={[type.h2, { marginTop: 10, marginBottom: 8 }]}>Datos</Text>
       <Card>

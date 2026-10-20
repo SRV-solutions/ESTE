@@ -20,11 +20,23 @@ const Gate = ({ children }) => {
     if (status === 'authenticated' && onLogin) router.replace('/');
   }, [status, onLogin, router]);
 
-  if (status === 'loading') return <Loading label="Abriendo Event Box…" />;
+  // Mientras la redirección no se ejecutó, no se dibuja ninguna pantalla sin sesión (ni el login con sesión).
+  if (status === 'loading' || (status === 'anonymous' && !onLogin) || (status === 'authenticated' && onLogin)) {
+    return <Loading label="Abriendo Event Box…" />;
+  }
   return children;
 };
 
-const screen = { headerStyle: { backgroundColor: C.bg }, headerTintColor: C.text, headerTitleStyle: { fontWeight: '900' }, headerShadowVisible: false, contentStyle: { backgroundColor: C.bg } };
+const screen = {
+  headerStyle: { backgroundColor: C.bg },
+  headerTintColor: C.text,
+  headerTitleStyle: { fontWeight: '900' },
+  headerShadowVisible: false,
+  contentStyle: { backgroundColor: C.bg },
+  // Solo la flecha para volver (sin el nombre de la pantalla anterior, que en las pestañas sería "(tabs)").
+  headerBackButtonDisplayMode: 'minimal',
+  headerBackTitle: '',
+};
 
 export default function RootLayout() {
   return (
@@ -35,7 +47,7 @@ export default function RootLayout() {
           <Gate>
             <Stack screenOptions={screen}>
               <Stack.Screen name="login" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Inicio' }} />
               <Stack.Screen name="orders/[id]" options={{ title: 'Orden' }} />
               <Stack.Screen name="payslips" options={{ title: 'Mis recibos' }} />
               <Stack.Screen name="events" options={{ title: 'Eventos' }} />

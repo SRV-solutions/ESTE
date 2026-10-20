@@ -35,6 +35,9 @@ export const env = {
     ssl: process.env.DB_SSL === 'true',
   },
 
+  /** Radio (metros) alrededor del lugar dentro del cual el check-in cuenta como "en el lugar". */
+  checkinRadiusM: num(process.env.CHECKIN_RADIUS_M, 300),
+
   billing: {
     trialDays: num(process.env.TRIAL_DAYS, 14),
     /** Días después del vencimiento en los que la empresa sigue entrando (con aviso) antes del bloqueo. */

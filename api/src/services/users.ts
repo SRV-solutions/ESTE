@@ -55,6 +55,6 @@ export const assertPassword = (password: unknown, field = 'password') => {
 
 /** Cada empresa tiene que conservar al menos un administrador. */
 export const assertNotLastAdmin = async (user: User) => {
-  const admins = await User.count({ where: { companyId: user.companyId, roleId: env.adminRoleId, access: 'app' } });
+  const admins = await User.count({ where: { companyId: user.companyId, roleId: env.adminRoleId, access: 'app', disabledAt: null } });
   if (admins <= 1) throw new HttpError(409, 'Es el único administrador de la empresa: asigná otro antes de cambiarle el rol.');
 };

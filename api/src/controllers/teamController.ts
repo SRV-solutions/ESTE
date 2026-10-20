@@ -4,9 +4,10 @@ import { sequelize } from '../config/database';
 import { env } from '../config/env';
 import { getPlan, planHas, TEMPORARY_MAX_DAYS } from '../config/plans';
 import { tenant } from '../middlewares/auth';
-import { Employee, Role, User } from '../models';
+import { Employee, Payslip, Role, User } from '../models';
 import { hasLogin, UserAccess } from '../models/User';
-import { countActiveTemporary, countAppUsers, fichaOf, personName } from '../services/team';
+import { countActiveTemporary, countAppUsers, fichaOf, findTeamMember, personName } from '../services/team';
+import { deletePrivateFile } from '../services/storage';
 import { HttpError, parseId, pick } from '../utils/http';
 import { isValidCuit } from '../utils/companyInput';
 import { assertNotLastAdmin, assertPassword, hashPassword, validateProfile } from '../services/users';
@@ -98,7 +99,7 @@ export const listTeam = async (req: Request, res: Response) => {
   const payroll = planHas(req.user!.plan, 'payroll');
   const users = await User.findAll({
     where: { companyId },
-    attributes: ['id', 'username', 'email', 'firstname', 'lastname', 'avatarUrl', 'roleId', 'access', 'accessUntil'],
+    attributes: ['id', 'username', 'email', 'firstname', 'lastname', 'avatarUrl', 'roleId', 'access', 'accessUntil', 'disabledAt'],
     include: [
       { model: Role, attributes: ['id', 'roleName'] },
       ...(payroll
@@ -120,6 +121,7 @@ export const listTeam = async (req: Request, res: Response) => {
       roleName: u.Role?.roleName ?? null,
       access: u.access,
       accessUntil: u.accessUntil,
+      disabledAt: u.disabledAt,
       canLogin: hasLogin(u),
       ...(payroll
         ? {
@@ -269,4 +271,50 @@ export const updatePerson = async (req: Request, res: Response) => {
     if (payroll && Object.keys(ficha).length) await (await fichaOf(user, transaction)).update(ficha, { transaction });
   });
   res.json({ message: 'Datos guardados.' });
+};
+
+/** Quién puede tocar a esta persona: nadie a sí mismo, y a un administrador solo otro administrador. */
+const assertCanManage = (req: Request, user: User, verb: string) => {
+  if (user.id === req.user!.id) throw new HttpError(400, `No podés ${verb} tu propio usuario.`);
+  if (user.roleId === env.adminRoleId && !req.user!.isAdmin) throw new HttpError(403, `Solo un administrador puede ${verb} a otro administrador.`);
+};
+
+/**
+ * Desactivar: no entra ni cuenta para el plan, pero conserva su historial (órdenes, recibos).
+ * Volver a activar vuelve a contar para el límite de usuarios.
+ */
+export const setDisabled = async (req: Request, res: Response) => {
+  const user = await findTeamMember(tenant(req), req.params.id);
+  const disabled = req.body.disabled !== false;
+  assertCanManage(req, user, disabled ? 'desactivar' : 'activar');
+  if (disabled === !!user.disabledAt) return res.json({ message: disabled ? 'Ya estaba desactivado.' : 'Ya estaba activo.' });
+  if (disabled && user.roleId === env.adminRoleId && user.access === 'app') await assertNotLastAdmin(user);
+  if (!disabled && user.access === 'app') {
+    const plan = getPlan(req.user!.plan);
+    if ((await countAppUsers(user.companyId!)) >= plan.maxUsers) {
+      throw new HttpError(403, `Llegaron al límite de ${plan.maxUsers} usuarios del plan ${plan.name}: no se puede reactivar.`);
+    }
+  }
+  await user.update({ disabledAt: disabled ? new Date() : null });
+  res.json({ message: disabled ? `${personName(user)} quedó desactivado: no puede entrar y no cuenta para el plan.` : `${personName(user)} vuelve a estar activo.` });
+};
+
+/**
+ * Borrado definitivo (solo administradores). Las órdenes que creó quedan sin creador, el material
+ * que tiene a cargo sin responsable, y sus recibos de sueldo se borran con sus archivos.
+ */
+export const deletePerson = async (req: Request, res: Response) => {
+  const user = await findTeamMember(tenant(req), req.params.id);
+  assertCanManage(req, user, 'eliminar');
+  if (user.roleId === env.adminRoleId && user.access === 'app' && !user.disabledAt) await assertNotLastAdmin(user);
+
+  const employee = await Employee.findOne({ where: { userId: user.id } });
+  const payslips = employee ? await Payslip.findAll({ where: { employeeId: employee.id }, attributes: ['id', 'fileKey'] }) : [];
+  const name = personName(user);
+  await sequelize.transaction(async (transaction) => {
+    if (employee) await employee.destroy({ transaction }); // los recibos caen en cascada
+    await user.destroy({ transaction });
+  });
+  for (const slip of payslips) await deletePrivateFile(slip.fileKey);
+  res.json({ message: `${name} fue eliminado${payslips.length ? ` junto con ${payslips.length} recibo(s)` : ''}.` });
 };

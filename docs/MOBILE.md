@@ -1,6 +1,6 @@
 # App móvil (Expo / React Native)
 
-La app móvil de Event Box vive en `mobile/`. Está hecha con **Expo** y **React Native**, así que la
+La app móvil de Event Box vive en `mobile/`. Está hecha con **Expo (SDK 57)** y **React Native**, así que la
 misma base corre en **iOS y Android**. Usa la misma API que la versión web (no hay nada que agregar
 en el servidor) y mantiene el sistema visual de SRV: negro, azul `#0B78FB`, naranja `#F6950A`,
 títulos en 900.

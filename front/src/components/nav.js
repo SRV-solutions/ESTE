@@ -10,7 +10,7 @@ import EventOutlined from '@mui/icons-material/EventOutlined';
 import ArchitectureOutlined from '@mui/icons-material/ArchitectureOutlined';
 import BadgeOutlined from '@mui/icons-material/BadgeOutlined';
 import ReceiptLongOutlined from '@mui/icons-material/ReceiptLongOutlined';
-import QrCodeScannerOutlined from '@mui/icons-material/QrCodeScannerOutlined';
+import WhereToVoteOutlined from '@mui/icons-material/WhereToVoteOutlined';
 import InsightsOutlined from '@mui/icons-material/InsightsOutlined';
 
 /**
@@ -23,16 +23,16 @@ import InsightsOutlined from '@mui/icons-material/InsightsOutlined';
 export const NAV = [
   { to: '/', label: 'Inicio', icon: DashboardOutlined, end: true },
   { to: '/service-orders', label: 'Órdenes de servicio', short: 'Órdenes', icon: AssignmentOutlined, perm: ['serviceOrders', 'read'] },
-  { to: '/events', label: 'Eventos', icon: EventOutlined, perm: ['serviceOrders', 'read'] },
+  { to: '/events', label: 'Eventos', icon: EventOutlined, perm: ['events', 'read'] },
   { to: '/items', label: 'Stock', icon: Inventory2Outlined, perm: ['items', 'read'] },
   { to: '/categories', label: 'Categorías', icon: CategoryOutlined, perm: ['categories', 'read'] },
-  { to: '/locations', label: 'Lugares', icon: PlaceOutlined, perm: ['serviceOrders', 'read'] },
-  { to: '/blueprints', label: 'Planos', icon: ArchitectureOutlined, perm: ['serviceOrders', 'read'], feature: 'blueprints' },
-  { to: '/checkin', label: 'Check-in / out', icon: QrCodeScannerOutlined, perm: ['serviceOrders', 'read'], feature: 'checkin' },
-  { to: '/reports', label: 'Reportes', icon: InsightsOutlined, perm: ['serviceOrders', 'read'], feature: 'reports' },
+  { to: '/locations', label: 'Lugares', icon: PlaceOutlined, perm: ['locations', 'read'] },
+  { to: '/blueprints', label: 'Planos', icon: ArchitectureOutlined, perm: ['blueprints', 'read'], feature: 'blueprints' },
+  { to: '/checkin', label: 'Check-in / out', icon: WhereToVoteOutlined, perm: ['checkin', 'read'], feature: 'checkin' },
+  { to: '/reports', label: 'Reportes', icon: InsightsOutlined, perm: ['reports', 'read'], feature: 'reports' },
   { to: '/my-payslips', label: 'Mis recibos', icon: ReceiptLongOutlined, employee: true, feature: 'payroll' },
   { to: '/team', label: 'Equipo', icon: GroupOutlined, perm: ['users', 'read'], section: 'Equipo' },
-  { to: '/payroll', label: 'Sueldos', icon: BadgeOutlined, perm: ['users', 'update'], feature: 'payroll', section: 'Equipo' },
+  { to: '/payroll', label: 'Sueldos', icon: BadgeOutlined, perm: ['payroll', 'read'], feature: 'payroll', section: 'Equipo' },
   { to: '/billing', label: 'Mi empresa', icon: StorefrontOutlined, admin: true, section: 'Administración' },
   { to: '/platform', label: 'Panel SRV', icon: AdminPanelSettingsOutlined, superAdmin: true, section: 'SRV' },
 ];

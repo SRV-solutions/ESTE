@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Field } from '../src/components/ui';
+import { Button, Field, PasswordField } from '../src/components/ui';
 import { useAuth } from '../src/context/AuthContext';
 import { errorMessage, session } from '../src/lib/api';
 import { C, type } from '../src/lib/theme';
@@ -40,7 +40,7 @@ export default function LoginScreen() {
           </View>
 
           <Field label="Usuario" value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} textContentType="username" returnKeyType="next" />
-          <Field label="Contraseña" value={password} onChangeText={setPassword} secureTextEntry textContentType="password" returnKeyType="go" onSubmitEditing={submit} />
+          <PasswordField label="Contraseña" value={password} onChangeText={setPassword} textContentType="password" returnKeyType="go" onSubmitEditing={submit} />
           {!!error && (
             <Text style={[type.small, { color: C.danger, marginBottom: 12 }]}>
               {error}

@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
-import { FEATURES, getPlan, IN_DEVELOPMENT, PlanId, PLANS } from '../config/plans';
+import { FEATURES, getPlan, IN_DEVELOPMENT, PERMISSION_ENTITIES, PlanId, PLANS } from '../config/plans';
 import { Company } from '../models';
 import { countAppUsers } from '../services/team';
 import { HttpError } from '../utils/http';
 
 /** Catálogo de planes y módulos (para la pantalla de planes y los candados del menú). */
 export const listPlans = (_req: Request, res: Response) => {
-  res.json({ plans: PLANS, features: FEATURES, inDevelopment: IN_DEVELOPMENT });
+  res.json({ plans: PLANS, features: FEATURES, inDevelopment: IN_DEVELOPMENT, permissionEntities: PERMISSION_ENTITIES });
 };
 
 /** Uso actual frente al límite del plan. */

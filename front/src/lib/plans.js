@@ -29,7 +29,7 @@ export const MIN_PLAN = {
 
 /** Planes para los selectores del Panel SRV (el detalle completo viene de GET /plans). */
 export const PLAN_OPTIONS = [
-  { id: 'basico', name: 'Básico', priceUsd: 520, maxUsers: 30, maxTemporary: 10 },
-  { id: 'profesional', name: 'Profesional', priceUsd: 1200, maxUsers: 100, maxTemporary: 40 },
-  { id: 'empresa', name: 'Empresa', priceUsd: 1400, maxUsers: 250, maxTemporary: 100 },
+  { id: 'basico', name: 'Básico', priceUsd: 550, maxUsers: 30, maxTemporary: 10 },
+  { id: 'profesional', name: 'Profesional', priceUsd: 750, maxUsers: 100, maxTemporary: 40 },
+  { id: 'empresa', name: 'Empresa', priceUsd: 900, maxUsers: 250, maxTemporary: 100 },
 ];

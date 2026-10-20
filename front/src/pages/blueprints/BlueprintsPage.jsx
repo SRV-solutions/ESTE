@@ -97,7 +97,7 @@ const BlueprintsPage = () => {
   const [uploading, setUploading] = useState(false);
   const [eventFilter, setEventFilter] = useState(null);
   const [search, setSearch] = useState('');
-  const canUpload = can('serviceOrders', 'update');
+  const canUpload = can('blueprints', 'create');
 
   const { data, loading, error, reload } = useLoader(async () => {
     const [blueprints, events] = await Promise.all([api.get('/blueprints').then((r) => r.data), api.get('/events').then((r) => r.data)]);

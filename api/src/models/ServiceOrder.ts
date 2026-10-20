@@ -11,7 +11,8 @@ class ServiceOrder extends Model {
   declare id: number;
   declare companyId: number;
   declare eventId: number;
-  declare orderedBy: number;
+  /** Null si la persona que la creó fue eliminada. */
+  declare orderedBy: number | null;
   declare deployedBy: number | null;
   declare checkedBy: number | null;
   /** Responsable del traslado (lista → despachada → en el evento → volviendo). */
@@ -40,7 +41,7 @@ ServiceOrder.init(
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     companyId: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'Company', key: 'id' } },
     eventId: { type: DataTypes.INTEGER, references: { model: 'Event', key: 'id' } },
-    orderedBy: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'User', key: 'id' } },
+    orderedBy: { type: DataTypes.INTEGER, allowNull: true, references: { model: 'User', key: 'id' } },
     deployedBy: { type: DataTypes.INTEGER, allowNull: true, references: { model: 'User', key: 'id' } },
     checkedBy: { type: DataTypes.INTEGER, allowNull: true, references: { model: 'User', key: 'id' } },
     logisticsBy: { type: DataTypes.INTEGER, allowNull: true },

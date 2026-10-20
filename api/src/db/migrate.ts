@@ -7,6 +7,7 @@ import planesYModulos from './migrations/003_planes_y_modulos';
 import personalEsUsuario from './migrations/004_personal_es_usuario';
 import accesoDelEquipo from './migrations/005_acceso_del_equipo';
 import rolesPorEmpresa from './migrations/006_roles_por_empresa';
+import checkinReportesPermisos from './migrations/007_checkin_reportes_permisos';
 
 export interface Migration {
   name: string;
@@ -14,7 +15,7 @@ export interface Migration {
 }
 
 /** Orden de aplicación. Nunca se edita una migración ya aplicada: se agrega una nueva. */
-const MIGRATIONS: Migration[] = [baseline, multiempresa, archivosYAvisos, planesYModulos, personalEsUsuario, accesoDelEquipo, rolesPorEmpresa];
+const MIGRATIONS: Migration[] = [baseline, multiempresa, archivosYAvisos, planesYModulos, personalEsUsuario, accesoDelEquipo, rolesPorEmpresa, checkinReportesPermisos];
 
 const run = (sql: string, t: Transaction) => sequelize.query(sql, { transaction: t });
 export const sql = run;

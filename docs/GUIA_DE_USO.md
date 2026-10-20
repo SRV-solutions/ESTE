@@ -95,6 +95,29 @@ peso, y si son almacenables o contenedores. Desactivar una categoría desactiva 
 Con el plan Profesional o Empresa, los planos del evento se suben en PDF, imagen o DWG y los ve
 todo el equipo desde el navegador o el celular. Son privados de la empresa.
 
+## Check-in / out (plan Empresa)
+
+![Check-in](img/checkin.jpg)
+
+Registrá cuándo el material **llega al evento** y cuándo **se retira**, con la ubicación del celular o del
+navegador. Elegís la orden en curso, agregás una nota si hace falta y tocás *Check-in: llegó* o
+*Check-out: se retira*.
+
+- Si el lugar del evento tiene coordenadas (se cargan en **Lugares**, con *Estoy acá* o copiándolas
+  de Google Maps), se calcula la distancia: dentro de 300 m queda **En el lugar**; si estás más lejos,
+  te avisa cuánto y podés registrarlo igual como *fuera del lugar*.
+- Cada registro guarda quién, cuándo, la distancia y un link al mapa.
+- En la app móvil está en el detalle de cada orden, con el GPS del teléfono.
+
+## Reportes (plan Empresa)
+
+![Reportes](img/reportes.jpg)
+
+Qué se usa y qué está parado, para los últimos 3, 6, 12 o 24 meses: ítems activos, cuántos están en
+uso ahora, cuántos nunca se usaron, ciclo promedio de una orden (de creada a desarmada), órdenes por
+mes y por estado, categorías más pedidas, ítems más usados, lugares con más eventos, quién pide más y
+los check-ins del período.
+
 ## Equipo
 
 ![Equipo](img/equipo.jpg)
@@ -110,14 +133,22 @@ accesos temporales hay frente al límite del plan. Cada persona tiene un tipo de
 
 Al tocar a una persona se editan su acceso, sus datos, su usuario, su contraseña, su rol y, con el
 módulo de sueldos, sus **datos laborales** (CUIL, puesto, área, fecha de ingreso, teléfono, si cobra
-sueldo).
+sueldo). Abajo de la ficha:
+
+- **Desactivar**: no entra ni cuenta para el plan, pero conserva sus órdenes, recibos y datos. Se
+  revierte con *Volver a activar*.
+- **Eliminar definitivamente** (solo administradores): borra el usuario y sus recibos. Las órdenes
+  que creó quedan sin creador y el material a su cargo sin responsable.
 
 ### Roles y permisos
 
 ![Roles y permisos](img/roles.jpg)
 
-Cada empresa define sus roles. Un rol dice qué se puede **ver, crear, editar y borrar** en órdenes y
-eventos, stock, categorías y equipo. Vienen roles de fábrica para empezar y se pueden crear otros
+Cada empresa define sus roles. Un rol dice qué se puede **ver, crear, editar y borrar** en órdenes,
+eventos, lugares, stock, categorías, equipo, planos, sueldos, check-in y reportes. Los módulos que
+el plan no incluye aparecen con candado: el permiso se guarda y empieza a valer al cambiar de plan.
+
+![Editor de un rol](img/roles-editor.jpg) Vienen roles de fábrica para empezar y se pueden crear otros
 (por ejemplo, *Chofer*). El rol **Administrador** es fijo y tiene todos los permisos.
 
 Por seguridad: los roles los modifica solo un administrador; solo un administrador puede dar el rol
@@ -155,6 +186,13 @@ Un recibo sin firmar se puede reemplazar o borrar; uno firmado ya no se modifica
 - **Planes**: la comparación de Básico, Profesional y Empresa, el uso de usuarios frente al límite y
   el cambio de plan. El precio nuevo rige desde el próximo abono. No se puede bajar a un plan con
   menos usuarios de los que ya tienen acceso.
+
+## Llevar Event Box al celular
+
+El botón **Llevar al celular**, al pie del menú, muestra un QR para abrir el sitio desde el teléfono.
+En el celular, el mismo botón explica cómo agregarla a la pantalla de inicio: queda con el ícono de
+Event Box y abre a pantalla completa, como una app. (La app nativa, con GPS para el check-in, es
+aparte: ver [MOBILE.md](MOBILE.md).)
 
 ## Reportar un problema
 

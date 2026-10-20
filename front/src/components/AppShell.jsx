@@ -26,11 +26,13 @@ import PersonOutline from '@mui/icons-material/PersonOutline';
 import Logout from '@mui/icons-material/Logout';
 import BugReportOutlined from '@mui/icons-material/BugReportOutlined';
 import LockOutlined from '@mui/icons-material/LockOutlined';
+import PhoneIphoneOutlined from '@mui/icons-material/PhoneIphoneOutlined';
 import { useAuth } from '../context/AuthContext';
 import { useColorMode } from '../context/ColorModeContext';
 import { userName } from '../lib/format';
 import { BySrv, CompanyLogo, EventBoxLogo } from './Brand';
 import FeedbackDialog from './FeedbackDialog';
+import InstallDialog from './InstallDialog';
 import { NAV, visibleNav } from './nav';
 import SubscriptionBanner from './SubscriptionBanner';
 import UserAvatar from './UserAvatar';
@@ -72,7 +74,7 @@ const SidebarHeader = ({ company, isAdmin, onNavigate }) => {
   );
 };
 
-const SidebarContent = ({ onNavigate }) => {
+const SidebarContent = ({ onNavigate, onInstall }) => {
   const auth = useAuth();
   const items = visibleNav(auth);
   return (
@@ -98,6 +100,12 @@ const SidebarContent = ({ onNavigate }) => {
         ))}
       </List>
       <Box sx={{ mt: 'auto', px: 1, pt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <ListItemButton onClick={onInstall} sx={{ borderRadius: 2, py: 0.75 }}>
+          <ListItemIcon sx={{ minWidth: 34 }}>
+            <PhoneIphoneOutlined fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Llevar al celular" primaryTypographyProps={{ fontSize: 13, fontWeight: 700 }} />
+        </ListItemButton>
         {auth.company && <EventBoxLogo size={20} fontSize={14} />}
         <BySrv />
       </Box>
@@ -112,6 +120,7 @@ const AppShell = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [reporting, setReporting] = useState(false);
+  const [installing, setInstalling] = useState(false);
   const { user, logout } = useAuth();
   const { mode, toggle } = useColorMode();
   const navigate = useNavigate();
@@ -129,7 +138,7 @@ const AppShell = () => {
           ModalProps={{ keepMounted: true }}
           PaperProps={{ sx: { width: DRAWER_WIDTH, borderRight: 1, borderColor: 'divider', bgcolor: 'background.paper' } }}
         >
-          <SidebarContent onNavigate={() => setMobileOpen(false)} />
+          <SidebarContent onNavigate={() => setMobileOpen(false)} onInstall={() => { setMobileOpen(false); setInstalling(true); }} />
         </Drawer>
       </Box>
 
@@ -224,6 +233,7 @@ const AppShell = () => {
         </Box>
       </Box>
       <FeedbackDialog open={reporting} onClose={() => setReporting(false)} />
+      <InstallDialog open={installing} onClose={() => setInstalling(false)} />
     </Box>
   );
 };

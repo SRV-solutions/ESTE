@@ -52,7 +52,7 @@ export default function MoreScreen() {
 
       <Card style={{ padding: 0 }}>
         {payroll && <ListRow icon="receipt-outline" title="Mis recibos" subtitle="Ver y firmar los recibos de sueldo" onPress={() => router.push('/payslips')} />}
-        {can('serviceOrders', 'read') && <ListRow icon="calendar-outline" title="Eventos" subtitle="Los eventos de la empresa" onPress={() => router.push('/events')} />}
+        {can('events', 'read') && <ListRow icon="calendar-outline" title="Eventos" subtitle="Los eventos de la empresa" onPress={() => router.push('/events')} />}
         <ListRow icon="bug-outline" title="Reportar un problema" subtitle="Le llega al equipo de SRV" onPress={() => router.push('/feedback')} />
       </Card>
 

@@ -12,7 +12,7 @@ const PITCH = {
   payroll: 'Cargá los recibos de sueldo en PDF y que cada persona los vea y los firme en conformidad desde su usuario.',
   eventTools: 'Duplicá un evento con todo su material y pasá el material de un evento que terminó directo al siguiente.',
   stageOwners: 'Asigná un responsable para logística y otro para la recepción: cada uno avanza su etapa.',
-  checkin: 'Escaneá cada ítem al salir del depósito y al volver del evento: sabés qué falta antes de cerrar la orden.',
+  checkin: 'Registrá desde el celular cuándo el material llega al evento y cuándo se retira, con la ubicación verificada contra el lugar.',
   reports: 'Qué material se usa más, cuál está parado, cuántos eventos por mes y qué se pierde o se rompe.',
   multiWarehouse: 'Manejá varios depósitos y mové stock entre ellos.',
   apiAccess: 'Conectá Event Box con tus sistemas.',

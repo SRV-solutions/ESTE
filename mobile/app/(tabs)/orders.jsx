@@ -36,8 +36,10 @@ const matches = (o, filter, user) => {
 export default function OrdersScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  // El filtro vive en la URL de la pestaña: así "Me toca" desde Inicio lo cambia aunque la pestaña ya esté abierta.
   const params = useLocalSearchParams();
-  const [filter, setFilter] = useState(params.filter || 'active');
+  const filter = params.filter || 'active';
+  const setFilter = (value) => router.setParams({ filter: value === 'active' ? undefined : value });
   const [search, setSearch] = useState('');
   const { data, loading, refreshing, error, reload, refresh } = useLoader(() => api.get('/service-orders'), []);
 
@@ -55,10 +57,16 @@ export default function OrdersScreen() {
       <View style={{ paddingHorizontal: 18 }}>
         <Field placeholder="Buscar evento, lugar, cliente o N°" value={search} onChangeText={setSearch} autoCorrect={false} style={{ marginBottom: 8 }} />
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 18, gap: 8, paddingBottom: 10 }}>
+      {/* flexGrow 0: si no, la lista de abajo (flex 1) aplasta la tira de filtros hasta que no se ve. */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0, flexShrink: 0 }}
+        contentContainerStyle={{ paddingHorizontal: 18, gap: 8, paddingBottom: 10, alignItems: 'center' }}
+      >
         {FILTERS.map((f) => (
           <Pressable key={f.value} onPress={() => setFilter(f.value)}>
-            <Chip label={f.label} color={filter === f.value ? C.primary : C.text3} filled={filter === f.value} style={{ paddingVertical: 6, paddingHorizontal: 14 }} />
+            <Chip label={f.label} color={filter === f.value ? C.primary : C.text3} filled={filter === f.value} style={{ paddingVertical: 7, paddingHorizontal: 14 }} />
           </Pressable>
         ))}
       </ScrollView>

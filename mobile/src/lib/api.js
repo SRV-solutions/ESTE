@@ -96,8 +96,16 @@ export const api = {
 
 export const errorMessage = (err, fallback = 'Algo salió mal.') => err?.message || fallback;
 
-/** URL absoluta de un archivo público (logo, avatar). */
-export const fileUrl = (value) => (value && !/^https?:/.test(value) ? `${baseUrl}${value}` : value);
+/**
+ * URL absoluta de un archivo público (logo, avatar). En desarrollo la API guarda las imágenes con su
+ * propia dirección (`http://localhost:3000/...`); en el celular "localhost" es el teléfono, así que
+ * se reemplaza por el servidor configurado.
+ */
+export const fileUrl = (value) => {
+  if (!value) return value;
+  if (!/^https?:/.test(value)) return `${baseUrl}${value}`;
+  return value.replace(/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?/, baseUrl);
+};
 
 /** Descarga un archivo privado (recibo, plano) con el token y devuelve la ruta local. */
 export const downloadPrivate = async (path, fileName) => {

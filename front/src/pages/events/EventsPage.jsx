@@ -101,8 +101,8 @@ const EventsPage = () => {
     return { events, locations };
   }, []);
 
-  const canEdit = can('serviceOrders', 'update');
-  const canCreate = can('serviceOrders', 'create');
+  const canEdit = can('events', 'update');
+  const canCreate = can('events', 'create');
   const canDuplicate = hasFeature('eventTools');
 
   const visible = useMemo(() => {

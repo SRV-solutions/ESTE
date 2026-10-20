@@ -8,6 +8,9 @@ class Location extends Model {
   declare address: string;
   declare city: string;
   declare country: string;
+  /** Coordenadas del lugar, para el check-in por geolocalización (opcionales). */
+  declare lat: number | null;
+  declare lng: number | null;
 }
 
 Location.init(
@@ -18,6 +21,8 @@ Location.init(
     address: { type: DataTypes.STRING, allowNull: false },
     city: { type: DataTypes.STRING, allowNull: false },
     country: { type: DataTypes.STRING, allowNull: false },
+    lat: { type: DataTypes.DOUBLE, allowNull: true },
+    lng: { type: DataTypes.DOUBLE, allowNull: true },
   },
   { sequelize, modelName: 'Location', tableName: 'Location', timestamps: false },
 );

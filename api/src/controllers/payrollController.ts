@@ -172,7 +172,7 @@ export const downloadPayslip = async (req: Request, res: Response) => {
   const payslip = await Payslip.findOne({ where: { id: parseId(req.params.id), companyId: tenant(req) }, include: [{ model: Employee, include: [User] }] });
   if (!payslip) throw new HttpError(404, 'Recibo no encontrado.');
   const isOwner = payslip.Employee?.userId === req.user!.id;
-  const canManage = req.user!.permissions.some((p) => p.entity === 'users' && p.action === 'update');
+  const canManage = req.user!.permissions.some((p) => p.entity === 'payroll' && p.action === 'read');
   if (!isOwner && !canManage) throw new HttpError(403, 'No podés ver este recibo.');
 
   const person = payslip.Employee?.User;

@@ -23,15 +23,10 @@ import LockOutlined from '@mui/icons-material/LockOutlined';
 import FormDialog from '../../components/FormDialog';
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
+import { useLoader } from '../../hooks/useLoader';
 import { api, errorMessage, fieldErrors } from '../../lib/api';
+import { FEATURE_LABELS, MIN_PLAN } from '../../lib/plans';
 
-/** Qué se puede permitir: cada sección por las cuatro acciones. */
-const ENTITIES = [
-  { id: 'serviceOrders', label: 'Órdenes y eventos', hint: 'Órdenes de servicio, eventos, lugares y planos' },
-  { id: 'items', label: 'Stock', hint: 'Ítems y contenedores' },
-  { id: 'categories', label: 'Categorías', hint: 'Categorías del stock' },
-  { id: 'users', label: 'Equipo', hint: 'Personas, accesos y sueldos' },
-];
 const ACTIONS = [
   { id: 'read', label: 'Ver' },
   { id: 'create', label: 'Crear' },
@@ -39,15 +34,17 @@ const ACTIONS = [
   { id: 'delete', label: 'Borrar' },
 ];
 
-const summary = (permissions) =>
-  ENTITIES.map((e) => {
-    const acts = ACTIONS.filter((a) => permissions.includes(`${e.id}.${a.id}`));
+/** Las secciones y acciones las define la API (plans.permissionEntities); acá solo se dibujan. */
+const summary = (entities, permissions) =>
+  entities.map((e) => {
+    const acts = ACTIONS.filter((a) => e.actions.includes(a.id) && permissions.includes(`${e.id}.${a.id}`));
     if (!acts.length) return null;
-    return `${e.label}: ${acts.length === ACTIONS.length ? 'todo' : acts.map((a) => a.label.toLowerCase()).join(', ')}`;
+    return { text: `${e.label}: ${acts.length === e.actions.length ? 'todo' : acts.map((a) => a.label.toLowerCase()).join(', ')}`, feature: e.feature };
   }).filter(Boolean);
 
-const RoleDialog = ({ role, onClose, onSaved }) => {
+const RoleDialog = ({ role, entities, onClose, onSaved }) => {
   const { notify } = useFeedback();
+  const { hasFeature } = useAuth();
   const isNew = !role.id;
   const [form, setForm] = useState({ roleName: role.roleName || '', description: role.description || '', permissions: role.permissions || ['serviceOrders.read'] });
   const [errors, setErrors] = useState({});
@@ -102,28 +99,46 @@ const RoleDialog = ({ role, onClose, onSaved }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {ENTITIES.map((e) => (
-              <TableRow key={e.id}>
-                <TableCell>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                    {e.label}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {e.hint}
-                  </Typography>
-                </TableCell>
-                {ACTIONS.map((a) => (
-                  <TableCell key={a.id} align="center" padding="checkbox">
-                    <Checkbox checked={has(`${e.id}.${a.id}`)} onChange={() => toggle(e.id, a.id)} inputProps={{ 'aria-label': `${e.label}: ${a.label}` }} />
+            {entities.map((e) => {
+              const locked = e.feature && !hasFeature(e.feature);
+              return (
+                <TableRow key={e.id} sx={{ opacity: locked ? 0.55 : 1 }}>
+                  <TableCell>
+                    <Stack direction="row" spacing={0.75} alignItems="center">
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                        {e.label}
+                      </Typography>
+                      {e.feature && (
+                        <Tooltip title={locked ? `Módulo del plan ${MIN_PLAN[e.feature]}: la empresa no lo tiene. El permiso se guarda, pero no tiene efecto hasta pasar de plan.` : `Módulo ${FEATURE_LABELS[e.feature]} (incluido en tu plan)`}>
+                          <Chip size="small" icon={locked ? <LockOutlined /> : undefined} label={locked ? `Plan ${MIN_PLAN[e.feature]}` : 'Módulo'} sx={{ height: 20, fontSize: 11 }} />
+                        </Tooltip>
+                      )}
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                      {e.hint}
+                    </Typography>
                   </TableCell>
-                ))}
-              </TableRow>
-            ))}
+                  {ACTIONS.map((a) =>
+                    e.actions.includes(a.id) ? (
+                      <TableCell key={a.id} align="center" padding="checkbox">
+                        <Checkbox checked={has(`${e.id}.${a.id}`)} onChange={() => toggle(e.id, a.id)} inputProps={{ 'aria-label': `${e.label}: ${a.label}` }} />
+                      </TableCell>
+                    ) : (
+                      <TableCell key={a.id} align="center" padding="checkbox">
+                        <Typography variant="caption" color="text.disabled">
+                          —
+                        </Typography>
+                      </TableCell>
+                    ),
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </Box>
       <Typography variant="caption" color="text.secondary">
-        Marcar una acción también marca “Ver”. Los datos de la empresa, el abono y los roles son solo del Administrador.
+        Marcar una acción también marca “Ver”. Los módulos con candado son de un plan superior: el permiso queda guardado y se activa al cambiar de plan. Los datos de la empresa, el abono y los roles son solo del Administrador.
       </Typography>
     </FormDialog>
   );
@@ -131,9 +146,11 @@ const RoleDialog = ({ role, onClose, onSaved }) => {
 
 /** Roles de la empresa y qué puede hacer cada uno. Solo el administrador los modifica. */
 const RolesSection = ({ roles, onChanged }) => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, hasFeature } = useAuth();
   const { notify, confirm } = useFeedback();
   const [editing, setEditing] = useState(null);
+  const { data: plans } = useLoader(() => api.get('/plans').then((r) => r.data), []);
+  const entities = plans?.permissionEntities || [];
 
   const remove = async (role) => {
     if (!(await confirm({ title: `Borrar el rol ${role.roleName}`, confirmLabel: 'Borrar', danger: true }))) return;
@@ -201,7 +218,9 @@ const RolesSection = ({ roles, onChanged }) => {
                       Configura la empresa, el equipo y los roles. No se modifica.
                     </Typography>
                   ) : (
-                    summary(r.permissions).map((s) => <Chip key={s} size="small" label={s} />)
+                    summary(entities, r.permissions).map((s) => (
+                      <Chip key={s.text} size="small" label={s.text} icon={s.feature && !hasFeature(s.feature) ? <LockOutlined /> : undefined} sx={{ opacity: s.feature && !hasFeature(s.feature) ? 0.6 : 1 }} />
+                    ))
                   )}
                   {!r.locked && !r.permissions.length && (
                     <Typography variant="caption" color="text.secondary">
@@ -217,6 +236,7 @@ const RolesSection = ({ roles, onChanged }) => {
       {editing && (
         <RoleDialog
           role={editing}
+          entities={entities}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
