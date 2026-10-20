@@ -8,6 +8,14 @@ Stock y órdenes de servicio para empresas de eventos. Un producto de [SRV](http
 - **Reportar un problema**: botón en la barra superior; llega al Panel SRV (Reportes) y por mail a soporte.
 - `api/`: Express + Sequelize + PostgreSQL (TypeScript).
 - `front/`: React + Vite + MUI, con el sistema visual de SRV.
+- `mobile/`: app para iOS y Android con Expo / React Native (ver [docs/MOBILE.md](docs/MOBILE.md)).
+
+## Documentación
+
+- [Guía de uso con capturas](docs/GUIA_DE_USO.md): cada pantalla, paso a paso.
+- [Guía en PDF](docs/Event-Box-Guia-de-uso-planes-y-alcances.pdf): uso, planes, requisitos y alcances, para mandarle a un cliente.
+- [App móvil](docs/MOBILE.md): probarla con Expo Go y publicarla en las tiendas.
+- [Archivos (R2) y mails (Resend)](docs/ARCHIVOS_Y_MAILS.md) · [Cobros](docs/COBROS.md).
 
 ## Planes
 
@@ -53,6 +61,11 @@ cd front
 cp .env.example .env
 yarn install
 yarn dev
+
+# App móvil (Expo Go en el celular, misma red Wi-Fi)
+cd mobile
+npm install
+npx expo start
 ```
 
 ## Usuarios
