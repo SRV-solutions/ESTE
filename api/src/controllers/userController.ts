@@ -1,387 +1,203 @@
-import { Request } from 'express';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import Role from '../models/Role';
-import User from '../models/User';
-import ServiceOrder from '../models/ServiceOrder';
-import Permission from '../models/Permission';
+import crypto from 'crypto';
+import { Request, Response } from 'express';
+import { Op } from 'sequelize';
+import { sequelize } from '../config/database';
+import { env } from '../config/env';
+import { assertCanLogin, signToken, tenant } from '../middlewares/auth';
+import { getPlan, IN_DEVELOPMENT } from '../config/plans';
+import { Company, PasswordResetToken, Permission, Role, User } from '../models';
+import { hasLogin } from '../models/User';
+import { countAppUsers } from '../services/team';
+import { assertPassword, checkPassword, hashPassword, validateProfile } from '../services/users';
+import { button, paragraph, sendEmail } from '../services/email';
+import { deleteByUrl, saveImage } from '../services/storage';
+import { subscriptionState } from '../services/subscription';
+import { HttpError, parseId } from '../utils/http';
 
-// Clave secreta para JWT (colócala en un archivo .env)
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
-interface ValidationErrors {
-  newEmail?: string;
-  newUsername?: string;
-}
+const roleWithPermissions = { model: Role, include: [{ model: Permission, through: { attributes: [] } }] };
+const sessionIncludes = [roleWithPermissions, { model: Company }];
+const ROLE_BRIEF = { model: Role, attributes: ['id', 'roleName'] };
 
-export const getAllUsers = async (req: Request, res: any) => {
-  try {
-    const users = await User.findAll({
-      include: [Role],
-      attributes: [
-        'id',
-        'username',
-        'email',
-        'roleId'
-      ]
-    });
-    if (!users.length) {
-      return res.status(404).json({ message: 'No hay usuarios disponibles' });
-    }
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: 'Error al obtener los usuarios', error });
-  }
+/** Forma única del usuario autenticado (login y perfil devuelven lo mismo). */
+const toSession = async (user: User) => {
+  const plan = user.Company ? getPlan(user.Company.plan) : null;
+  const userCount = user.companyId ? await countAppUsers(user.companyId) : 0;
+  return {
+    ...baseSession(user),
+    plan: plan
+      ? { id: plan.id, name: plan.name, features: plan.features, inDevelopment: IN_DEVELOPMENT, maxUsers: plan.maxUsers, maxTemporary: plan.maxTemporary, userCount }
+      : null,
+  };
 };
 
-export const getUser = async (req: Request, res: any) => {
-  const { id } = req.params;
-  try {
-    const user = await User.findByPk(id, {
-      include: [{
-        model: Role,
-        include: [Permission]
-      }]
-    });
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ message: 'Error al obtener el usuario', error });
-  }
-};
+const baseSession = (user: User) => ({
+  id: user.id,
+  username: user.username,
+  email: user.email,
+  firstname: user.firstname,
+  lastname: user.lastname,
+  avatarUrl: user.avatarUrl,
+  access: user.access,
+  accessUntil: user.accessUntil,
+  roleId: user.roleId,
+  roleName: user.Role?.roleName ?? null,
+  isAdmin: !!user.companyId && user.roleId === env.adminRoleId,
+  isSuperAdmin: user.isSuperAdmin,
+  permissions: (user.Role?.Permissions || []).map((p) => ({ entity: p.entity, action: p.action })),
+  company: user.Company
+    ? {
+        id: user.Company.id,
+        name: user.Company.name,
+        phone: user.Company.phone,
+        address: user.Company.address,
+        logoUrl: user.Company.logoUrl,
+        subscription: subscriptionState(user.Company),
+      }
+    : null,
+});
 
-export const createUser = async (req: Request, res: any) => {
-  const { username, email, password, roleId } = req.body;
-  try {
-    // Validar si el rol existe
-    const role = await Role.findByPk(roleId);
-    if (!role) {
-      return res.status(404).json({ message: 'Rol no encontrado' });
-    }
-
-    // Encriptar contraseña
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Crear usuario
-    const user = await User.create({
-      username,
-      email,
-      password: hashedPassword,
-      roleId,
-    });
-
-    res.status(201).json(user);
-  } catch (error) {
-    res.status(500).json({ message: 'Error al crear el usuario', error });
-  }
-};
-
-export const register = async (req: Request, res: any) => {
-  const { username, email, password, roleId } = req.body;
-  try {
-    // Validar si el email ya está registrado
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ message: 'El email ya está registrado' });
-    }
-
-    // Encriptar contraseña
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Crear usuario
-    const user = await User.create({
-      username,
-      email,
-      password: hashedPassword,
-      roleId,
-    });
-
-    res.status(201).json({ message: 'Usuario registrado correctamente', user });
-  } catch (error) {
-    res.status(500).json({ message: 'Error al registrar el usuario', error });
-  }
-};
-
-export const login = async (req: Request, res: any) => {
+export const login = async (req: Request, res: Response) => {
   const { username, password } = req.body;
+  if (!username || !password) throw new HttpError(400, 'Ingresá usuario y contraseña.');
 
-  try {
-    
-    const user = await User.findOne({
-      where: { username },
-      include: [{
-        model: Role,
-        include: [Permission]
-      }]
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Contraseña incorrecta' });
-    }
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        roleId: user.roleId,
-      },
-      JWT_SECRET,
-      { expiresIn: '20h' }
-    );
-
-    res.status(200).json({
-      message: 'Login exitoso',
-      token,
-      userData: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        roleId: user.roleId,
-        roleName: user.Role?.roleName,
-        permissions: user.Role?.Permissions?.map(p => ({
-          entity: p.entity,
-          action: p.action
-        }))
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Error al iniciar sesión', error });
+  const user = await User.scope('withPassword').findOne({ where: { username }, include: sessionIncludes });
+  // Mismo mensaje para usuario inexistente y contraseña incorrecta: no revela qué usuarios existen.
+  if (!user?.password || !(await checkPassword(password, user.password))) {
+    throw new HttpError(401, 'Usuario o contraseña incorrectos.');
   }
+  assertCanLogin(user);
+
+  res.json({ token: signToken(user), user: await toSession(user) });
 };
 
-export const getMyOwnUser = async (req: any, res: any) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'No autorizado. Usuario no autenticado.' });
-    }
-
-    const user = await User.findByPk(req.user.id, {
-      include: [
-        { model: Role, include: [Permission] },
-        { model: ServiceOrder, as: 'DeployedBy' },
-        { model: ServiceOrder, as: 'CheckedBy' },
-        { model: ServiceOrder, as: 'OrderedBy' },
-      ]
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
-    }
-
-    res.status(200).json({
-      id: user.id,
-      username: user.username,
-      firstname: user.firstname,
-      lastname: user.lastname,
-      email: user.email,
-      role: user.Role,
-      CheckedBy: user.CheckedBy,
-      DeployedBy: user.DeployedBy,
-      OrderedBy: user.OrderedBy
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: 'Error al obtener la información del perfil.',
-      error: error instanceof Error ? error.message : error
-    });
-  }
+export const getMyProfile = async (req: Request, res: Response) => {
+  const user = await User.findByPk(req.user!.id, { include: sessionIncludes });
+  if (!user) throw new HttpError(404, 'Usuario no encontrado.');
+  res.json(await toSession(user));
 };
 
-export const updateUser = async (req: any, res: any) => {
-  const errors: ValidationErrors = {};  // Tipo explícito para los errores
+export const updateMyProfile = async (req: Request, res: Response) => {
+  const user = await User.findByPk(req.user!.id);
+  if (!user) throw new HttpError(404, 'Usuario no encontrado.');
 
-  try {
-    const { id } = req.params;
-    const { email, username, roleId, password } = req.body;
+  // Solo datos personales: el rol y la contraseña no se cambian desde acá.
+  const { username, email, firstname, lastname } = req.body;
+  await validateProfile({ username, email, firstname, lastname }, user.id);
 
-    if (!id) {
-      return res.status(404).json({ message: 'Id invalido' });
-    }
+  await user.update({
+    username: username ?? user.username,
+    email: email ?? user.email,
+    firstname: firstname?.trim() || null,
+    lastname: lastname?.trim() || null,
+  });
 
-    const user = await User.findByPk(id);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User invalido' });
-    }
-
-    // Validación para el email
-    if (email && !/\S+@\S+\.\S+/.test(email)) {
-      errors.newEmail = 'Email inválido';  // Guarda el error para el email
-    }
-
-    // Validación para el nombre de usuario
-    if (username && !/^[a-zA-Z0-9_-]+$/.test(username)) {
-      errors.newUsername = 'El nombre de usuario solo puede contener letras, números, guiones y guiones bajos';  // Guarda el error para el nombre de usuario
-    }
-
-    // Si hay errores, devuelve el objeto con los errores
-    if (Object.keys(errors).length > 0) {
-      return res.status(400).json({ errors });
-    }
-
-    // Si no hay errores, actualiza el usuario
-    user.username = username ? username : user.username;
-    user.email = email ? email : user.email;
-    user.password = password ? await bcrypt.hash(password, 10) : user.password;
-    user.roleId = roleId ? roleId : user.roleId;
-
-    // Buscar el usuario actualizado e incluir su rol
-    await user.save(); // Esperar a que se guarde antes de buscarlo nuevamente
-    const updatedUser = await User.findByPk(id, { include: Role });
-
-    res.status(200).json(updatedUser);
-
-  } catch (error) {
-    res.status(500).json({ message: 'Error al actualizar el usuario' });
-  }
-};
-interface ValidationErrors {
-  username?: string;
-  email?: string;
-  firstname?: string;
-  lastname?: string;
-}
-export const updateMyOwnUser = async (req: any, res: any) => {
-  const errors: ValidationErrors = {};
-
-  try {
-    const { email, username, roleId, password, firstname, lastname } = req.body;
-
-    if (!req.user) {
-      return res.status(401).json({ message: 'No autorizado. Usuario no autenticado.' });
-    }
-
-    const user = await User.findByPk(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario inválido' });
-    }
-
-    // Validación de email
-    if (email && !/\S+@\S+\.\S+/.test(email)) {
-      errors.email = 'Email inválido';
-    }
-
-    // Validación de username
-    if (username && !/^[a-zA-Z0-9_-]+$/.test(username)) {
-      errors.username = 'El nombre de usuario solo puede contener letras, números, guiones y guiones bajos';
-    }
-
-    // Chequeo de username duplicado si se cambió
-    if (username && username !== user.username) {
-      const existingUser = await User.findOne({ where: { username } });
-      if (existingUser) {
-        errors.username = 'Ese nombre de usuario ya está en uso';
-      }
-    }
-
-    // Validaciones simples de firstname y lastname
-    if (firstname && firstname.length < 2) {
-      errors.firstname = 'El nombre debe tener al menos 2 caracteres';
-    }
-
-    if (lastname && lastname.length < 2) {
-      errors.lastname = 'El apellido debe tener al menos 2 caracteres';
-    }
-
-    // Si hay errores, retornar
-    if (Object.keys(errors).length > 0) {
-      return res.status(400).json({ errors });
-    }
-
-    // Actualización de campos
-    user.username = username || user.username;
-    user.firstname = firstname || user.firstname;
-    user.lastname = lastname || user.lastname;
-    user.email = email || user.email;
-    user.password = password ? await bcrypt.hash(password, 10) : user.password;
-    user.roleId = roleId || user.roleId;
-
-    await user.save();
-
-    const updatedUser = await User.findByPk(req.user.id, {
-      include: Role,
-    });
-
-    return res.status(200).json(updatedUser);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Error al actualizar el usuario', error });
-  }
+  const fresh = await User.findByPk(user.id, { include: sessionIncludes });
+  res.json(await toSession(fresh!));
 };
 
-export const changeMyOwnPassword = async (req: any, res: any) => {
-
-  try {
-    const { currentPassword, newPassword } = req.body;
-    if (!req.user) {
-      return res.status(401).json({ message: 'No autorizado. Usuario no autenticado.' });
-    }
-    const id = req.user.id
-    const user = await User.findByPk(id);
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Contraseña actual incorrecta' });
-    }
-
-    // Validar que la nueva contraseña cumpla con los criterios (mínimo 6 caracteres, por ejemplo)
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres' });
-    }
-
-    // Encriptar la nueva contraseña    
-    const hashedNewPassword: string = await bcrypt.hash(newPassword, 10)
-
-    // Actualizar la contraseña en la base de datos
-    user.password = hashedNewPassword;
-    await user.save();
-
-    res.status(200).json({ message: 'Contraseña cambiada con éxito' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error al cambiar la contraseña', error });
-  }
-};
-
-export const changePassword = async (req: Request, res: any) => {
+export const changeMyPassword = async (req: Request, res: Response) => {
   const { currentPassword, newPassword } = req.body;
-  const { id } = req.params;
+  const user = await User.scope('withPassword').findByPk(req.user!.id);
+  if (!user) throw new HttpError(404, 'Usuario no encontrado.');
 
-  try {
-    // Verificar si el usuario existe
-    const user = await User.findByPk(id);
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Contraseña actual incorrecta' });
-    }
-
-    // Validar que la nueva contraseña cumpla con los criterios (mínimo 6 caracteres, por ejemplo)
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres' });
-    }
-
-    // Encriptar la nueva contraseña    
-    const hashedNewPassword: string = await bcrypt.hash(newPassword, 10)
-
-    // Actualizar la contraseña en la base de datos
-    user.password = hashedNewPassword;
-    await user.save();
-
-    res.status(200).json({ message: 'Contraseña cambiada con éxito' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error al cambiar la contraseña', error });
+  if (!currentPassword || !(await checkPassword(currentPassword, user.password))) {
+    throw new HttpError(400, 'La contraseña actual es incorrecta.', { currentPassword: 'Contraseña incorrecta.' });
   }
+  assertPassword(newPassword, 'newPassword');
+
+  await user.update({ password: await hashPassword(newPassword) });
+  res.json({ message: 'Contraseña actualizada.' });
+};
+
+// ---------- Foto de perfil ----------
+
+export const uploadMyAvatar = async (req: Request, res: Response) => {
+  if (!req.file) throw new HttpError(400, 'Elegí una imagen.');
+  const user = await User.findByPk(req.user!.id);
+  if (!user) throw new HttpError(404, 'Usuario no encontrado.');
+  const previous = user.avatarUrl;
+  await user.update({ avatarUrl: await saveImage(req.file.buffer, `usuarios/${user.id}`, 'avatar') });
+  await deleteByUrl(previous);
+  const fresh = await User.findByPk(user.id, { include: sessionIncludes });
+  res.json(await toSession(fresh!));
+};
+
+export const deleteMyAvatar = async (req: Request, res: Response) => {
+  const user = await User.findByPk(req.user!.id);
+  if (!user) throw new HttpError(404, 'Usuario no encontrado.');
+  const previous = user.avatarUrl;
+  await user.update({ avatarUrl: null });
+  await deleteByUrl(previous);
+  const fresh = await User.findByPk(user.id, { include: sessionIncludes });
+  res.json(await toSession(fresh!));
+};
+
+// ---------- Recuperar contraseña ----------
+
+const RESET_TTL_MS = 60 * 60 * 1000;
+const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
+
+/**
+ * Manda un link para elegir una contraseña nueva. Responde siempre lo mismo,
+ * exista o no el usuario, para no revelar qué emails están registrados.
+ */
+export const forgotPassword = async (req: Request, res: Response) => {
+  const identifier = String(req.body.identifier || '').trim();
+  const generic = { message: 'Si el usuario existe, le mandamos un mail con un link para elegir una contraseña nueva.' };
+  if (!identifier) throw new HttpError(400, 'Ingresá tu usuario o tu email.');
+
+  const user = await User.findOne({ where: { [Op.or]: [{ username: identifier }, { email: identifier.toLowerCase() }, { email: identifier }] } });
+  if (!user?.email || !hasLogin(user)) return res.json(generic);
+
+  const token = crypto.randomBytes(32).toString('hex');
+  await PasswordResetToken.create({ userId: user.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + RESET_TTL_MS) });
+
+  const link = `${env.appUrl}/reset-password?token=${token}`;
+  await sendEmail({
+    to: user.email,
+    subject: 'Elegí una contraseña nueva para Event Box',
+    title: 'Recuperar contraseña',
+    body:
+      paragraph(`Hola ${user.firstname || user.username}, pediste cambiar la contraseña de tu usuario ${user.username}.`) +
+      button('Elegir contraseña nueva', link) +
+      paragraph('El link vence en 1 hora y sirve una sola vez. Si no lo pediste vos, ignorá este mail: tu contraseña no cambia.'),
+  });
+  if (!env.isProduction) console.log(`[eventbox] Link de recuperación para ${user.username}: ${link}`);
+
+  res.json(generic);
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const token = String(req.body.token || '');
+  const record = token ? await PasswordResetToken.findOne({ where: { tokenHash: sha256(token) } }) : null;
+  if (!record || record.usedAt || record.expiresAt < new Date()) {
+    throw new HttpError(400, 'El link no es válido o ya venció. Pedí uno nuevo.');
+  }
+  assertPassword(req.body.password);
+
+  await sequelize.transaction(async (transaction) => {
+    await User.update({ password: await hashPassword(req.body.password) }, { where: { id: record.userId }, transaction });
+    // El link usado y cualquier otro pendiente del mismo usuario dejan de servir.
+    await PasswordResetToken.update({ usedAt: new Date() }, { where: { userId: record.userId, usedAt: null }, transaction });
+  });
+  res.json({ message: 'Listo: ya podés entrar con tu contraseña nueva.' });
+};
+
+/** Personas que entran a la app (para elegir responsables). El equipo completo está en /team. */
+export const listUsers = async (req: Request, res: Response) => {
+  const users = await User.findAll({
+    where: { companyId: tenant(req), access: { [Op.ne]: 'none' } },
+    include: [ROLE_BRIEF],
+    order: [['username', 'ASC']],
+  });
+  res.json(users);
+};
+
+const findCompanyUser = (req: Request, options = {}) =>
+  User.findOne({ where: { id: parseId(req.params.id), companyId: tenant(req) }, ...options });
+
+export const getUser = async (req: Request, res: Response) => {
+  const user = await findCompanyUser(req, { include: [roleWithPermissions] });
+  if (!user) throw new HttpError(404, 'Usuario no encontrado.');
+  res.json(user);
 };

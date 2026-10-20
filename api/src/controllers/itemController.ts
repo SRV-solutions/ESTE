@@ -1,530 +1,228 @@
-import { Request } from 'express';
-import { Op } from 'sequelize';
-import csvParser from "csv-parser";
-import fs from "fs";
+import csvParser from 'csv-parser';
+import { Request, Response } from 'express';
+import { Op, WhereOptions } from 'sequelize';
+import { Readable } from 'stream';
+import { sequelize } from '../config/database';
+import { tenant } from '../middlewares/auth';
+import { Category, Item, StoreItem } from '../models';
+import { createItemsForCategory, findAvailableItems, findCompanyItem } from '../services/itemService';
+import { HttpError, parseId, parsePositiveInt } from '../utils/http';
+import { naturalCodeOrder } from '../utils/itemCode';
+import { parseCategoryInput } from '../utils/categoryInput';
 
-import Category from '../models/Category';
-import Item from '../models/Item';
-import User from '../models/User';
-import StoreItem from '../models/StoreItem';
-import ServiceOrderItem from '../models/ServiceOrderItem';
-import ServiceOrder, { ServiceOrderStatus } from '../models/ServiceOrder';
-import ServiceOrderStoreItem from '../models/ServiceOrderStoreItem';
+const MAX_PAGE_SIZE = 100;
+const MAX_PER_BATCH = 1000;
 
-export const getItems = async (req: Request, res: any) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const category = req.query.category || '';  // Recibir categoría desde la query
-    const offset = (page - 1) * limit;
-    const search = req.query.search || ''; // ← Agregar el término de búsqueda
-    // Obtener items con hijos, aplicando el filtro de búsqueda
-    const itemsWithChildren = await Item.findAll({
-      where: {
-        code: {
-          [Op.iLike]: `%${search}%`, // Filtrar por código (puedes agregar más filtros si es necesario)
-        },
-        ...(category && { categoryId: category }), // Filtrar por categoría si está presente
-      },
-      include: [
-        {
-          model: Category,
-          where: { isContainer: true }
-        },
-        {
-          model: StoreItem,
-          as: "StoreItemParent",
-          include: [
-            {
-              model: Item,
-              as: "StoreItemChild",
-              include: [{ model: Category }],
-            },
-          ],
-        },
-      ],
-    });
-    const filteredItemsWithChildren = itemsWithChildren.filter(item => item.StoreItemParent.length !== 0);
+/**
+ * Stock paginado. Los ítems guardados fijos dentro de un contenedor no se listan sueltos:
+ * aparecen en `contents` de su contenedor.
+ */
+export const listItems = async (req: Request, res: Response) => {
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), MAX_PAGE_SIZE);
+  const search = String(req.query.search || '').trim();
+  const categoryId = Number(req.query.category) || undefined;
 
-    const childItemIds = filteredItemsWithChildren.flatMap((item: any) => {
-      const parentId = item.id;
-      const childIds = item.StoreItemParent.map((storeItem: any) => storeItem.StoreItemChild.id);
-      return [parentId, ...childIds];
-    });
+  const where: WhereOptions = {
+    companyId: tenant(req),
+    id: { [Op.notIn]: sequelize.literal('(SELECT "itemIdChild" FROM "StoreItem")') },
+    ...(categoryId ? { categoryId } : {}),
+    ...(search
+      ? { [Op.or]: [{ code: { [Op.iLike]: `%${search}%` } }, { '$Category.name$': { [Op.iLike]: `%${search}%` } }] }
+      : {}),
+  };
 
-    const itemsWithoutChildren = await Item.findAll({
-      where: {
-        id: { [Op.notIn]: childItemIds },
-        code: {
-          [Op.iLike]: `%${search}%`, // Filtro por código
-        },
-        ...(category && { categoryId: category }), // Filtrar por categoría si está presente
-      },
-      include: [{ model: Category }],
-    });
+  const { rows, count } = await Item.findAndCountAll({
+    where,
+    include: [{ model: Category, required: true }],
+    order: naturalCodeOrder(),
+    limit,
+    offset: (page - 1) * limit,
+  });
 
-    // Combinar resultados y paginar
-    const cleanItems = [...filteredItemsWithChildren, ...itemsWithoutChildren];
-    const allItems = cleanItems.sort((a, b) => {
-      const codeA = a.code;
-      const codeB = b.code;
+  const containerIds = rows.filter((i) => i.Category?.isContainer).map((i) => i.id);
+  const contents = containerIds.length
+    ? await StoreItem.findAll({ where: { itemIdParent: containerIds }, include: [{ model: Item, as: 'Child', include: [Category] }] })
+    : [];
 
-      // Función para dividir el código en partes numéricas y alfabéticas
-      const alphanumericCompare = (strA: any, strB: any) => {
-        const regex = /(\D+|\d+)/g; // Captura las secuencias alfabéticas y numéricas
-        const partsA = strA.match(regex);
-        const partsB = strB.match(regex);
+  const items = rows.map((item) => ({
+    ...item.toJSON(),
+    contents: contents.filter((c) => c.itemIdParent === item.id).map((c) => c.Child),
+  }));
 
-        // Comparar parte por parte
-        for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-          const partA = partsA[i] || '';
-          const partB = partsB[i] || '';
-
-          // Si ambas partes son numéricas, compararlas como números
-          if (!isNaN(partA) && !isNaN(partB)) {
-            const numA = parseInt(partA, 10);
-            const numB = parseInt(partB, 10);
-            if (numA !== numB) {
-              return numA - numB;
-            }
-          } else {
-            // Si son alfabéticas, compararlas alfabéticamente
-            if (partA < partB) return -1;
-            if (partA > partB) return 1;
-          }
-        }
-        return 0;
-      };
-
-      return alphanumericCompare(codeA, codeB);
-    });
-    const paginatedItems = allItems.slice(offset, offset + limit);
-
-    return res.json({
-      totalItems: allItems.length,
-      totalPages: Math.ceil(allItems.length / limit),
-      currentPage: page,
-      items: paginatedItems
-    });
-
-  } catch (error) {
-
-    res.status(500).json({ message: "Error fetching items", error });
-  }
+  res.json({ totalItems: count, totalPages: Math.max(Math.ceil(count / limit), 1), currentPage: page, items });
 };
 
-export const createItem = async (req: Request, res: any) => {
-  const {
-    uses = 0,
-    ownerId = 1,
-    categoryId,
-    name,
-    description,
-    type,
-    quantity = 1,
-    unity,
-    value,
-    code,
-    weight,
-    isStorable,
-    isContainer,
-  } = req.body;
+/** Ítems libres para cargar en una orden (opcionalmente de una categoría o solo almacenables). */
+export const listAvailableItems = async (req: Request, res: Response) => {
+  const categoryId = Number(req.query.category) || undefined;
+  res.json(await findAvailableItems(tenant(req), { categoryId, storableOnly: req.query.storable === 'true' }));
+};
 
-  try {
+/** Cuántos ítems libres hay por categoría (para elegir qué cargar sin bajar miles de ítems). */
+export const listAvailableSummary = async (req: Request, res: Response) => {
+  const items = await findAvailableItems(tenant(req), { storableOnly: req.query.storable === 'true' });
+  const byCategory = new Map<number, { category: Category; count: number }>();
+  for (const item of items) {
+    const entry = byCategory.get(item.categoryId) ?? { category: item.Category!, count: 0 };
+    entry.count++;
+    byCategory.set(item.categoryId, entry);
+  }
+  res.json([...byCategory.values()].sort((a, b) => a.category.name.localeCompare(b.category.name, 'es')));
+};
 
-    const searchedUserOwner = await User.findByPk(ownerId);
-    if (!searchedUserOwner) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
+/** Ítems almacenables libres para asignar como contenido fijo de un contenedor. */
+export const listAvailableStorableItems = async (req: Request, res: Response) => {
+  res.json(await findAvailableItems(tenant(req), { storableOnly: true, excludePermanentParents: true }));
+};
 
-    let finalCategoryId = categoryId;
+/** Crea N ítems en una categoría existente, o crea la categoría y sus ítems en un paso. */
+export const createItems = async (req: Request, res: Response) => {
+  const companyId = tenant(req);
+  const quantity = parsePositiveInt(req.body.quantity ?? 1, 'La cantidad', MAX_PER_BATCH);
+  const uses = Math.max(Number(req.body.uses) || 0, 0);
 
-    if (!categoryId) {
-      if (!name || !type || !unity || value === undefined || weight === undefined || isStorable === undefined || isContainer === undefined) {
-        return res.status(400).json({ message: 'Faltan datos obligatorios para crear una categoría.' });
-      }
-
-      const newCategory = await Category.create({
-        name,
-        description,
-        code,
-        type,
-        unity,
-        value,
-        weight,
-        isStorable,
-        isContainer,
-        isActive: true,
-      });
-
-      finalCategoryId = newCategory.id;
+  const created = await sequelize.transaction(async (transaction) => {
+    let category: Category | null;
+    if (req.body.categoryId) {
+      category = await Category.findOne({ where: { id: parseId(req.body.categoryId, 'id de categoría'), companyId }, transaction });
+      if (!category) throw new HttpError(404, 'Categoría no encontrada.');
+      if (!category.isActive) throw new HttpError(409, 'La categoría está desactivada.');
     } else {
-      // Validar existencia de la categoría
-      const category = await Category.findByPk(Number(categoryId));
+      const data = parseCategoryInput(req.body);
+      category = await Category.create({ isStorable: false, isContainer: false, ...data, companyId, isActive: true }, { transaction });
+    }
+    return createItemsForCategory(category, quantity, { uses, ownerId: req.user!.id }, transaction);
+  });
+
+  res.status(201).json({ message: `${created.length} ítem(s) creado(s).`, items: created });
+};
+
+export const updateItem = async (req: Request, res: Response) => {
+  const item = await findCompanyItem(tenant(req), parseId(req.params.id));
+
+  const updates: Record<string, unknown> = {};
+  if (req.body.isActive !== undefined) updates.isActive = Boolean(req.body.isActive);
+  if (req.body.uses !== undefined) {
+    const uses = Number(req.body.uses);
+    if (!Number.isInteger(uses) || uses < 0) throw new HttpError(400, 'Los usos deben ser un número entero positivo.');
+    updates.uses = uses;
+  }
+  if (req.body.code !== undefined) {
+    const code = String(req.body.code).trim();
+    if (!code || /\s/.test(code)) throw new HttpError(400, 'El código no puede estar vacío ni tener espacios.');
+    updates.code = code;
+  }
+
+  await item.update(updates);
+  res.json(item);
+};
+
+export const deleteItem = async (req: Request, res: Response) => {
+  const item = await findCompanyItem(tenant(req), parseId(req.params.id));
+  await item.destroy(); // Si tiene historial en órdenes, el errorHandler responde 409.
+  res.json({ message: 'Ítem eliminado.' });
+};
+
+// ---------- Importación CSV ----------
+
+const CSV_HEADERS = ['nombre', 'descripcion', 'codigo', 'tipo', 'unidad', 'valor', 'peso', 'es_almacenable', 'es_contenedor', 'cantidad'] as const;
+
+const YES = new Set(['si', 'sí', 's', 'true', '1', 'x', 'yes']);
+
+/**
+ * Excel en Windows guarda los CSV en Windows-1252: leerlos como UTF-8 convierte "á" o "ñ" en "�".
+ * Si el archivo no es UTF-8 válido, se decodifica como Windows-1252.
+ */
+export const decodeCsv = (buffer: Buffer) => {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer).replace(/^﻿/, '');
+  } catch {
+    return new TextDecoder('windows-1252').decode(buffer);
+  }
+};
+
+/** Normaliza encabezados: minúsculas, sin tildes ni espacios ("Descripción" → "descripcion"). */
+const normalizeHeader = (header: string) =>
+  header.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_');
+
+const parseCsv = (buffer: Buffer) =>
+  new Promise<Record<string, string>[]>((resolve, reject) => {
+    const text = decodeCsv(buffer);
+    const firstLine = text.split(/\r?\n/, 1)[0] || '';
+    // Excel en español exporta con `;`.
+    const separator = firstLine.split(';').length > firstLine.split(',').length ? ';' : ',';
+    const rows: Record<string, string>[] = [];
+
+    Readable.from([text])
+      .pipe(csvParser({ separator, mapHeaders: ({ header }) => normalizeHeader(header) }))
+      .on('data', (row) => rows.push(row))
+      .on('end', () => resolve(rows))
+      .on('error', reject);
+  });
+
+/** Números con coma decimal ("15,5") o punto ("15.5"). */
+const parseNumber = (value: string | undefined) => (value ? Number(value.trim().replace(/\.(?=\d{3}\b)/g, '').replace(',', '.')) : NaN);
+
+export const importItemsCsv = async (req: Request, res: Response) => {
+  if (!req.file) throw new HttpError(400, 'Adjuntá un archivo CSV.');
+  const companyId = tenant(req);
+
+  const rows = await parseCsv(req.file.buffer);
+  if (!rows.length) throw new HttpError(400, 'El archivo no tiene filas.');
+
+  const headers = Object.keys(rows[0]);
+  const missing = CSV_HEADERS.filter((h) => !headers.includes(h));
+  if (missing.length) throw new HttpError(400, `Faltan columnas obligatorias: ${missing.join(', ')}.`);
+
+  // Validar todo antes de escribir: o se importa el archivo entero o nada.
+  const errors: string[] = [];
+  const parsed = rows.map((row, i) => {
+    const line = i + 2;
+    const quantity = Number(row.cantidad);
+    if (!row.codigo?.trim()) errors.push(`Fila ${line}: falta el código.`);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_PER_BATCH) {
+      errors.push(`Fila ${line}: la cantidad debe ser un entero entre 1 y ${MAX_PER_BATCH}.`);
+    }
+    return { line, row, quantity, uses: Math.max(Number(row.usos) || 0, 0) };
+  });
+  if (errors.length) throw new HttpError(400, errors.slice(0, 10).join(' '), errors);
+
+  const summary = await sequelize.transaction(async (transaction) => {
+    let itemsCreated = 0;
+    let categoriesCreated = 0;
+    // Secuencial a propósito: dos filas con el mismo código comparten la categoría recién creada.
+    for (const { line, row, quantity, uses } of parsed) {
+      const code = row.codigo.trim();
+      let category = await Category.findOne({ where: { code, companyId }, transaction });
       if (!category) {
-        return res.status(404).json({ message: 'Categoría no encontrada' });
-      }
-    }
-    // Crear ítems (bulk siempre, incluso si bulkQuantity es 1)
-    const itemsToCreate = Array.from({ length: quantity }, () => ({
-      isActive: true,
-      uses,
-      ownerId,
-      categoryId: finalCategoryId
-    }));
-
-    await Item.bulkCreate(itemsToCreate);
-
-    return res.status(201).json({ message: `${quantity} ítem(s) creado(s) con éxito` });
-  } catch (error) {
-    return res.status(500).json({ message: 'Error interno del servidor', error });
-  }
-};
-
-export const deleteItem = async (req: Request, res: any) => {
-  const { id } = req.params;
-
-  try {
-    const item = await Item.findByPk(id);
-
-    if (!item) {
-      return res.status(404).json({ message: 'Ítem no encontrado' });
-    }
-
-    await item.destroy();
-    return res.json({ message: 'Ítem eliminado con éxito' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error eliminando el ítem', error });
-  }
-};
-
-export const getAvalibleItemsByCategory = async (req: Request, res: any) => {
-  const { categoryId } = req.body
-  const items = await Item.findAll({
-    include: [
-      {
-        model: ServiceOrderItem,
-        required: false, // LEFT OUTER JOIN para incluir también los que no tienen órdenes
-        include: [
-          {
-            model: ServiceOrder,
-            required: false, // LEFT OUTER JOIN en ServiceOrder
-            where: {
-              status: { [Op.ne]: ServiceOrderStatus.Disassembled },
-            },
-          },
-        ],
-      },
-      Category
-    ],
-    where: {
-      // Filtra los items que no tienen órdenes activas
-      '$ServiceOrderItems.ServiceOrder.id$': null,
-      categoryId
-    },
-  });
-
-  const sortedItems = items.sort((a, b) => {
-    const regex = /-(\d+)$/; // Captura el número al final del código
-    const numA = parseInt(a.code.match(regex)?.[1] || "0", 10);
-    const numB = parseInt(b.code.match(regex)?.[1] || "0", 10);
-
-    // Primero ordenamos alfabéticamente sin el número final
-    const baseA = a.code.replace(regex, "");
-    const baseB = b.code.replace(regex, "");
-    const textComparison = baseA.localeCompare(baseB);
-
-    return textComparison !== 0 ? textComparison : numA - numB;
-  });
-
-  return res.status(201).json(sortedItems);
-}
-
-export const getAvalibleItems = async (req: Request, res: any) => {
-  try {
-    const items = await Item.findAll({
-      include: [
-        {
-          model: ServiceOrderItem,
-          required: false, // LEFT OUTER JOIN para incluir también los que no tienen órdenes
-          include: [
-            {
-              model: ServiceOrder,
-              required: false, // LEFT OUTER JOIN en ServiceOrder
-              where: {
-                status: { [Op.ne]: ServiceOrderStatus.Disassembled }, // Solo ordenes que no están desarmadas
-              },
-            },
-          ],
-        },
-        {
-          model: ServiceOrderStoreItem,
-          required: false, // LEFT OUTER JOIN para verificar si está en algún ServiceOrderStoreItem
-          as: 'ServiceOrderStoreItemParent', // Usamos el alias para la relación 'itemIdParent'
-          include: [
-            {
-              model: ServiceOrder,
-              where: {
-                status: { [Op.ne]: ServiceOrderStatus.Disassembled }, // Asegura que esté en una orden no desarmada
-              },
-            },
-          ],
-        },
-        {
-          model: ServiceOrderStoreItem,
-          required: false, // LEFT OUTER JOIN para verificar si está en algún ServiceOrderStoreItem
-          as: 'ServiceOrderStoreItemChild', // Usamos el alias para la relación 'itemIdChild'
-          include: [
-            {
-              model: ServiceOrder,
-              where: {
-                status: { [Op.ne]: ServiceOrderStatus.Disassembled }, // Asegura que esté en una orden no desarmada
-              },
-            },
-          ],
-        },
-        Category,
-      ],
-      where: {
-        // Filtra los items que no están en ninguna orden de servicio activa
-        '$ServiceOrderItems.ServiceOrder.id$': null,
-        // Filtra los ítems que no están dentro de ningún baúl que esté relacionado con una orden de servicio no desarmada
-        '$ServiceOrderStoreItemParent.id$': null,
-        '$ServiceOrderStoreItemChild.id$': null,
-      },
-    });
-
-    const sortedItems = items.sort((a, b) => {
-      const regex = /-(\d+)$/; // Captura el número al final del código
-      const numA = parseInt(a.code.match(regex)?.[1] || "0", 10);
-      const numB = parseInt(b.code.match(regex)?.[1] || "0", 10);
-
-      // Primero ordenamos alfabéticamente sin el número final
-      const baseA = a.code.replace(regex, "");
-      const baseB = b.code.replace(regex, "");
-      const textComparison = baseA.localeCompare(baseB);
-
-      return textComparison !== 0 ? textComparison : numA - numB;
-    });
-
-    return res.status(200).json(sortedItems);
-  } catch (error) {
-    return res.status(500).json({ message: 'Error al obtener los ítems disponibles.' });
-  }
-};
-
-export const getAvailableStoreItems = async (req: Request, res: any) => {
-  try {
-    const items = await Item.findAll({
-      include: [
-        {
-          model: ServiceOrderItem,
-          required: false,
-          include: [
-            {
-              model: ServiceOrder,
-              required: false,
-              where: {
-                status: { [Op.ne]: ServiceOrderStatus.Disassembled },
-              },
-            },
-          ],
-        },
-        {
-          model: ServiceOrderStoreItem,
-          required: false,
-          as: "ServiceOrderStoreItemParent",
-          include: [
-            {
-              model: ServiceOrder,
-              where: {
-                status: { [Op.ne]: ServiceOrderStatus.Disassembled },
-              },
-            },
-          ],
-        },
-        {
-          model: ServiceOrderStoreItem,
-          required: false,
-          as: "ServiceOrderStoreItemChild",
-          include: [
-            {
-              model: ServiceOrder,
-              where: {
-                status: { [Op.ne]: ServiceOrderStatus.Disassembled },
-              },
-            },
-          ],
-        },
-        {
-          model: StoreItem,
-          required: false,
-          as: "StoreItemParent",
-        },
-        {
-          model: StoreItem,
-          required: false,
-          as: "StoreItemChild",
-        },
-        {
-          model: Category,
-          required: true,
-          where: {
-            isStorable: true,
-          }
-        }
-      ],
-      where: {
-        "$ServiceOrderItems.ServiceOrder.id$": null,
-        "$StoreItemParent.id$": null,
-        "$StoreItemChild.id$": null,
-        "$ServiceOrderStoreItemParent.id$": null,
-        "$ServiceOrderStoreItemChild.id$": null,
-      },
-    });
-
-    const sortedItems = items.sort((a, b) => {
-      const regex = /-(\d+)$/; // Captura el número al final del código
-      const numA = parseInt(a.code.match(regex)?.[1] || "0", 10);
-      const numB = parseInt(b.code.match(regex)?.[1] || "0", 10);
-
-      // Primero ordenamos alfabéticamente sin el número final
-      const baseA = a.code.replace(regex, "");
-      const baseB = b.code.replace(regex, "");
-      const textComparison = baseA.localeCompare(baseB);
-
-      return textComparison !== 0 ? textComparison : numA - numB;
-    });
-
-    return res.status(200).json(sortedItems);
-  } catch (error) {
-    return res.status(500).json({ message: "Error al obtener los ítems disponibles." });
-  }
-};
-
-export const uploadCSV = async (req: Request | any, res: Response | any) => {
-  if (!req.file) {
-    return res.status(400).json({ message: "No se proporcionó ningún archivo" });
-  }
-
-  const requiredHeaders = [
-    "nombre",
-    "descripcion",
-    "codigo",
-    "tipo",
-    "unidad",
-    "valor",
-    "peso",
-    "es_almacenable",
-    "es_contenedor",
-    "cantidad",
-    "usos"
-  ];
-
-  try {
-    const items: any[] = [];
-    let headersValidated = false;
-
-    fs.createReadStream(req.file.path)
-      .pipe(csvParser())
-      .on("headers", (headers) => {
-        const headersLower = headers.map((h:any) => h.toLowerCase().trim());
-        const missing = requiredHeaders.filter(h => !headersLower.includes(h));
-
-        if (missing.length > 0) {
-          fs.unlinkSync(req.file.path); // Eliminamos el archivo para no dejar basura
-          return res.status(400).json({
-            message: `Faltan los siguientes encabezados obligatorios: ${missing.join(", ")}`,
-          });
-        }
-
-        headersValidated = true;
-      })
-      .on("data", (row) => items.push(row))
-      .on("end", async () => {
-        if (!headersValidated) return;
-
+        let data;
         try {
-          const itemsToCreate = await Promise.all(
-            items.map(async (item) => {
-              let category = await Category.findOne({
-                where: { code: item.codigo },
-              });
-
-              if (!category) {
-                category = await Category.create({
-                  name: item.nombre,
-                  description: item.descripcion,
-                  code: item.codigo,
-                  type: item.tipo,
-                  unity: item.unidad,
-                  value: parseFloat(item.valor),
-                  weight: parseFloat(item.peso),
-                  isStorable: item.es_almacenable.toLowerCase() === "si",
-                  isContainer: item.es_contenedor.toLowerCase() === "si",
-                  isActive: true,
-                });
-              }
-
-              return Array.from({ length: parseInt(item.cantidad, 10) || 1 }, () => ({
-                isActive: true,
-                uses: parseInt(item.usos, 10) || 0,
-                ownerId: 1,
-                categoryId: category.id,
-              }));
-            })
-          );
-
-          const flatItems = itemsToCreate.flat();
-          await Item.bulkCreate(flatItems);
-
-          fs.unlinkSync(req.file.path);
-
-          return res.status(201).json({
-            message: "Items subidos con éxito",
-            items: flatItems,
+          data = parseCategoryInput({
+            code,
+            name: row.nombre,
+            description: row.descripcion,
+            type: row.tipo,
+            unity: row.unidad,
+            value: parseNumber(row.valor),
+            weight: parseNumber(row.peso),
+            isStorable: YES.has(String(row.es_almacenable).trim().toLowerCase()),
+            isContainer: YES.has(String(row.es_contenedor).trim().toLowerCase()),
           });
-        } catch (error) {          
-          fs.unlinkSync(req.file.path);
-          return res.status(500).json({ message: "Error al guardar los items", error });
+        } catch (err) {
+          throw new HttpError(400, `Fila ${line}: ${(err as Error).message}`);
         }
-      });
-  } catch (error) {    
-    fs.unlinkSync(req.file.path);
-    return res.status(500).json({ message: "Error en la carga del archivo", error });
-  }
-};
-
-
-// export const fixItems = async (req:any, res:any) => {
-
-// }
-export const updateItem = async (req: Request | any, res: Response | any) => {
-  const { id } = req.params;
-  const { code, isActive, uses, categoryId } = req.body;
-
-  try {
-    // Buscar el ítem por su ID
-    const item = await Item.findByPk(id);
-
-    if (!item) {
-      return res.status(404).json({ message: 'Item no encontrado' });
+        category = await Category.create({ ...data, companyId, isActive: true }, { transaction });
+        categoriesCreated++;
+      }
+      const created = await createItemsForCategory(category, quantity, { uses, ownerId: req.user!.id }, transaction);
+      itemsCreated += created.length;
     }
+    return { itemsCreated, categoriesCreated };
+  });
 
-    // Crear un objeto con solo las propiedades definidas en el body
-    const updatedFields: any = {};
-
-    // Añadir solo los campos que estén presentes en el body
-    if (code !== undefined) updatedFields.code = code;
-    if (isActive !== undefined) updatedFields.isActive = isActive;
-    if (uses !== undefined) updatedFields.uses = uses;
-    if (categoryId !== undefined) updatedFields.categoryId = categoryId;
-
-    // Actualizar solo las propiedades que están presentes
-    await item.update(updatedFields);
-
-    return res.status(200).json(item);
-  } catch (error) {
-    return res.status(500).json({ message: 'Error al actualizar el ítem' });
-  }
+  res.status(201).json({
+    message: `Importación completa: ${summary.itemsCreated} ítem(s) y ${summary.categoriesCreated} categoría(s) nueva(s).`,
+    ...summary,
+  });
 };

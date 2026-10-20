@@ -1,7 +1,7 @@
 {
-  "name": "front",
+  "name": "eventbox-front",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,19 +14,12 @@
     "@emotion/styled": "^11.13.5",
     "@mui/icons-material": "^6.1.4",
     "@mui/material": "^6.1.8",
-    "axios": "^1.7.7",
-    "jsbarcode": "^3.11.6",
-    "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
-    "jwt-decode": "^4.0.0",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
-    "react-dnd": "^16.0.1",
-    "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.27.0",
-    "react-slick": "^0.30.2",
-    "slick-carousel": "^1.8.1"
+    "react-router-dom": "^6.27.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

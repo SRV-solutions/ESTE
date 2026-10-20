@@ -1,45 +1,22 @@
-import { Model, DataTypes } from 'sequelize';
-import { sequelize } from '../config/database'; // Asegúrate de tener la configuración de Sequelize
-import Item from './Item'; // Asegúrate de importar el modelo Item
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database';
+import type Item from './Item';
 
+/** Contenido fijo de un contenedor: el ítem hijo viaja siempre dentro del padre. */
 class StoreItem extends Model {
-  public id!: number;
-  public itemIdParent!: number;
-  public itemIdChild!: number;
-
-  // Método para definir asociaciones
-  public static associate() {
-    StoreItem.belongsTo(Item, { foreignKey: 'itemIdParent', as: 'StoreItemParent' });
-    StoreItem.belongsTo(Item, { foreignKey: 'itemIdChild', as: 'StoreItemChild' });
-  }
+  declare id: number;
+  declare itemIdParent: number;
+  declare itemIdChild: number;
+  declare Child?: Item;
 }
 
-StoreItem.init({
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
+StoreItem.init(
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    itemIdParent: { type: DataTypes.INTEGER, references: { model: 'Item', key: 'id' } },
+    itemIdChild: { type: DataTypes.INTEGER, references: { model: 'Item', key: 'id' } },
   },
-  itemIdParent: {
-    type: DataTypes.INTEGER,
-    references: {
-      model: 'Item', // Nombre de la tabla referenciada
-      key: 'id',     // Clave primaria de la tabla referenciada
-    },
-  },
-  itemIdChild: {
-    type: DataTypes.INTEGER,
-    references: {
-      model: 'Item', // Nombre de la tabla referenciada
-      key: 'id',     // Clave primaria de la tabla referenciada
-    },
-  }
-}, {
-  sequelize,
-  modelName: 'StoreItem',
-  tableName: 'StoreItem', // Cambié a 'store_items' para seguir la convención de nombres
-  timestamps: false, // Si no tienes createdAt y updatedAt
-});
+  { sequelize, modelName: 'StoreItem', tableName: 'StoreItem', timestamps: false },
+);
 
-// Exportar el modelo
 export default StoreItem;

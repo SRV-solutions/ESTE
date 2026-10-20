@@ -1,46 +1,24 @@
-import { Model, DataTypes } from 'sequelize';
+import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/database';
-import User from './User';
-import Permission from './Permission';
-import RolePermission from './RolePermission';
+import type Permission from './Permission';
 
 class Role extends Model {
-  public id!: number;
-  public roleName!: string;
-  public description?: string;  // Nuevo campo
-  public Permissions?: [Permission];  // Nuevo campo
-  
-
-  public static associate() {
-    Role.hasMany(User, { foreignKey: 'roleId' });
-
-    Role.belongsToMany(Permission, {
-      through: RolePermission,
-      foreignKey: 'roleId',
-      otherKey: 'permissionId',
-    });
-  }
+  declare id: number;
+  declare roleName: string;
+  declare description: string | null;
+  /** Null: el rol Administrador (global) y las plantillas que se copian a cada empresa nueva. */
+  declare companyId: number | null;
+  declare Permissions?: Permission[];
 }
 
-Role.init({
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
+Role.init(
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    roleName: { type: DataTypes.STRING, allowNull: false },
+    description: { type: DataTypes.STRING, allowNull: true },
+    companyId: { type: DataTypes.INTEGER, allowNull: true },
   },
-  roleName: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  description: {
-    type: DataTypes.STRING,
-    allowNull: true,  // Cambiar según si lo quieres obligatorio
-  },
-}, {
-  sequelize,
-  modelName: 'Role',
-  tableName: 'Role',
-  timestamps: false,
-});
+  { sequelize, modelName: 'Role', tableName: 'Role', timestamps: false },
+);
 
 export default Role;

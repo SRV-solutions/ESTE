@@ -131,3 +131,18 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Backups locales de la base
+backups/
+
+# Certificados de ARCA (nunca al repositorio)
+*.key
+*.crt
+*.csr
+*.pem
+
+# Configuración local de Claude Code
+.claude/settings.local.json
+
+# Documentos privados en desarrollo (recibos, planos)
+private-uploads/
