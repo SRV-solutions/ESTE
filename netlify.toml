@@ -1,0 +1,25 @@
+# Front de Event Box en Netlify. La API va aparte (Railway, Render, un VPS…): su URL se pone en
+# Netlify → Site configuration → Environment variables → VITE_API_URL.
+[build]
+  base = "front"
+  command = "yarn build"
+  publish = "dist"
+
+# Single Page App: cualquier ruta (/items, /service-orders/12…) la resuelve React Router.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Los assets de Vite llevan hash en el nombre: se cachean un año.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
