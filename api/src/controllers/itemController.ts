@@ -4,7 +4,7 @@ import { Op, WhereOptions } from 'sequelize';
 import { Readable } from 'stream';
 import { sequelize } from '../config/database';
 import { tenant } from '../middlewares/auth';
-import { Category, Item, StoreItem } from '../models';
+import { Category, Item, StoreItem, User } from '../models';
 import { createItemsForCategory, findAvailableItems, findCompanyItem } from '../services/itemService';
 import { HttpError, parseId, parsePositiveInt } from '../utils/http';
 import { naturalCodeOrder } from '../utils/itemCode';
@@ -34,7 +34,10 @@ export const listItems = async (req: Request, res: Response) => {
 
   const { rows, count } = await Item.findAndCountAll({
     where,
-    include: [{ model: Category, required: true }],
+    include: [
+      { model: Category, required: true },
+      { model: User, as: 'Owner', attributes: ['id', 'username', 'firstname', 'lastname'] },
+    ],
     order: naturalCodeOrder(),
     limit,
     offset: (page - 1) * limit,
