@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ColorModeProvider } from './context/ColorModeContext';
 import { FeedbackProvider } from './context/FeedbackContext';
 
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ColorModeProvider>
