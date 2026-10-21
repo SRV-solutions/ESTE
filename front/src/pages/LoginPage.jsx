@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Navigate, Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Navigate, Link as RouterLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, IconButton, InputAdornment, Link, Stack, TextField, Typography } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
@@ -10,13 +10,30 @@ import { errorMessage } from '../lib/api';
 import { BRAND } from '../theme';
 
 const LoginPage = () => {
-  const { login, status } = useAuth();
+  const { login, loginWithLink, status } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [params, setParams] = useSearchParams();
   const [form, setForm] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const link = params.get('link');
+  const linkTried = useRef(false);
+
+  // Llegó escaneando el QR de "Llevar al celular": entra con el link de un solo uso, sin contraseña.
+  useEffect(() => {
+    if (!link || linkTried.current || status !== 'anonymous') return;
+    linkTried.current = true;
+    setLoading(true);
+    loginWithLink(link)
+      .then(() => navigate('/', { replace: true }))
+      .catch((err) => {
+        setError(errorMessage(err, 'No se pudo entrar con el código.'));
+        setParams({}, { replace: true });
+      })
+      .finally(() => setLoading(false));
+  }, [link, status, loginWithLink, navigate, setParams]);
 
   if (status === 'authenticated') return <Navigate to="/" replace />;
 
@@ -84,11 +101,11 @@ const LoginPage = () => {
             Iniciar sesión
           </Typography>
           <Typography color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
-            Entrá con el usuario que te dio tu empresa.
+            {link && loading ? 'Entrando con el código de la PC…' : 'Entrá con tu usuario, tu email o tu DNI.'}
           </Typography>
           <Stack spacing={2}>
             <TextField
-              label="Usuario"
+              label="Usuario, email o DNI"
               name="username"
               autoComplete="username"
               autoFocus

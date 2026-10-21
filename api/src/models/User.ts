@@ -18,6 +18,8 @@ class User extends Model {
   /** Null solo en personas sin acceso a la app. */
   declare username: string;
   declare email: string | null;
+  /** DNI sin puntos: sirve para entrar, igual que el usuario o el email. */
+  declare dni: string | null;
   declare password: string;
   declare access: UserAccess;
   declare accessUntil: Date | null;
@@ -39,6 +41,7 @@ User.init(
     isSuperAdmin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     username: { type: DataTypes.STRING, allowNull: true, unique: true },
     email: { type: DataTypes.STRING, allowNull: true, unique: true },
+    dni: { type: DataTypes.STRING(10), allowNull: true },
     password: { type: DataTypes.STRING, allowNull: true },
     access: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'app' },
     accessUntil: { type: DataTypes.DATE, allowNull: true },

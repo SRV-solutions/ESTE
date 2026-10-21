@@ -11,7 +11,7 @@ import { countActiveTemporary, countAppUsers, fichaOf, findTeamMember, personNam
 import { deletePrivateFile } from '../services/storage';
 import { HttpError, parseId, pick } from '../utils/http';
 import { isValidCuit } from '../utils/companyInput';
-import { assertNotLastAdmin, assertPassword, hashPassword, validateProfile } from '../services/users';
+import { assertNotLastAdmin, assertPassword, hashPassword, normalizeDni, validateProfile } from '../services/users';
 
 /**
  * Equipo: todas las personas de la empresa en un solo lugar.
@@ -21,6 +21,12 @@ import { assertNotLastAdmin, assertPassword, hashPassword, validateProfile } fro
 
 const ACCESS: UserAccess[] = ['app', 'temporary', 'none'];
 const FICHA_FIELDS = ['cuil', 'position', 'area', 'startDate', 'phone', 'isActive'] as const;
+
+/** CUIL = prefijo (2) + DNI (8) + verificador (1). */
+const dniFromCuil = (cuil: unknown) => {
+  const digits = String(cuil ?? '').replace(/\D/g, '');
+  return digits.length === 11 ? normalizeDni(digits.slice(2, 10)) : null;
+};
 
 const trimOrNull = (v: unknown) => (v === undefined ? undefined : String(v ?? '').trim() || null);
 
@@ -100,7 +106,7 @@ export const listTeam = async (req: Request, res: Response) => {
   const payroll = planHasFeature(req.user!.plan, 'payroll');
   const users = await User.findAll({
     where: { companyId },
-    attributes: ['id', 'username', 'email', 'firstname', 'lastname', 'avatarUrl', 'roleId', 'access', 'accessUntil', 'disabledAt'],
+    attributes: ['id', 'username', 'email', 'dni', 'firstname', 'lastname', 'avatarUrl', 'roleId', 'access', 'accessUntil', 'disabledAt'],
     include: [
       { model: Role, attributes: ['id', 'roleName'] },
       ...(payroll
@@ -115,6 +121,7 @@ export const listTeam = async (req: Request, res: Response) => {
       id: u.id,
       username: u.username,
       email: u.email,
+      dni: u.dni,
       firstname: u.firstname,
       lastname: u.lastname,
       avatarUrl: u.avatarUrl,
@@ -163,11 +170,12 @@ export const createPerson = async (req: Request, res: Response) => {
   const email = trimOrNull(req.body.email) ?? null;
   const username = login ? (trimOrNull(req.body.username) ?? null) : null;
   const roleId = login ? (req.body.roleId ? Number(req.body.roleId) : null) : null;
+  const dni = normalizeDni(req.body.dni) ?? dniFromCuil(req.body.cuil);
 
   if (!firstname) throw new HttpError(400, 'El nombre es obligatorio.', { firstname: 'Obligatorio.' });
   if (login && !username) throw new HttpError(400, 'Elegí el usuario con el que va a entrar.', { username: 'Obligatorio.' });
   if (access === 'app' && !email) throw new HttpError(400, 'El email es obligatorio para quien usa la app.', { email: 'Obligatorio.' });
-  await validateProfile({ username: username ?? undefined, email: email ?? undefined, firstname, lastname: lastname ?? undefined });
+  await validateProfile({ username: username ?? undefined, email: email ?? undefined, firstname, lastname: lastname ?? undefined, dni });
   if (login) {
     assertPassword(req.body.password);
     await assertCompanyRole(req, roleId);
@@ -186,6 +194,7 @@ export const createPerson = async (req: Request, res: Response) => {
         accessUntil,
         username,
         email,
+        dni,
         firstname,
         lastname,
         roleId,
@@ -225,6 +234,8 @@ export const updatePerson = async (req: Request, res: Response) => {
   const lastname = trimOrNull(req.body.lastname);
   const email = trimOrNull(req.body.email);
   const username = trimOrNull(req.body.username);
+  // DNI: el que mandan; si lo dejan vacío y cargan CUIL, se deriva del CUIL.
+  const dni = req.body.dni !== undefined ? normalizeDni(req.body.dni) ?? dniFromCuil(req.body.cuil) ?? null : undefined;
   const roleId = req.body.roleId !== undefined && req.body.roleId !== '' ? Number(req.body.roleId) : user.roleId;
   const password = req.body.password ? String(req.body.password) : null;
 
@@ -235,7 +246,7 @@ export const updatePerson = async (req: Request, res: Response) => {
   if (login && !finalUsername) throw new HttpError(400, 'Elegí el usuario con el que va a entrar.', { username: 'Obligatorio.' });
   if (login && !user.password && !password) throw new HttpError(400, 'Poné una contraseña para que pueda entrar.', { password: 'Obligatoria.' });
   await validateProfile(
-    { username: username ?? undefined, email: email ?? undefined, firstname: firstname ?? undefined, lastname: lastname ?? undefined },
+    { username: username ?? undefined, email: email ?? undefined, firstname: firstname ?? undefined, lastname: lastname ?? undefined, dni },
     user.id,
   );
   if (password) assertPassword(password);
@@ -262,6 +273,7 @@ export const updatePerson = async (req: Request, res: Response) => {
         accessUntil,
         username: finalUsername,
         email: finalEmail,
+        ...(dni !== undefined ? { dni } : {}),
         firstname: firstname === undefined ? user.firstname : firstname,
         lastname: lastname === undefined ? user.lastname : lastname,
         roleId,

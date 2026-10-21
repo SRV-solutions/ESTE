@@ -24,7 +24,7 @@ const ProfileDialog = ({ open, onClose }) => {
   const [saving, setSaving] = useState(false);
 
   if (open && !form) {
-    setForm({ firstname: user.firstname ?? '', lastname: user.lastname ?? '', username: user.username, email: user.email });
+    setForm({ firstname: user.firstname ?? '', lastname: user.lastname ?? '', username: user.username, email: user.email, dni: user.dni ?? '' });
   }
   if (!open && form) setForm(null);
 
@@ -54,6 +54,7 @@ const ProfileDialog = ({ open, onClose }) => {
           <TextField label="Apellido" value={form.lastname} onChange={set('lastname')} error={!!errors.lastname} helperText={errors.lastname} />
           <TextField label="Usuario" value={form.username} onChange={set('username')} required error={!!errors.username} helperText={errors.username || 'Con este nombre iniciás sesión'} />
           <TextField label="Email" type="email" value={form.email} onChange={set('email')} required error={!!errors.email} helperText={errors.email} />
+          <TextField label="DNI" value={form.dni} onChange={set('dni')} inputProps={{ inputMode: 'numeric', maxLength: 10 }} error={!!errors.dni} helperText={errors.dni || 'Opcional. También sirve para iniciar sesión.'} />
         </>
       )}
     </FormDialog>

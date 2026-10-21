@@ -39,7 +39,7 @@ export default function LoginScreen() {
             <Text style={type.body}>El depósito y los eventos, en orden.</Text>
           </View>
 
-          <Field label="Usuario" value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} textContentType="username" returnKeyType="next" />
+          <Field label="Usuario, email o DNI" value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} textContentType="username" returnKeyType="next" />
           <PasswordField label="Contraseña" value={password} onChangeText={setPassword} textContentType="password" returnKeyType="go" onSubmitEditing={submit} />
           {!!error && (
             <Text style={[type.small, { color: C.danger, marginBottom: 12 }]}>

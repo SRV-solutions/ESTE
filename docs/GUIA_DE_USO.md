@@ -10,7 +10,7 @@ la app móvil se explica en [MOBILE.md](MOBILE.md).
 
 ## Entrar
 
-Cada persona entra con el usuario y la contraseña que le dio el administrador de su empresa. Si
+Cada persona entra con su **usuario, su email o su DNI** y la contraseña que le dio el administrador de su empresa. Si
 se olvidó la contraseña, *Olvidé mi contraseña* manda un link por mail que vale una hora.
 
 Desde **Mi perfil** (la foto, arriba a la derecha) se cambian el nombre, el email, la foto de perfil y
@@ -190,7 +190,7 @@ Un recibo sin firmar se puede reemplazar o borrar; uno firmado ya no se modifica
 ## Llevar Event Box al celular
 
 El botón **Llevar al celular**, al pie del menú, muestra un QR para abrir el sitio desde el teléfono.
-En el celular, el mismo botón explica cómo agregarla a la pantalla de inicio: queda con el ícono de
+El QR entra directo con tu usuario (es de un solo uso y vence a los 5 minutos; no lo compartas). En el celular, el mismo botón explica cómo agregarla a la pantalla de inicio: queda con el ícono de
 Event Box y abre a pantalla completa, como una app. (La app nativa, con GPS para el check-in, es
 aparte: ver [MOBILE.md](MOBILE.md).)
 

@@ -5,10 +5,10 @@ import { sequelize } from '../config/database';
 import { env } from '../config/env';
 import { assertCanLogin, signToken, tenant } from '../middlewares/auth';
 import { effectivePlan } from '../services/plan';
-import { Company, PasswordResetToken, Permission, Role, User } from '../models';
+import { Company, LoginLinkToken, PasswordResetToken, Permission, Role, User } from '../models';
 import { hasLogin } from '../models/User';
 import { countAppUsers } from '../services/team';
-import { assertPassword, checkPassword, hashPassword, validateProfile } from '../services/users';
+import { assertPassword, checkPassword, findByIdentifier, hashPassword, normalizeDni, validateProfile } from '../services/users';
 import { button, paragraph, sendEmail } from '../services/email';
 import { deleteByUrl, saveImage } from '../services/storage';
 import { subscriptionState } from '../services/subscription';
@@ -46,6 +46,7 @@ const baseSession = (user: User) => ({
   id: user.id,
   username: user.username,
   email: user.email,
+  dni: user.dni,
   firstname: user.firstname,
   lastname: user.lastname,
   avatarUrl: user.avatarUrl,
@@ -70,12 +71,13 @@ const baseSession = (user: User) => ({
 
 export const login = async (req: Request, res: Response) => {
   const { username, password } = req.body;
-  if (!username || !password) throw new HttpError(400, 'Ingresá usuario y contraseña.');
+  if (!username || !password) throw new HttpError(400, 'Ingresá tu usuario, email o DNI, y la contraseña.');
 
-  const user = await User.scope('withPassword').findOne({ where: { username }, include: sessionIncludes });
+  // Se entra con el usuario, el email o el DNI.
+  const user = await User.scope('withPassword').findOne({ ...findByIdentifier(String(username)), include: sessionIncludes });
   // Mismo mensaje para usuario inexistente y contraseña incorrecta: no revela qué usuarios existen.
   if (!user?.password || !(await checkPassword(password, user.password))) {
-    throw new HttpError(401, 'Usuario o contraseña incorrectos.');
+    throw new HttpError(401, 'Usuario, email o DNI incorrecto, o contraseña incorrecta.');
   }
   assertCanLogin(user);
 
@@ -94,11 +96,13 @@ export const updateMyProfile = async (req: Request, res: Response) => {
 
   // Solo datos personales: el rol y la contraseña no se cambian desde acá.
   const { username, email, firstname, lastname } = req.body;
-  await validateProfile({ username, email, firstname, lastname }, user.id);
+  const dni = req.body.dni === undefined ? undefined : normalizeDni(req.body.dni);
+  await validateProfile({ username, email, firstname, lastname, dni }, user.id);
 
   await user.update({
     username: username ?? user.username,
     email: email ?? user.email,
+    ...(dni !== undefined ? { dni } : {}),
     firstname: firstname?.trim() || null,
     lastname: lastname?.trim() || null,
   });
@@ -156,9 +160,9 @@ const sha256 = (value: string) => crypto.createHash('sha256').update(value).dige
 export const forgotPassword = async (req: Request, res: Response) => {
   const identifier = String(req.body.identifier || '').trim();
   const generic = { message: 'Si el usuario existe, le mandamos un mail con un link para elegir una contraseña nueva.' };
-  if (!identifier) throw new HttpError(400, 'Ingresá tu usuario o tu email.');
+  if (!identifier) throw new HttpError(400, 'Ingresá tu usuario, tu email o tu DNI.');
 
-  const user = await User.findOne({ where: { [Op.or]: [{ username: identifier }, { email: identifier.toLowerCase() }, { email: identifier }] } });
+  const user = await User.findOne(findByIdentifier(identifier));
   if (!user?.email || !hasLogin(user)) return res.json(generic);
 
   const token = crypto.randomBytes(32).toString('hex');
@@ -177,6 +181,36 @@ export const forgotPassword = async (req: Request, res: Response) => {
   if (!env.isProduction) console.log(`[eventbox] Link de recuperación para ${user.username}: ${link}`);
 
   res.json(generic);
+};
+
+// ---------- Entrar en el celular con el QR ----------
+
+const LINK_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Desde una sesión abierta (la PC) genera un link de un solo uso que vale 5 minutos: el celular
+ * lo escanea y entra como la misma persona, sin escribir la contraseña. Se guarda hasheado.
+ */
+export const createLoginLink = async (req: Request, res: Response) => {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + LINK_TTL_MS);
+  // Un solo link vivo por persona: los anteriores dejan de servir.
+  await LoginLinkToken.update({ usedAt: new Date() }, { where: { userId: req.user!.id, usedAt: null } });
+  await LoginLinkToken.create({ userId: req.user!.id, tokenHash: sha256(token), expiresAt });
+  res.json({ url: `${env.appUrl}/login?link=${token}`, expiresAt });
+};
+
+export const redeemLoginLink = async (req: Request, res: Response) => {
+  const token = String(req.body.token || '');
+  const record = token ? await LoginLinkToken.findOne({ where: { tokenHash: sha256(token) } }) : null;
+  if (!record || record.usedAt || record.expiresAt < new Date()) {
+    throw new HttpError(400, 'El código ya se usó o venció. Volvé a abrir "Llevar al celular" en la PC y escaneá el nuevo.');
+  }
+  const user = await User.findByPk(record.userId, { include: sessionIncludes });
+  if (!user) throw new HttpError(400, 'El usuario ya no existe.');
+  assertCanLogin(user);
+  await record.update({ usedAt: new Date() });
+  res.json({ token: signToken(user), user: await toSession(user) });
 };
 
 export const resetPassword = async (req: Request, res: Response) => {

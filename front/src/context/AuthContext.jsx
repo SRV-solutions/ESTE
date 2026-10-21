@@ -52,6 +52,15 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   }, []);
 
+  /** Entra con el link de un solo uso del QR "Llevar al celular" (generado desde una sesión abierta). */
+  const loginWithLink = useCallback(async (token) => {
+    const { data } = await api.post('/auth/link/redeem', { token });
+    tokenStore.set(data.token);
+    setUser(data.user);
+    setStatus('authenticated');
+    return data.user;
+  }, []);
+
   const can = useCallback(
     (entity, action) => !!user?.permissions?.some((p) => p.entity === entity && p.action === action),
     [user],
@@ -68,6 +77,7 @@ export const AuthProvider = ({ children }) => {
       user,
       status,
       login,
+      loginWithLink,
       logout,
       refresh,
       setUser,
@@ -82,7 +92,7 @@ export const AuthProvider = ({ children }) => {
       /** La empresa puede usar la app (al día o en período de gracia). */
       hasAccess: !!user?.company && ['active', 'grace'].includes(subscription?.state),
     }),
-    [user, status, login, logout, refresh, can, hasFeature, inDevelopment, subscription],
+    [user, status, login, loginWithLink, logout, refresh, can, hasFeature, inDevelopment, subscription],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

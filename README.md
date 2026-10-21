@@ -71,6 +71,10 @@ npx expo start
 
 ## Usuarios
 
+Se entra con el **usuario, el email o el DNI** (sin puntos o con puntos, da igual) y la contraseña. El DNI se carga en
+Mi perfil o en Equipo; si la persona tiene CUIL en su ficha, se completa solo. **Llevar al celular** (abajo del menú) muestra
+un QR que entra directo en el teléfono con la sesión de la PC: es de un solo uso y vence a los 5 minutos.
+
 - **Equipo de SRV (superadmin)**: entra al **Panel SRV**, crea empresas con su primer administrador, ve pagos y facturas, registra pagos manuales y suspende empresas. Se habilita con:
 
   ```bash

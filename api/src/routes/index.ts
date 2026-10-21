@@ -55,6 +55,9 @@ const mailLimiter = rateLimit({
 router.post('/auth/login', loginLimiter, h(users.login));
 router.post('/auth/forgot', mailLimiter, h(users.forgotPassword));
 router.post('/auth/reset', loginLimiter, h(users.resetPassword));
+// Entrar en el celular escaneando el QR de una sesión abierta en la PC.
+router.post('/auth/link', isAuth, h(users.createLoginLink));
+router.post('/auth/link/redeem', loginLimiter, h(users.redeemLoginLink));
 router.get('/me', isAuth, h(users.getMyProfile));
 router.patch('/me', isAuth, h(users.updateMyProfile));
 router.put('/me/password', isAuth, h(users.changeMyPassword));

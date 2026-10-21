@@ -9,6 +9,7 @@ import Invoice from './Invoice';
 import Item from './Item';
 import Payment from './Payment';
 import Location from './Location';
+import LoginLinkToken from './LoginLinkToken';
 import PasswordResetToken from './PasswordResetToken';
 import Payslip from './Payslip';
 import Permission from './Permission';
@@ -33,6 +34,7 @@ Invoice.belongsTo(Company, { foreignKey: 'companyId' });
 Feedback.belongsTo(Company, { foreignKey: 'companyId' });
 Feedback.belongsTo(User, { foreignKey: 'userId' });
 PasswordResetToken.belongsTo(User, { foreignKey: 'userId' });
+LoginLinkToken.belongsTo(User, { foreignKey: 'userId' });
 
 Blueprint.belongsTo(Event, { foreignKey: 'eventId' });
 Blueprint.belongsTo(User, { foreignKey: 'uploadedBy', as: 'Uploader' });
@@ -94,6 +96,7 @@ export {
   Item,
   Payment,
   Location,
+  LoginLinkToken,
   PasswordResetToken,
   Payslip,
   Permission,

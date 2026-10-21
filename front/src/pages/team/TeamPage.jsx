@@ -54,6 +54,7 @@ const EMPTY = {
   firstname: '',
   lastname: '',
   email: '',
+  dni: '',
   username: '',
   password: '',
   roleId: '',
@@ -200,6 +201,9 @@ const PersonDialog = ({ person, roles: allRoles, payroll, limits, onClose, onSav
         </Grid>
         <Grid item xs={12} sm={login ? 6 : 12}>
           {field('email', form.access === 'app' ? 'Email' : 'Email (opcional)', { type: 'email', required: form.access === 'app' })}
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          {field('dni', 'DNI', { inputProps: { inputMode: 'numeric', maxLength: 10 }, helperText: 'Opcional. Sirve para entrar; si cargás el CUIL, se completa solo.' })}
         </Grid>
         {login && (
           <>
