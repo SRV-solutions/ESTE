@@ -146,3 +146,6 @@ backups/
 
 # Documentos privados en desarrollo (recibos, planos)
 private-uploads/
+
+# Variables de producción (contienen secretos)
+.env.production
