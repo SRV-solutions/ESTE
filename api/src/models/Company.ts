@@ -24,6 +24,14 @@ class Company extends Model {
   declare monthlyPriceUsd: string;
   /** Hasta qué día está paga la suscripción. */
   declare paidUntil: string | null;
+  /** Acuerdo especial de SRV (ver services/plan.ts): precio, módulos y límites propios por un período. */
+  declare dealFrom: string | null;
+  declare dealUntil: string | null;
+  declare dealPriceUsd: string | null;
+  declare dealFeatures: string[] | null;
+  declare dealMaxUsers: number | null;
+  declare dealMaxTemporary: number | null;
+  declare dealNote: string | null;
   declare createdAt: Date;
   declare updatedAt: Date;
 }
@@ -43,6 +51,13 @@ Company.init(
     plan: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'profesional' },
     monthlyPriceUsd: { type: DataTypes.DECIMAL(10, 2), allowNull: false, defaultValue: 400 },
     paidUntil: { type: DataTypes.DATEONLY, allowNull: true },
+    dealFrom: { type: DataTypes.DATEONLY, allowNull: true },
+    dealUntil: { type: DataTypes.DATEONLY, allowNull: true },
+    dealPriceUsd: { type: DataTypes.DECIMAL(10, 2), allowNull: true },
+    dealFeatures: { type: DataTypes.JSONB, allowNull: true },
+    dealMaxUsers: { type: DataTypes.INTEGER, allowNull: true },
+    dealMaxTemporary: { type: DataTypes.INTEGER, allowNull: true },
+    dealNote: { type: DataTypes.TEXT, allowNull: true },
   },
   { sequelize, modelName: 'Company', tableName: 'Company', timestamps: true },
 );

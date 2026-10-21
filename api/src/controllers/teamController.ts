@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { literal, Op, Transaction } from 'sequelize';
 import { sequelize } from '../config/database';
 import { env } from '../config/env';
-import { getPlan, planHas, TEMPORARY_MAX_DAYS } from '../config/plans';
+import { TEMPORARY_MAX_DAYS } from '../config/plans';
+import { planHasFeature } from '../services/plan';
 import { tenant } from '../middlewares/auth';
 import { Employee, Payslip, Role, User } from '../models';
 import { hasLogin, UserAccess } from '../models/User';
@@ -71,7 +72,7 @@ const assertAccessAllowed = async (
   transaction: Transaction,
 ) => {
   const companyId = tenant(req);
-  const plan = getPlan(req.user!.plan);
+  const plan = req.user!.plan!;
   if (access === 'app' && !wasActiveApp) {
     if ((await countAppUsers(companyId, transaction)) >= plan.maxUsers) {
       throw new HttpError(
@@ -86,7 +87,7 @@ const assertAccessAllowed = async (
       throw new HttpError(403, `El plan ${plan.name} permite ${plan.maxTemporary} accesos temporales activos a la vez. Esperá a que venza alguno o pasá a un plan mayor.`);
     }
   }
-  if (access === 'none' && !planHas(req.user!.plan, 'payroll')) {
+  if (access === 'none' && !planHasFeature(req.user!.plan, 'payroll')) {
     throw new HttpError(403, 'Las personas sin acceso a la app son parte del módulo de sueldos (plan Profesional).');
   }
 };
@@ -95,8 +96,8 @@ const COUNT = (extra = '') => literal(`(SELECT COUNT(*) FROM "Payslip" p WHERE p
 
 export const listTeam = async (req: Request, res: Response) => {
   const companyId = tenant(req);
-  const plan = getPlan(req.user!.plan);
-  const payroll = planHas(req.user!.plan, 'payroll');
+  const plan = req.user!.plan!;
+  const payroll = planHasFeature(req.user!.plan, 'payroll');
   const users = await User.findAll({
     where: { companyId },
     attributes: ['id', 'username', 'email', 'firstname', 'lastname', 'avatarUrl', 'roleId', 'access', 'accessUntil', 'disabledAt'],
@@ -172,7 +173,7 @@ export const createPerson = async (req: Request, res: Response) => {
     await assertCompanyRole(req, roleId);
   }
   const accessUntil = access === 'temporary' ? parseDays(req.body.days) : null;
-  const payroll = planHas(req.user!.plan, 'payroll');
+  const payroll = planHasFeature(req.user!.plan, 'payroll');
   const ficha = payroll ? parseFicha(req.body) : {};
   if (payroll) await assertCuilFree(companyId, ficha.cuil);
 
@@ -249,7 +250,7 @@ export const updatePerson = async (req: Request, res: Response) => {
   const staysAdmin = roleId === env.adminRoleId && access === 'app';
   if (wasAdmin && !staysAdmin) await assertNotLastAdmin(user);
 
-  const payroll = planHas(req.user!.plan, 'payroll');
+  const payroll = planHasFeature(req.user!.plan, 'payroll');
   const ficha = payroll ? parseFicha(req.body) : {};
   if (payroll) await assertCuilFree(companyId, ficha.cuil, user.id);
 
@@ -290,7 +291,7 @@ export const setDisabled = async (req: Request, res: Response) => {
   if (disabled === !!user.disabledAt) return res.json({ message: disabled ? 'Ya estaba desactivado.' : 'Ya estaba activo.' });
   if (disabled && user.roleId === env.adminRoleId && user.access === 'app') await assertNotLastAdmin(user);
   if (!disabled && user.access === 'app') {
-    const plan = getPlan(req.user!.plan);
+    const plan = req.user!.plan!;
     if ((await countAppUsers(user.companyId!)) >= plan.maxUsers) {
       throw new HttpError(403, `Llegaron al límite de ${plan.maxUsers} usuarios del plan ${plan.name}: no se puede reactivar.`);
     }

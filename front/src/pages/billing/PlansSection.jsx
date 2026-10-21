@@ -21,6 +21,25 @@ const PlansSection = ({ onChanged }) => {
 
   const usage = Math.min((current.userCount / current.maxUsers) * 100, 100);
 
+  if (current.custom) {
+    return (
+      <Box id="planes" sx={{ mt: 4 }}>
+        <Typography variant="h5">Plan</Typography>
+        <Paper variant="outlined" sx={{ p: 2.5, mt: 1.5, borderColor: 'secondary.main' }}>
+          <Typography sx={{ fontWeight: 800 }}>Acuerdo especial con SRV</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {formatUsd(current.priceUsd)} por mes, {current.features.length} módulos y hasta {current.maxUsers} usuarios de la app
+            {current.dealUntil ? `, hasta el ${new Date(`${current.dealUntil}T12:00:00`).toLocaleDateString('es-AR')}` : ''}. Para cambiar las condiciones, hablá con SRV.
+          </Typography>
+          <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 1 }}>
+            {current.userCount} de {current.maxUsers} usuarios de la app
+          </Typography>
+          <LinearProgress variant="determinate" value={usage} color={usage > 85 ? 'warning' : 'primary'} sx={{ height: 8, borderRadius: 4, maxWidth: 320 }} />
+        </Paper>
+      </Box>
+    );
+  }
+
   const change = async (plan) => {
     const downgrade = plan.priceUsd < data.plans.find((p) => p.id === current.id).priceUsd;
     const ok = await confirm({

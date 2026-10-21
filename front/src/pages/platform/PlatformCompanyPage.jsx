@@ -22,6 +22,7 @@ import EditOutlined from '@mui/icons-material/EditOutlined';
 import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
 import PictureAsPdfOutlined from '@mui/icons-material/PictureAsPdfOutlined';
 import ReplayOutlined from '@mui/icons-material/ReplayOutlined';
+import HandshakeOutlined from '@mui/icons-material/HandshakeOutlined';
 import FormDialog from '../../components/FormDialog';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui';
 import { useFeedback } from '../../context/FeedbackContext';
@@ -32,6 +33,7 @@ import { downloadInvoice, voucherLabel } from '../../lib/invoices';
 import { PLAN_OPTIONS } from '../../lib/plans';
 import { ACCESS_STATE, PAYMENT_STATUS, formatArs, formatUsd, periodLabel, taxConditionLabel } from '../../lib/money';
 import CompanyForm from '../billing/CompanyForm';
+import DealDialog from './DealDialog';
 import { EMPTY_COMPANY } from '../billing/companyDefaults';
 
 const Field = ({ label, value }) => (
@@ -125,6 +127,7 @@ const PlatformCompanyPage = () => {
   const { id } = useParams();
   const { notify, confirm } = useFeedback();
   const [editing, setEditing] = useState(false);
+  const [dealing, setDealing] = useState(false);
   const [busy, setBusy] = useState(false);
   const { data: company, loading, error, reload } = useLoader(() => api.get(`/platform/companies/${id}`).then((r) => r.data), [id]);
 
@@ -181,6 +184,9 @@ const PlatformCompanyPage = () => {
             <Button variant="outlined" startIcon={<EditOutlined />} onClick={() => setEditing(true)}>
               Editar
             </Button>
+            <Button variant="outlined" color="secondary" startIcon={<HandshakeOutlined />} onClick={() => setDealing(true)}>
+              Acuerdo especial
+            </Button>
             <Button variant="outlined" color={company.status === 'active' ? 'error' : 'success'} onClick={toggleSuspend} disabled={busy}>
               {company.status === 'active' ? 'Suspender' : 'Reactivar'}
             </Button>
@@ -206,7 +212,24 @@ const PlatformCompanyPage = () => {
         <Grid item xs={12} sm={6} md={4}>
           <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
             <Stack spacing={1.5}>
-              <Field label="Plan y precio" value={`${PLAN_OPTIONS.find((p) => p.id === company.plan)?.name ?? company.plan} · ${formatUsd(company.monthlyPriceUsd)} por mes`} />
+              <Field label="Plan y precio de lista" value={`${PLAN_OPTIONS.find((p) => p.id === company.plan)?.name ?? company.plan} · ${formatUsd(company.monthlyPriceUsd)} por mes`} />
+              {company.effective?.deal && (
+                <Stack spacing={0.25}>
+                  <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Acuerdo especial
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                    <Chip size="small" color={company.effective.deal.active ? 'secondary' : 'default'} label={company.effective.deal.active ? 'Vigente' : company.effective.deal.from && company.effective.deal.from > new Date().toISOString().slice(0, 10) ? 'Empieza más adelante' : 'Vencido'} />
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {formatUsd(company.effective.deal.priceUsd)} por mes · {company.effective.deal.features.length} módulos · {company.effective.deal.maxUsers} usuarios
+                    </Typography>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary">
+                    {company.effective.deal.from ? `Del ${formatDate(company.effective.deal.from)}` : 'Desde siempre'} {company.effective.deal.until ? `al ${formatDate(company.effective.deal.until)}` : '· sin vencimiento'}
+                    {company.effective.deal.note ? ` · ${company.effective.deal.note}` : ''}
+                  </Typography>
+                </Stack>
+              )}
               <Field label="Paga hasta" value={formatDate(company.paidUntil)} />
               <Field label="Se bloquea" value={company.subscription.blocksOn ? formatDate(company.subscription.blocksOn) : '—'} />
               <Field label="Cliente desde" value={formatDate(company.createdAt)} />
@@ -309,6 +332,16 @@ const PlatformCompanyPage = () => {
         {!company.payments.length && <EmptyState title="Sin pagos todavía" />}
       </TableContainer>
 
+      {dealing && (
+        <DealDialog
+          company={company}
+          onClose={() => setDealing(false)}
+          onSaved={() => {
+            setDealing(false);
+            reload();
+          }}
+        />
+      )}
       {editing && (
         <EditDialog
           company={company}

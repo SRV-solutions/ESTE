@@ -203,3 +203,9 @@ con captura opcional. Llega a info@wearesrv.com.
 
 Alta de empresas con su primer administrador, plan y precio (de lista o especial), registro de
 pagos, suspensión y reactivación, y los reportes que mandan los usuarios.
+
+![Acuerdo especial](img/acuerdo-especial.jpg)
+
+**Acuerdo especial**: para una empresa, por un período, un precio propio por mes, los módulos que
+SRV decida (sin importar el plan) y límites propios. Por ejemplo, "hasta el año que viene, USD 400
+por mes con todo incluido". Al vencer, la empresa vuelve sola a su plan y a su precio de lista.

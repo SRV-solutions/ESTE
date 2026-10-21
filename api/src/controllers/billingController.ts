@@ -6,6 +6,7 @@ import { deleteByUrl, saveImage } from '../services/storage';
 import { usdToArs } from '../services/dollar';
 import { currentMonthStatus, subscriptionState } from '../services/subscription';
 import { Company, Invoice, Payment } from '../models';
+import { effectivePlan } from '../services/plan';
 import { HttpError, parseId } from '../utils/http';
 import { parseCompanyInput } from '../utils/companyInput';
 
@@ -25,9 +26,11 @@ export const getBilling = async (req: Request, res: Response) => {
   ]);
   // Lo que se debe del mes en curso: el abono del plan en dólares y su valor en pesos hoy.
   const rate = quote?.rate ?? null;
-  const amountUsd = Number(company.monthlyPriceUsd);
+  const plan = effectivePlan(company);
+  const amountUsd = plan.priceUsd;
   res.json({
     company,
+    plan,
     subscription: subscriptionState(company),
     month: {
       ...currentMonthStatus(company),

@@ -11,6 +11,7 @@ import { button, details, isEmailConfigured, paragraph, sendEmail } from '../ser
 import { cloneTemplateRoles } from '../services/roles';
 import { isR2Configured } from '../services/storage';
 import { isMercadoPagoConfigured } from '../services/mercadopago';
+import { effectivePlan, parseDeal } from '../services/plan';
 import { addDays, subscriptionState, todayAR } from '../services/subscription';
 import { HttpError, parseId } from '../utils/http';
 import { parseCompanyInput } from '../utils/companyInput';
@@ -19,14 +20,14 @@ import { EMAIL_RE, hashPassword } from '../services/users';
 const count = (table: string, extra = '') =>
   literal(`(SELECT COUNT(*) FROM "${table}" x WHERE x."companyId" = "Company"."id" ${extra})::int`);
 
-const withState = (company: Company) => ({ ...company.toJSON(), subscription: subscriptionState(company) });
+const withState = (company: Company) => ({ ...company.toJSON(), subscription: subscriptionState(company), effective: effectivePlan(company) });
 
 /** Resumen de la plataforma: empresas, ingresos y estado de las integraciones. */
 export const overview = async (_req: Request, res: Response) => {
   const companies = await Company.findAll();
   const states = companies.map((c) => subscriptionState(c).state);
   const rate = await getBlueRate().catch(() => null);
-  const mrrUsd = companies.filter((c, i) => c.status === 'active' && states[i] !== 'blocked').reduce((s, c) => s + Number(c.monthlyPriceUsd), 0);
+  const mrrUsd = companies.filter((c, i) => c.status === 'active' && states[i] !== 'blocked').reduce((s, c) => s + effectivePlan(c).priceUsd, 0);
   const since = new Date(Date.now() - 30 * 86400_000);
   const [collected, openFeedback] = await Promise.all([
     Payment.sum('amountArs', { where: { status: 'approved', paidAt: { [Op.gte]: since } } }),
@@ -159,6 +160,8 @@ export const updateCompany = async (req: Request, res: Response) => {
     if (req.body.paidUntil !== null && !/^\d{4}-\d{2}-\d{2}$/.test(req.body.paidUntil)) throw new HttpError(400, 'Fecha inválida.');
     updates.paidUntil = req.body.paidUntil;
   }
+  // Acuerdo especial: `deal: null` lo quita; un objeto lo crea o reemplaza.
+  if (req.body.deal !== undefined) Object.assign(updates, parseDeal(req.body.deal));
   await company.update(updates);
   res.json(withState(company));
 };

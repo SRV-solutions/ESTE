@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 import { sequelize } from '../config/database';
 import { env } from '../config/env';
 import { assertCanLogin, signToken, tenant } from '../middlewares/auth';
-import { getPlan, IN_DEVELOPMENT } from '../config/plans';
+import { effectivePlan } from '../services/plan';
 import { Company, PasswordResetToken, Permission, Role, User } from '../models';
 import { hasLogin } from '../models/User';
 import { countAppUsers } from '../services/team';
@@ -20,12 +20,24 @@ const ROLE_BRIEF = { model: Role, attributes: ['id', 'roleName'] };
 
 /** Forma única del usuario autenticado (login y perfil devuelven lo mismo). */
 const toSession = async (user: User) => {
-  const plan = user.Company ? getPlan(user.Company.plan) : null;
+  const plan = user.Company ? effectivePlan(user.Company) : null;
   const userCount = user.companyId ? await countAppUsers(user.companyId) : 0;
   return {
     ...baseSession(user),
     plan: plan
-      ? { id: plan.id, name: plan.name, features: plan.features, inDevelopment: IN_DEVELOPMENT, maxUsers: plan.maxUsers, maxTemporary: plan.maxTemporary, userCount }
+      ? {
+          id: plan.id,
+          name: plan.name,
+          features: plan.features,
+          inDevelopment: plan.inDevelopment,
+          maxUsers: plan.maxUsers,
+          maxTemporary: plan.maxTemporary,
+          priceUsd: plan.priceUsd,
+          custom: plan.custom,
+          dealUntil: plan.custom ? plan.deal?.until ?? null : null,
+          dealNote: plan.custom ? plan.deal?.note ?? null : null,
+          userCount,
+        }
       : null,
   };
 };

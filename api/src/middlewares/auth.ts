@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
-import { Feature, PlanId, planHas, PLANS } from '../config/plans';
+import { Feature, PLANS } from '../config/plans';
+import { EffectivePlan, effectivePlan, planHasFeature } from '../services/plan';
 import { Company, Permission, Role, User } from '../models';
 import { Action, Entity } from '../models/enums';
 import { hasLogin } from '../models/User';
@@ -18,7 +19,8 @@ export interface AuthUser {
   isSuperAdmin: boolean;
   permissions: Array<{ entity: string; action: string }>;
   access: AccessState | null;
-  plan: PlanId | null;
+  /** Plan vigente de la empresa (o su acuerdo especial): módulos, límites y precio. */
+  plan: EffectivePlan | null;
 }
 
 declare module 'express-serve-static-core' {
@@ -53,7 +55,7 @@ export const isAuth = asyncHandler(async (req: Request, _res: Response, next: Ne
     attributes: ['id', 'roleId', 'companyId', 'isSuperAdmin', 'access', 'accessUntil', 'disabledAt'],
     include: [
       { model: Role, include: [{ model: Permission, through: { attributes: [] } }] },
-      { model: Company, attributes: ['id', 'status', 'paidUntil', 'plan'] },
+      { model: Company, attributes: ['id', 'status', 'paidUntil', 'plan', 'monthlyPriceUsd', 'dealFrom', 'dealUntil', 'dealPriceUsd', 'dealFeatures', 'dealMaxUsers', 'dealMaxTemporary', 'dealNote'] },
     ],
   });
   if (!user) throw new HttpError(401, 'El usuario ya no existe.');
@@ -68,14 +70,14 @@ export const isAuth = asyncHandler(async (req: Request, _res: Response, next: Ne
     isSuperAdmin: user.isSuperAdmin,
     permissions: (user.Role?.Permissions || []).map((p) => ({ entity: p.entity, action: p.action })),
     access: user.Company ? subscriptionState(user.Company).state : null,
-    plan: user.Company?.plan ?? null,
+    plan: user.Company ? effectivePlan(user.Company) : null,
   };
   next();
 });
 
 /** Exige que el plan de la empresa incluya el módulo (si no, le dice qué plan lo tiene). */
 export const requireFeature = (feature: Feature) => (req: Request, _res: Response, next: NextFunction) => {
-  if (planHas(req.user?.plan, feature)) return next();
+  if (planHasFeature(req.user?.plan, feature)) return next();
   const needed = PLANS.find((p) => p.features.includes(feature));
   next(new HttpError(403, `Este módulo es parte del plan ${needed?.name ?? 'superior'}. Un administrador puede cambiar el plan desde Mi empresa.`));
 };

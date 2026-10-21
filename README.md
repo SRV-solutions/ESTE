@@ -129,6 +129,10 @@ Las reglas se validan en la API (`api/src/services/serviceOrderPolicy.ts`).
 
 Un contenedor (baúl, rack, caja) puede tener **contenido fijo**, que viaja siempre con él (Stock → Contenido fijo), o recibir ítems **solo para una orden**. Los contenedores pueden ir uno dentro de otro, y todo lo que está adentro queda ocupado mientras el de afuera está en una orden. Los dos tipos de contenido se pueden vaciar de una vez.
 
+## Acuerdos especiales (Panel SRV)
+
+Desde **Panel SRV → empresa → Acuerdo especial**, SRV puede pactar con una empresa, por un período (desde / hasta, o sin vencimiento), un **precio propio por mes** (incluso 0), los **módulos** que quiera sin importar el plan y límites propios de usuarios y temporales. Mientras rige, la empresa ve "Acuerdo especial" en Mi empresa, paga ese precio y no puede cambiar de plan desde la app; al vencer, vuelve sola a su plan y precio de lista. Se guarda en `Company.deal*` y lo resuelve `api/src/services/plan.ts` (`effectivePlan`).
+
 ## Check-in / out y reportes (plan Empresa)
 
 - **Check-in / out**: desde la app móvil o la web, la persona registra cuándo el material llega al evento (check-in) y cuándo se retira (check-out). Si el lugar tiene coordenadas (se cargan en Lugares con "Estoy acá" o desde Google Maps), la API calcula la distancia: dentro del radio (`CHECKIN_RADIUS_M`, 300 m por defecto) queda "en el lugar"; si está lejos, avisa y pide confirmación.

@@ -12,7 +12,7 @@ import {
   StoreItem,
   User,
 } from '../models';
-import { planHas } from '../config/plans';
+import { planHasFeature } from '../services/plan';
 import { tenant } from '../middlewares/auth';
 import { ServiceOrderStatus } from '../models/enums';
 import { findAvailableItems, pickAvailableItems } from '../services/itemService';
@@ -45,7 +45,7 @@ const parseResponsibles = async (req: Request, companyId: number) => {
   const out: Record<string, number | null> = {};
   for (const r of RESPONSIBLES) {
     if (req.body[r.field] === undefined) continue;
-    if ('feature' in r && req.body[r.field] && !planHas(req.user!.plan, 'stageOwners')) {
+    if ('feature' in r && req.body[r.field] && !planHasFeature(req.user!.plan, 'stageOwners')) {
       throw new HttpError(403, 'Los responsables de logística y recepción son parte del plan Profesional.');
     }
     out[r.field] = await assertUser(companyId, req.body[r.field], r.label);

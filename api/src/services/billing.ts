@@ -6,6 +6,7 @@ import { HttpError } from '../utils/http';
 import { ArcaError, isArcaConfigured, issueVoucher } from './arca';
 import { getBlueRate, usdToArs } from './dollar';
 import { button, details, paragraph, sendEmail } from './email';
+import { effectivePlan } from './plan';
 import { createCheckout, getMpPayment, isMercadoPagoConfigured } from './mercadopago';
 import { monthEnd, nextPeriod } from './subscription';
 
@@ -15,7 +16,7 @@ export const periodLabel = (period: string) => `${MONTHS[Number(period.slice(5, 
 /** Cuánto paga la empresa por el próximo mes, convertido a pesos con el dólar blue de ahora. */
 export const quoteFor = async (company: Company) => {
   const rate = await getBlueRate();
-  const amountUsd = Number(company.monthlyPriceUsd);
+  const amountUsd = effectivePlan(company).priceUsd;
   const { period, from, to } = nextPeriod(company);
   return { period, periodLabel: periodLabel(period), from, to, amountUsd, rate, amountArs: usdToArs(amountUsd, rate.sell) };
 };
