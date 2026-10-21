@@ -98,6 +98,18 @@ Con el módulo de sueldos, cada persona suma sus datos laborales (CUIL, puesto, 
 
 ## Base de datos
 
+### Llevar la base a producción
+
+```bash
+scripts/db-dump.sh                      # backup de la base local "este" → backups/eventbox-produccion-<fecha>.dump
+scripts/db-restore.sh backups/eventbox-produccion-<fecha>.dump postgres://usuario:clave@host:5432
+```
+
+`db-restore.sh` crea la base **eventbox** en ese servidor (si existe, pide confirmación y la reemplaza) y
+restaura el backup. Después, en el `.env` de la API, `DB_NAME=eventbox` con el host, usuario y clave del
+servidor; al arrancar, la API aplica sola las migraciones que falten. Sin URL, usa el Postgres local
+(`PGHOST`, `PGUSER`, `PGPASSWORD`). Los backups quedan fuera del repo (`backups/` está ignorado).
+
 Las migraciones están en `api/src/db/migrations` y se aplican solas al iniciar la API. Cada una corre en una transacción y queda registrada en la tabla `EventBoxMigration`. Para aplicarlas sin levantar la API: `yarn build && yarn db:migrate`.
 
 Una base vacía arranca con los roles y permisos de fábrica. Una base existente de E.S.T.E. pasa a ser la empresa 1. Las bases creadas cuando la app se llamaba Sortex conservan su historial: la tabla `SortexMigration` se renombra sola.
