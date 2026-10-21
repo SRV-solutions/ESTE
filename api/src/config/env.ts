@@ -27,6 +27,8 @@ export const env = {
   appUrl: process.env.APP_URL || 'http://localhost:5173',
 
   db: {
+    /** URL completa (Railway, Render, Neon la dan así). Si está, pisa a DB_HOST/DB_USER/... */
+    url: process.env.DATABASE_URL || '',
     host: process.env.DB_HOST || 'localhost',
     port: num(process.env.DB_PORT, 5432),
     username: process.env.DB_USER || 'postgres',
