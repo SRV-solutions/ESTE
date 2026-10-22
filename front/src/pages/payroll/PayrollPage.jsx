@@ -9,6 +9,7 @@ import FormDialog from '../../components/FormDialog';
 import { EmptyState, ErrorState, Loading, PageHeader, StatTile } from '../../components/ui';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useLoader } from '../../hooks/useLoader';
+import { useUrlParams } from '../../hooks/useUrlParams';
 import FileViewer from '../../components/FileViewer';
 import { api, errorMessage } from '../../lib/api';
 import { formatDateTime, userName } from '../../lib/format';
@@ -95,6 +96,7 @@ const PayrollPage = () => {
   const [period, setPeriod] = useState(currentPeriod());
   const [uploading, setUploading] = useState(null); // {} o { preset: persona }
   const [viewing, setViewing] = useState(null);
+  useUrlParams(({ accion }) => accion === 'cargar' && setUploading({}));
 
   const team = useLoader(() => api.get('/team').then((r) => r.data.people), []);
   const slips = useLoader(() => api.get('/payslips', { params: { period } }).then((r) => r.data), [period]);

@@ -7,6 +7,7 @@ import { errorHandler, notFound } from './middlewares/errorHandler';
 import './models';
 import routes from './routes';
 import { auditRequests } from './services/audit';
+import { refreshSearchOnChange } from './services/search';
 import { isR2Configured, LOCAL_UPLOAD_DIR } from './services/storage';
 
 const app = express();
@@ -47,6 +48,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.use(auditRequests);
+app.use(refreshSearchOnChange);
 app.use(routes);
 app.use(notFound);
 app.use(errorHandler);

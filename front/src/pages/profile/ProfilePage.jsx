@@ -10,6 +10,7 @@ import UserAvatar from '../../components/UserAvatar';
 import { PageHeader } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
+import { useUrlParams } from '../../hooks/useUrlParams';
 import { api, errorMessage, fieldErrors } from '../../lib/api';
 import { userName } from '../../lib/format';
 
@@ -185,6 +186,10 @@ const ProfilePage = () => {
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  useUrlParams(({ accion }) => {
+    if (accion === 'contrasena') setChangingPassword(true);
+    if (accion === 'editar') setEditing(true);
+  });
 
   const permissions = Object.entries(
     (user.permissions || []).reduce((acc, p) => {

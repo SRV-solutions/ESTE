@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useColumns } from '../../hooks/useColumns';
 import { useLoader } from '../../hooks/useLoader';
+import { useUrlParams } from '../../hooks/useUrlParams';
 import { api, errorMessage } from '../../lib/api';
 import { formatArs } from '../../lib/money';
 import CategoryFields from './CategoryFields';
@@ -118,6 +119,13 @@ const CategoriesPage = () => {
   const [show, setShow] = useState('active');
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState(null); // categoría o EMPTY_CATEGORY para crear
+  useUrlParams(({ accion, buscar }) => {
+    if (accion === 'nueva' && can('categories', 'create')) setEditing(EMPTY_CATEGORY);
+    if (buscar) {
+      setSearch(buscar);
+      setPage(0);
+    }
+  });
   const [saving, setSaving] = useState(false);
 
   const { data, loading, error, reload } = useLoader(() => api.get('/categories').then((r) => r.data), []);

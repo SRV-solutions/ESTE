@@ -24,6 +24,7 @@ import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useLoader } from '../../hooks/useLoader';
+import { useUrlParams } from '../../hooks/useUrlParams';
 import { api, errorMessage } from '../../lib/api';
 import { getPrivateFile, saveFile } from '../../lib/privateFiles';
 import { formatDate, formatDateTime, userName } from '../../lib/format';
@@ -101,6 +102,10 @@ const BlueprintsPage = () => {
   const [eventFilter, setEventFilter] = useState(null);
   const [search, setSearch] = useState('');
   const canUpload = can('blueprints', 'create');
+  useUrlParams(({ accion, buscar }) => {
+    if (accion === 'subir' && canUpload) setUploading(true);
+    if (buscar) setSearch(buscar);
+  });
 
   const { data, loading, error, reload } = useLoader(async () => {
     const [blueprints, events] = await Promise.all([api.get('/blueprints').then((r) => r.data), api.get('/events').then((r) => r.data)]);

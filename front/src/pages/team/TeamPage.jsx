@@ -26,6 +26,7 @@ import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useLoader } from '../../hooks/useLoader';
+import { useUrlParams } from '../../hooks/useUrlParams';
 import { api, errorMessage, fieldErrors } from '../../lib/api';
 import { formatDate, formatDateTime, timeAgo, userName } from '../../lib/format';
 import RolesSection from './RolesSection';
@@ -374,6 +375,17 @@ const TeamPage = () => {
     const [team, roles] = await Promise.all([api.get('/team').then((r) => r.data), api.get('/roles').then((r) => r.data)]);
     return { ...team, roles };
   }, []);
+  // Desde el buscador: agregar una persona, ver los roles o abrir la ficha de alguien.
+  useUrlParams(({ accion, buscar, ver }) => {
+    if (accion === 'nueva' && can('users', 'create')) setEditing({});
+    if (accion === 'roles') setTab('roles');
+    if (buscar) setSearch(buscar);
+    const person = ver && data.people.find((p) => String(p.id) === ver);
+    if (person) {
+      setTab('people');
+      setEditing(person);
+    }
+  }, !!data);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();

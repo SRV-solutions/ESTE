@@ -33,6 +33,7 @@ import { userName } from '../lib/format';
 import { BySrv, CompanyLogo, EventBoxLogo } from './Brand';
 import { ErrorBoundary } from './ErrorBoundary';
 import FeedbackDialog from './FeedbackDialog';
+import GlobalSearch from './GlobalSearch';
 import InstallDialog from './InstallDialog';
 import { NAV, visibleNav } from './nav';
 import SubscriptionBanner from './SubscriptionBanner';
@@ -164,6 +165,14 @@ const AppShell = () => {
             <Typography sx={{ fontWeight: 900, fontSize: 17, flex: 1, minWidth: 0 }} noWrap>
               {current?.short || current?.label || ''}
             </Typography>
+            <GlobalSearch
+              onCommand={(cmd) => {
+                if (cmd === 'feedback') setReporting(true);
+                if (cmd === 'install') setInstalling(true);
+                if (cmd === 'theme') toggle();
+                if (cmd === 'logout') logout();
+              }}
+            />
             <Tooltip title="Reportar un problema">
               <IconButton onClick={() => setReporting(true)} aria-label="Reportar un problema">
                 <BugReportOutlined />

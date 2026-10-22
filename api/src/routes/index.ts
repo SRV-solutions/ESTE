@@ -12,6 +12,7 @@ import * as feedback from '../controllers/feedbackController';
 import * as items from '../controllers/itemController';
 import * as locations from '../controllers/locationController';
 import * as roles from '../controllers/roleController';
+import * as searchCtl from '../controllers/searchController';
 import * as orders from '../controllers/serviceOrderController';
 import * as platform from '../controllers/platformController';
 import * as reports from '../controllers/reportController';
@@ -60,6 +61,11 @@ router.post('/auth/reset', loginLimiter, h(users.resetPassword));
 router.post('/auth/link', isAuth, h(users.createLoginLink));
 router.post('/auth/link/redeem', loginLimiter, h(users.redeemLoginLink));
 router.post('/auth/logout', isAuth, h(users.logout));
+
+// ---------- Buscador general ----------
+const searchLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false, message: { message: 'Demasiadas búsquedas seguidas. Esperá un momento.' } });
+router.get('/search', isAuth, requireCompany, searchLimiter, h(searchCtl.search));
+
 router.get('/me', isAuth, h(users.getMyProfile));
 router.patch('/me', isAuth, h(users.updateMyProfile));
 router.put('/me/password', isAuth, h(users.changeMyPassword));

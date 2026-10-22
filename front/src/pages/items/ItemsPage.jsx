@@ -13,6 +13,7 @@ import { useFeedback } from '../../context/FeedbackContext';
 import { useColumns } from '../../hooks/useColumns';
 import { useDebounced } from '../../hooks/useDebounced';
 import { useLoader } from '../../hooks/useLoader';
+import { useUrlParams } from '../../hooks/useUrlParams';
 import { api, errorMessage } from '../../lib/api';
 import { userName } from '../../lib/format';
 import { formatArs } from '../../lib/money';
@@ -122,6 +123,14 @@ const ItemsPage = () => {
   );
 
   const categories = useLoader(() => api.get('/categories').then((r) => r.data), []);
+  // Desde el buscador: abrir "Agregar ítems" o "Importar", buscar un código o ver una categoría.
+  useUrlParams(({ accion, buscar, categoria }) => {
+    if (accion === 'nuevo' && canCreate) setCreating(true);
+    if (accion === 'importar' && canCreate) setImporting(true);
+    if (buscar) setSearch(buscar);
+    if (categoria) setCategory((categories.data || []).find((c) => String(c.id) === categoria) || null);
+    setPage(0);
+  }, !!categories.data);
   const items = useLoader(
     () =>
       api

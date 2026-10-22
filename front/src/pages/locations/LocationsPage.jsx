@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useColumns } from '../../hooks/useColumns';
 import { useLoader } from '../../hooks/useLoader';
+import { useUrlParams } from '../../hooks/useUrlParams';
 import { api, errorMessage } from '../../lib/api';
 
 const EMPTY = { locationName: '', address: '', city: '', country: '', lat: '', lng: '' };
@@ -54,6 +55,12 @@ const LocationsPage = () => {
   const isPhone = useMediaQuery((t) => t.breakpoints.down('sm'));
   const columns = useColumns('locations', COLUMNS);
   const { data, loading, error, reload } = useLoader(() => api.get('/locations').then((r) => r.data), []);
+  // Desde el buscador: crear un lugar o abrir uno.
+  useUrlParams(({ accion, ver }) => {
+    if (accion === 'nuevo' && can('locations', 'create')) setEditing(EMPTY);
+    const found = ver && data.find((l) => String(l.id) === ver);
+    if (found) setEditing(found);
+  }, !!data);
 
   const valid = editing && FIELDS.every(([k]) => String(editing[k] ?? '').trim()) && !!String(editing.lat ?? '').trim() === !!String(editing.lng ?? '').trim();
 

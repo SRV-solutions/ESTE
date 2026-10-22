@@ -25,6 +25,7 @@ import { EmptyState, ErrorState, Loading, PageHeader, StatusChip } from '../../c
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useLoader } from '../../hooks/useLoader';
+import { useUrlParams } from '../../hooks/useUrlParams';
 import { api, errorMessage } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import EventDialog from '../orders/EventDialog';
@@ -95,6 +96,13 @@ const EventsPage = () => {
   const [when, setWhen] = useState('upcoming');
   const [editing, setEditing] = useState(null); // evento o {} para crear
   const [duplicating, setDuplicating] = useState(null);
+  useUrlParams(({ accion, buscar }) => {
+    if (accion === 'nuevo' && can('events', 'create')) setEditing({});
+    if (buscar) {
+      setSearch(buscar);
+      setWhen('all');
+    }
+  });
 
   const { data, loading, error, reload } = useLoader(async () => {
     const [events, locations] = await Promise.all([api.get('/events').then((r) => r.data), api.get('/locations').then((r) => r.data)]);

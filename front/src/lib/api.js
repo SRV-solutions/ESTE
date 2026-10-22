@@ -22,7 +22,7 @@ class ApiError extends Error {
   }
 }
 
-const request = async (method, path, body, { params } = {}) => {
+const request = async (method, path, body, { params, signal } = {}) => {
   const url = new URL(API_URL + path);
   Object.entries(params || {}).forEach(([k, v]) => v !== undefined && v !== null && v !== '' && url.searchParams.set(k, v));
 
@@ -34,7 +34,7 @@ const request = async (method, path, body, { params } = {}) => {
 
   let res;
   try {
-    res = await fetch(url, { method, headers, body: body === undefined ? undefined : isForm ? body : JSON.stringify(body) });
+    res = await fetch(url, { method, headers, signal, body: body === undefined ? undefined : isForm ? body : JSON.stringify(body) });
   } catch {
     throw new Error('Network Error');
   }
