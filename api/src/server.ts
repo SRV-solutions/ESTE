@@ -1,3 +1,4 @@
+// Arranque de la API: conecta a la base, aplica migraciones pendientes y escucha.
 import app from './app';
 import { sequelize } from './config/database';
 import { env } from './config/env';
