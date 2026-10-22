@@ -78,18 +78,34 @@ export const openPrivateFile = async (path, { view = false, fileName = 'archivo'
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };
 
-/** Baja un archivo privado y devuelve una URL local (blob) para mostrarlo dentro de la app. */
-export const fetchPrivateBlob = async (path) => {
+/**
+ * Baja un archivo privado como Blob, avisando el avance (0 a 1, o null si el servidor no dice el tamaño).
+ * Se puede cancelar con `signal`.
+ */
+export const downloadPrivate = async (path, { onProgress, signal } = {}) => {
   const headers = {};
   const token = tokenStore.get();
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(API_URL + path, { headers });
+  const res = await fetch(API_URL + path, { headers, signal });
   if (!res.ok) {
     const data = await res.json().catch(() => null);
     if (res.status === 401) onUnauthorized();
     throw new ApiError(res.status, data);
   }
-  return URL.createObjectURL(await res.blob());
+  const type = res.headers.get('content-type') || '';
+  if (!res.body || !onProgress) return res.blob();
+  const total = Number(res.headers.get('content-length')) || 0;
+  const reader = res.body.getReader();
+  const chunks = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    onProgress(total ? Math.min(received / total, 1) : null);
+  }
+  return new Blob(chunks, { type });
 };
 
 /** Mensaje legible de cualquier error de la API. */

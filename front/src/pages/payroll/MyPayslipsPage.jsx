@@ -8,7 +8,9 @@ import FormDialog from '../../components/FormDialog';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useLoader } from '../../hooks/useLoader';
-import { api, errorMessage, openPrivateFile } from '../../lib/api';
+import FileViewer from '../../components/FileViewer';
+import { api, errorMessage } from '../../lib/api';
+import { getPrivateFile, saveFile } from '../../lib/privateFiles';
 import { formatDateTime, userName } from '../../lib/format';
 import { useAuth } from '../../context/AuthContext';
 import { formatArs, periodLabel } from '../../lib/money';
@@ -66,11 +68,16 @@ const MyPayslipsPage = () => {
   const { notify } = useFeedback();
   const { user } = useAuth();
   const [signing, setSigning] = useState(null); // { slip, disagree }
+  const [viewing, setViewing] = useState(null);
   const { data, loading, error, reload } = useLoader(() => api.get('/me/payslips').then((r) => r.data), []);
 
+  /** Ver: en el visor de la app. Descargar: lo guarda en el dispositivo. */
   const open = async (slip, view) => {
+    const file = { path: `/payslips/${slip.id}/file?view=1`, title: `Recibo de ${periodLabel(slip.period)}`, fileName: `recibo_${slip.period}.pdf`, mimeType: 'application/pdf' };
+    if (view) return setViewing(file);
     try {
-      await openPrivateFile(`/payslips/${slip.id}/file${view ? '?view=1' : ''}`, { view, fileName: `recibo_${slip.period}.pdf` });
+      const entry = await getPrivateFile(file.path);
+      saveFile(entry.url, file.fileName);
     } catch (err) {
       notify(errorMessage(err), 'error');
     }
@@ -154,6 +161,7 @@ const MyPayslipsPage = () => {
           ))}
         </Stack>
       )}
+      <FileViewer file={viewing} onClose={() => setViewing(null)} />
       {signing && (
         <SignDialog
           slip={signing.slip}

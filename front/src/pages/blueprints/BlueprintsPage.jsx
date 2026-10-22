@@ -1,19 +1,13 @@
 import { useRef, useState } from 'react';
 import {
-  Alert,
   Autocomplete,
   Box,
   Button,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Grid,
   IconButton,
   Paper,
-  Snackbar,
   Stack,
   TextField,
   Tooltip,
@@ -24,12 +18,14 @@ import ArchitectureOutlined from '@mui/icons-material/ArchitectureOutlined';
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
+import FileViewer from '../../components/FileViewer';
 import FormDialog from '../../components/FormDialog';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useLoader } from '../../hooks/useLoader';
-import { api, errorMessage, fetchPrivateBlob, openPrivateFile } from '../../lib/api';
+import { api, errorMessage } from '../../lib/api';
+import { getPrivateFile, saveFile } from '../../lib/privateFiles';
 import { formatDate, formatDateTime, userName } from '../../lib/format';
 
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -111,39 +107,30 @@ const BlueprintsPage = () => {
     return { blueprints, events };
   }, []);
 
-  const [busy, setBusy] = useState(null); // { title, view } mientras se descarga
-  const [preview, setPreview] = useState(null); // { b, url } para ver imágenes dentro de la app
+  const [viewing, setViewing] = useState(null); // archivo abierto en el visor
+  const [downloads, setDownloads] = useState({}); // id -> avance (0 a 1, o null) de cada descarga
 
-  /**
-   * Las imágenes se ven en un visor dentro de la app (abrirlas en otra pestaña falla en varios
-   * navegadores); los PDF, en una pestaña nueva. Mientras baja, se muestra un aviso con animación.
-   */
-  const open = async (b, view) => {
-    if (busy) return;
-    const isImage = b.mimeType?.startsWith('image/') && b.mimeType !== 'image/vnd.dwg';
-    setBusy({ title: b.title, view });
+  const fileOf = (b) => ({ path: `/blueprints/${b.id}/file?view=1`, title: b.title, fileName: b.fileName, mimeType: b.mimeType });
+
+  /** Ver: se abre al instante en el visor, que muestra el avance mientras baja. */
+  const view = (b) => setViewing(fileOf(b));
+
+  /** Descargar: el avance se ve en el botón de esa tarjeta; las demás siguen funcionando. */
+  const download = async (b) => {
+    if (b.id in downloads) return;
+    setDownloads((d) => ({ ...d, [b.id]: null }));
     try {
-      if (view && isImage) {
-        const url = await fetchPrivateBlob(`/blueprints/${b.id}/file?view=1`);
-        setPreview({ b, url });
-      } else {
-        await openPrivateFile(`/blueprints/${b.id}/file${view ? '?view=1' : ''}`, { view, fileName: b.fileName });
-        if (!view) notify(`Plano “${b.title}” descargado.`);
-      }
+      const entry = await getPrivateFile(fileOf(b).path, { onProgress: (p) => setDownloads((d) => ({ ...d, [b.id]: p })) });
+      saveFile(entry.url, b.fileName);
     } catch (err) {
-      notify(errorMessage(err, 'No se pudo abrir el plano.'), 'error');
+      notify(errorMessage(err, 'No se pudo descargar el plano.'), 'error');
     } finally {
-      setBusy(null);
+      setDownloads((d) => {
+        const rest = { ...d };
+        delete rest[b.id];
+        return rest;
+      });
     }
-  };
-
-  const closePreview = () => {
-    if (preview) URL.revokeObjectURL(preview.url);
-    setPreview(null);
-  };
-
-  const downloadPreview = () => {
-    Object.assign(document.createElement('a'), { href: preview.url, download: preview.b.fileName }).click();
   };
 
   const remove = async (b) => {
@@ -222,12 +209,17 @@ const BlueprintsPage = () => {
                 )}
                 <Stack direction="row" spacing={1} sx={{ mt: 'auto', pt: 0.5 }} alignItems="center">
                   {b.mimeType !== 'image/vnd.dwg' && (
-                    <Button size="small" variant="contained" startIcon={<VisibilityOutlined />} onClick={() => open(b, true)} disabled={!!busy}>
+                    <Button size="small" variant="contained" startIcon={<VisibilityOutlined />} onClick={() => view(b)}>
                       Ver
                     </Button>
                   )}
-                  <Button size="small" startIcon={<DownloadOutlined />} onClick={() => open(b, false)} disabled={!!busy}>
-                    Descargar
+                  <Button
+                    size="small"
+                    startIcon={b.id in downloads ? <CircularProgress size={14} thickness={6} /> : <DownloadOutlined />}
+                    onClick={() => download(b)}
+                    disabled={b.id in downloads}
+                  >
+                    {b.id in downloads ? `Bajando${downloads[b.id] != null ? ` ${Math.round(downloads[b.id] * 100)}%` : '…'}` : 'Descargar'}
                   </Button>
                   {canUpload && (
                     <Tooltip title="Eliminar">
@@ -243,28 +235,7 @@ const BlueprintsPage = () => {
         </Grid>
       )}
 
-      {/* Aviso mientras baja el plano */}
-      <Snackbar open={!!busy} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity="info" icon={<CircularProgress size={18} thickness={5} />} sx={{ alignItems: 'center', minWidth: 300 }}>
-          {busy?.view ? 'Abriendo' : 'Descargando'} el plano “{busy?.title}”…
-        </Alert>
-      </Snackbar>
-
-      {/* Visor de imágenes */}
-      <Dialog open={!!preview} onClose={closePreview} maxWidth="lg" fullWidth>
-        <DialogTitle sx={{ pb: 1 }}>{preview?.b.title}</DialogTitle>
-        <DialogContent sx={{ display: 'grid', placeItems: 'center', bgcolor: 'background.default', p: 1 }}>
-          {preview && <Box component="img" src={preview.url} alt={preview.b.title} sx={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: 1 }} />}
-        </DialogContent>
-        <DialogActions>
-          <Button startIcon={<DownloadOutlined />} onClick={downloadPreview}>
-            Descargar
-          </Button>
-          <Button variant="contained" onClick={closePreview}>
-            Cerrar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <FileViewer file={viewing} onClose={() => setViewing(null)} />
 
       <UploadDialog
         open={uploading}

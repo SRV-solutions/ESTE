@@ -16,6 +16,7 @@
     "@mui/material": "^6.1.8",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
+    "pdfjs-dist": "3.11.174",
     "qrcode": "1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
