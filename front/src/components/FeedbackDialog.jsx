@@ -29,7 +29,7 @@ const TYPES = [
 ];
 
 /** Reportar un problema al equipo de SRV, con captura opcional. Se adjunta sola la pantalla actual. */
-const FeedbackDialog = ({ open, onClose }) => {
+const FeedbackDialog = ({ open, onClose, technical }) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const { notify } = useFeedback();
@@ -60,7 +60,9 @@ const FeedbackDialog = ({ open, onClose }) => {
     try {
       const form = new FormData();
       form.append('type', type);
-      form.append('message', message.trim());
+      // Si viene de una pantalla rota, se suma el detalle técnico del error (lo lee SRV).
+      const full = technical ? `${message.trim()}\n\n— Detalle técnico (adjuntado solo):\n${technical}` : message.trim();
+      form.append('message', full.slice(0, 5000));
       form.append('pageUrl', window.location.href);
       if (file) form.append('file', file);
       const { data } = await api.post('/feedback', form);
@@ -116,6 +118,7 @@ const FeedbackDialog = ({ open, onClose }) => {
               Adjuntar captura
             </ImagePicker>
           )}
+          {technical && <Alert severity="info">Se adjunta solo el detalle técnico del error.</Alert>}
           {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>

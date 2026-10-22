@@ -1,33 +1,35 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import AppShell from './components/AppShell';
 import RequireAuth from './components/RequireAuth';
-import { EmptyState, Loading } from './components/ui';
+import { Loading } from './components/ui';
+import { lazyPage } from './lib/lazyPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 // Cada sección se descarga recién cuando se abre.
-const OrdersPage = lazy(() => import('./pages/orders/OrdersPage'));
-const NewOrderPage = lazy(() => import('./pages/orders/NewOrderPage'));
-const OrderDetailPage = lazy(() => import('./pages/orders/OrderDetailPage'));
-const ItemsPage = lazy(() => import('./pages/items/ItemsPage'));
-const CategoriesPage = lazy(() => import('./pages/categories/CategoriesPage'));
-const LocationsPage = lazy(() => import('./pages/locations/LocationsPage'));
-const TeamPage = lazy(() => import('./pages/team/TeamPage'));
-const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
-const BillingPage = lazy(() => import('./pages/billing/BillingPage'));
-const PlatformPage = lazy(() => import('./pages/platform/PlatformPage'));
-const PlatformCompanyPage = lazy(() => import('./pages/platform/PlatformCompanyPage'));
-const FeedbackPage = lazy(() => import('./pages/platform/FeedbackPage'));
-const EventsPage = lazy(() => import('./pages/events/EventsPage'));
-const BlueprintsPage = lazy(() => import('./pages/blueprints/BlueprintsPage'));
-const PayrollPage = lazy(() => import('./pages/payroll/PayrollPage'));
-const MyPayslipsPage = lazy(() => import('./pages/payroll/MyPayslipsPage'));
-const CheckinPage = lazy(() => import('./pages/checkin/CheckinPage'));
-const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
-const AuditPage = lazy(() => import('./pages/audit/AuditPage'));
-const ForgotPasswordPage = lazy(() => import('./pages/PasswordRecoveryPages').then((m) => ({ default: m.ForgotPasswordPage })));
-const ResetPasswordPage = lazy(() => import('./pages/PasswordRecoveryPages').then((m) => ({ default: m.ResetPasswordPage })));
+const OrdersPage = lazyPage(() => import('./pages/orders/OrdersPage'));
+const NewOrderPage = lazyPage(() => import('./pages/orders/NewOrderPage'));
+const OrderDetailPage = lazyPage(() => import('./pages/orders/OrderDetailPage'));
+const ItemsPage = lazyPage(() => import('./pages/items/ItemsPage'));
+const CategoriesPage = lazyPage(() => import('./pages/categories/CategoriesPage'));
+const LocationsPage = lazyPage(() => import('./pages/locations/LocationsPage'));
+const TeamPage = lazyPage(() => import('./pages/team/TeamPage'));
+const ProfilePage = lazyPage(() => import('./pages/profile/ProfilePage'));
+const BillingPage = lazyPage(() => import('./pages/billing/BillingPage'));
+const PlatformPage = lazyPage(() => import('./pages/platform/PlatformPage'));
+const PlatformCompanyPage = lazyPage(() => import('./pages/platform/PlatformCompanyPage'));
+const FeedbackPage = lazyPage(() => import('./pages/platform/FeedbackPage'));
+const EventsPage = lazyPage(() => import('./pages/events/EventsPage'));
+const BlueprintsPage = lazyPage(() => import('./pages/blueprints/BlueprintsPage'));
+const PayrollPage = lazyPage(() => import('./pages/payroll/PayrollPage'));
+const MyPayslipsPage = lazyPage(() => import('./pages/payroll/MyPayslipsPage'));
+const CheckinPage = lazyPage(() => import('./pages/checkin/CheckinPage'));
+const ReportsPage = lazyPage(() => import('./pages/reports/ReportsPage'));
+const AuditPage = lazyPage(() => import('./pages/audit/AuditPage'));
+const ForgotPasswordPage = lazyPage(() => import('./pages/PasswordRecoveryPages').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazyPage(() => import('./pages/PasswordRecoveryPages').then((m) => ({ default: m.ResetPasswordPage })));
 
 const guard = (element, perm, options = {}) => (
   <RequireAuth perm={perm} {...options}>
@@ -67,7 +69,7 @@ const App = () => (
       <Route path="platform" element={guard(<PlatformPage />, undefined, { superAdmin: true })} />
       <Route path="platform/companies/:id" element={guard(<PlatformCompanyPage />, undefined, { superAdmin: true })} />
       <Route path="platform/feedback" element={guard(<FeedbackPage />, undefined, { superAdmin: true })} />
-      <Route path="*" element={<EmptyState title="Página no encontrada" description="La dirección no existe o se movió." />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Route>
   </Routes>
 );

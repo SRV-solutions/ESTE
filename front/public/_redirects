@@ -1,2 +1,4 @@
+# Un archivo de una versión anterior que ya no existe devuelve 404 (y no la app), así la app se recarga sola.
+/assets/*  /404.html  404
 # Single Page App: toda ruta la resuelve React Router desde index.html.
 /*  /index.html  200

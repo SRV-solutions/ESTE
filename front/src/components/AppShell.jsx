@@ -31,6 +31,7 @@ import { useAuth } from '../context/AuthContext';
 import { useColorMode } from '../context/ColorModeContext';
 import { userName } from '../lib/format';
 import { BySrv, CompanyLogo, EventBoxLogo } from './Brand';
+import { ErrorBoundary } from './ErrorBoundary';
 import FeedbackDialog from './FeedbackDialog';
 import InstallDialog from './InstallDialog';
 import { NAV, visibleNav } from './nav';
@@ -229,7 +230,9 @@ const AppShell = () => {
 
         <Box component="main" sx={{ width: '100%', maxWidth: 1200, mx: 'auto', px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 } }}>
           <SubscriptionBanner />
-          <Outlet />
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </Box>
       </Box>
       <FeedbackDialog open={reporting} onClose={() => setReporting(false)} />
