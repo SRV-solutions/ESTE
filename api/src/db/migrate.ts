@@ -11,6 +11,7 @@ import checkinReportesPermisos from './migrations/007_checkin_reportes_permisos'
 import acuerdosEspeciales from './migrations/008_acuerdos_especiales';
 import dni from './migrations/009_dni';
 import loginPorQr from './migrations/010_login_por_qr';
+import auditoria from './migrations/011_auditoria';
 
 export interface Migration {
   name: string;
@@ -18,7 +19,7 @@ export interface Migration {
 }
 
 /** Orden de aplicación. Nunca se edita una migración ya aplicada: se agrega una nueva. */
-const MIGRATIONS: Migration[] = [baseline, multiempresa, archivosYAvisos, planesYModulos, personalEsUsuario, accesoDelEquipo, rolesPorEmpresa, checkinReportesPermisos, acuerdosEspeciales, dni, loginPorQr];
+const MIGRATIONS: Migration[] = [baseline, multiempresa, archivosYAvisos, planesYModulos, personalEsUsuario, accesoDelEquipo, rolesPorEmpresa, checkinReportesPermisos, acuerdosEspeciales, dni, loginPorQr, auditoria];
 
 const run = (sql: string, t: Transaction) => sequelize.query(sql, { transaction: t });
 export const sql = run;

@@ -22,6 +22,8 @@ export const AuthProvider = ({ children }) => {
   const [status, setStatus] = useState('loading'); // loading | authenticated | anonymous
 
   const logout = useCallback(() => {
+    // Se avisa a la API para que quede en la auditoría; si falla, se cierra igual.
+    if (tokenStore.get()) api.post('/auth/logout').catch(() => {});
     tokenStore.clear();
     setUser(null);
     setStatus('anonymous');

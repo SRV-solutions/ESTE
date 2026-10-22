@@ -106,7 +106,7 @@ export const listTeam = async (req: Request, res: Response) => {
   const payroll = planHasFeature(req.user!.plan, 'payroll');
   const users = await User.findAll({
     where: { companyId },
-    attributes: ['id', 'username', 'email', 'dni', 'firstname', 'lastname', 'avatarUrl', 'roleId', 'access', 'accessUntil', 'disabledAt'],
+    attributes: ['id', 'username', 'email', 'dni', 'firstname', 'lastname', 'avatarUrl', 'roleId', 'access', 'accessUntil', 'disabledAt', 'lastLoginAt', 'lastLoginIp'],
     include: [
       { model: Role, attributes: ['id', 'roleName'] },
       ...(payroll
@@ -130,6 +130,8 @@ export const listTeam = async (req: Request, res: Response) => {
       access: u.access,
       accessUntil: u.accessUntil,
       disabledAt: u.disabledAt,
+      lastLoginAt: u.lastLoginAt,
+      lastLoginIp: u.lastLoginIp,
       canLogin: hasLogin(u),
       ...(payroll
         ? {

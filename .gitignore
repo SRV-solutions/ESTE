@@ -149,3 +149,6 @@ private-uploads/
 
 # Variables de producción (contienen secretos)
 .env.production
+
+# Material que sube Marcos para trabajar (audios, fotos, documentos): no va al repo
+pedidos/

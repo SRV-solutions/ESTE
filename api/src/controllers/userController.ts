@@ -7,6 +7,7 @@ import { assertCanLogin, signToken, tenant } from '../middlewares/auth';
 import { effectivePlan } from '../services/plan';
 import { Company, LoginLinkToken, PasswordResetToken, Permission, Role, User } from '../models';
 import { hasLogin } from '../models/User';
+import { audit, clientIp } from '../services/audit';
 import { countAppUsers } from '../services/team';
 import { assertPassword, checkPassword, findByIdentifier, hashPassword, normalizeDni, validateProfile } from '../services/users';
 import { button, paragraph, sendEmail } from '../services/email';
@@ -69,6 +70,17 @@ const baseSession = (user: User) => ({
     : null,
 });
 
+/** Guarda el último ingreso y lo deja en la auditoría. */
+const registerLogin = async (req: Request, user: User, how: string) => {
+  await user.update({ lastLoginAt: new Date(), lastLoginIp: clientIp(req) });
+  audit(req, { kind: 'login', action: 'auth.login', summary: `Entró ${how}`, companyId: user.companyId, userId: user.id, username: user.username, status: 200 });
+};
+
+export const logout = async (req: Request, res: Response) => {
+  audit(req, { kind: 'logout', action: 'auth.logout', summary: 'Cerró sesión', username: null, status: 200 });
+  res.json({ message: 'Sesión cerrada.' });
+};
+
 export const login = async (req: Request, res: Response) => {
   const { username, password } = req.body;
   if (!username || !password) throw new HttpError(400, 'Ingresá tu usuario, email o DNI, y la contraseña.');
@@ -77,10 +89,25 @@ export const login = async (req: Request, res: Response) => {
   const user = await User.scope('withPassword').findOne({ ...findByIdentifier(String(username)), include: sessionIncludes });
   // Mismo mensaje para usuario inexistente y contraseña incorrecta: no revela qué usuarios existen.
   if (!user?.password || !(await checkPassword(password, user.password))) {
+    // Intento fallido: se guarda lo que escribió (nunca la contraseña) para detectar ataques.
+    audit(req, {
+      kind: 'login_failed',
+      action: 'auth.login_failed',
+      summary: user ? 'Contraseña incorrecta' : `Intento de ingreso con "${String(username).slice(0, 80)}" (no existe)`,
+      companyId: user?.companyId ?? null,
+      userId: user?.id ?? null,
+      username: user?.username ?? String(username).slice(0, 80),
+      status: 401,
+    });
     throw new HttpError(401, 'Usuario, email o DNI incorrecto, o contraseña incorrecta.');
   }
-  assertCanLogin(user);
-
+  try {
+    assertCanLogin(user);
+  } catch (err) {
+    audit(req, { kind: 'login_failed', action: 'auth.login_blocked', summary: 'Ingreso bloqueado: usuario desactivado o acceso vencido', companyId: user.companyId, userId: user.id, username: user.username, status: 401 });
+    throw err;
+  }
+  await registerLogin(req, user, 'con usuario y contraseña');
   res.json({ token: signToken(user), user: await toSession(user) });
 };
 
@@ -103,8 +130,9 @@ export const updateMyProfile = async (req: Request, res: Response) => {
     username: username ?? user.username,
     email: email ?? user.email,
     ...(dni !== undefined ? { dni } : {}),
-    firstname: firstname?.trim() || null,
-    lastname: lastname?.trim() || null,
+    // Solo se tocan los campos que vienen en el pedido (guardar el DNI no borra el nombre).
+    firstname: firstname === undefined ? user.firstname : String(firstname).trim() || null,
+    lastname: lastname === undefined ? user.lastname : String(lastname).trim() || null,
   });
 
   const fresh = await User.findByPk(user.id, { include: sessionIncludes });
@@ -164,6 +192,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
   const user = await User.findOne(findByIdentifier(identifier));
   if (!user?.email || !hasLogin(user)) return res.json(generic);
+  audit(req, { kind: 'security', action: 'auth.forgot', summary: 'Pidió recuperar la contraseña por mail', companyId: user.companyId, userId: user.id, username: user.username, status: 200 });
 
   const token = crypto.randomBytes(32).toString('hex');
   await PasswordResetToken.create({ userId: user.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + RESET_TTL_MS) });
@@ -210,6 +239,7 @@ export const redeemLoginLink = async (req: Request, res: Response) => {
   if (!user) throw new HttpError(400, 'El usuario ya no existe.');
   assertCanLogin(user);
   await record.update({ usedAt: new Date() });
+  await registerLogin(req, user, 'escaneando el QR de la PC');
   res.json({ token: signToken(user), user: await toSession(user) });
 };
 
@@ -226,6 +256,8 @@ export const resetPassword = async (req: Request, res: Response) => {
     // El link usado y cualquier otro pendiente del mismo usuario dejan de servir.
     await PasswordResetToken.update({ usedAt: new Date() }, { where: { userId: record.userId, usedAt: null }, transaction });
   });
+  const resetUser = await User.findByPk(record.userId, { attributes: ['id', 'companyId', 'username'] });
+  audit(req, { kind: 'security', action: 'auth.reset', summary: 'Eligió una contraseña nueva con el link del mail', companyId: resetUser?.companyId, userId: record.userId, username: resetUser?.username, status: 200 });
   res.json({ message: 'Listo: ya podés entrar con tu contraseña nueva.' });
 };
 

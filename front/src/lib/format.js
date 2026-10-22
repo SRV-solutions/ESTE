@@ -35,3 +35,14 @@ export const eventLabel = (event) => {
 };
 
 export const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+/** "hace 5 min", "hace 3 h", "hace 2 días", o la fecha si pasó más de un mes. */
+export const timeAgo = (value) => {
+  if (!value) return null;
+  const s = Math.round((Date.now() - new Date(value).getTime()) / 1000);
+  if (s < 60) return 'recién';
+  if (s < 3600) return `hace ${Math.round(s / 60)} min`;
+  if (s < 86400) return `hace ${Math.round(s / 3600)} h`;
+  if (s < 30 * 86400) return `hace ${Math.round(s / 86400)} día${Math.round(s / 86400) === 1 ? '' : 's'}`;
+  return `el ${formatDate(value)}`;
+};

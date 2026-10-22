@@ -25,6 +25,9 @@ class User extends Model {
   declare accessUntil: Date | null;
   /** Desactivado: no entra ni cuenta para el plan, pero conserva su historial. */
   declare disabledAt: Date | null;
+  /** Último ingreso (fecha e IP), para el equipo y la auditoría. */
+  declare lastLoginAt: Date | null;
+  declare lastLoginIp: string | null;
   declare firstname: string | null;
   declare lastname: string | null;
   declare roleId: number;
@@ -46,6 +49,8 @@ User.init(
     access: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'app' },
     accessUntil: { type: DataTypes.DATE, allowNull: true },
     disabledAt: { type: DataTypes.DATE, allowNull: true },
+    lastLoginAt: { type: DataTypes.DATE, allowNull: true },
+    lastLoginIp: { type: DataTypes.STRING(64), allowNull: true },
     firstname: { type: DataTypes.STRING, allowNull: true },
     lastname: { type: DataTypes.STRING, allowNull: true },
     roleId: { type: DataTypes.INTEGER, references: { model: 'Role', key: 'id' } },

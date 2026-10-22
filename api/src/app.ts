@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 import './models';
 import routes from './routes';
+import { auditRequests } from './services/audit';
 import { isR2Configured, LOCAL_UPLOAD_DIR } from './services/storage';
 
 const app = express();
@@ -45,6 +46,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', app: 'eventbox-api' });
 });
 
+app.use(auditRequests);
 app.use(routes);
 app.use(notFound);
 app.use(errorHandler);

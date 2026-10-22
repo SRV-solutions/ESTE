@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import * as audit from '../controllers/auditController';
 import * as billing from '../controllers/billingController';
 import * as blueprints from '../controllers/blueprintController';
 import * as payroll from '../controllers/payrollController';
@@ -27,7 +28,7 @@ import {
 } from '../middlewares/auth';
 import { blueprintUpload, csvUpload, imageUpload, pdfUpload } from '../middlewares/upload';
 import { Action, Entity } from '../models/enums';
-import { asyncHandler as h } from '../utils/http';
+import { asyncHandler as h, HttpError } from '../utils/http';
 
 const { CREATE, READ, UPDATE, DELETE } = Action;
 const { USERS, CATEGORIES, ITEMS, SERVICE_ORDERS, EVENTS, LOCATIONS, BLUEPRINTS, PAYROLL, CHECKIN, REPORTS } = Entity;
@@ -58,6 +59,7 @@ router.post('/auth/reset', loginLimiter, h(users.resetPassword));
 // Entrar en el celular escaneando el QR de una sesión abierta en la PC.
 router.post('/auth/link', isAuth, h(users.createLoginLink));
 router.post('/auth/link/redeem', loginLimiter, h(users.redeemLoginLink));
+router.post('/auth/logout', isAuth, h(users.logout));
 router.get('/me', isAuth, h(users.getMyProfile));
 router.patch('/me', isAuth, h(users.updateMyProfile));
 router.put('/me/password', isAuth, h(users.changeMyPassword));
@@ -168,6 +170,8 @@ router.post('/company/logo', companyAdmin, imageUpload, h(billing.uploadLogo));
 router.delete('/company/logo', companyAdmin, h(billing.deleteLogo));
 router.patch('/company/plan', companyAdmin, h(plans.changeMyPlan));
 router.get('/plans', isAuth, plans.listPlans);
+// Auditoría: el administrador ve su empresa; el equipo de SRV, todas (scope=all).
+router.get('/audit', isAuth, (req, _res, next) => (req.user!.isAdmin || req.user!.isSuperAdmin ? next() : next(new HttpError(403, 'Solo el administrador de la empresa puede ver la auditoría.'))), h(audit.listAudit));
 router.post('/billing/checkout', companyAdmin, h(billing.checkout));
 router.get('/billing/invoices/:id', isAuth, h(billing.getInvoice));
 router.post('/billing/mercadopago/webhook', h(billing.mercadoPagoWebhook)); // Público: lo valida la firma.

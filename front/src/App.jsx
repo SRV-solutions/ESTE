@@ -25,6 +25,7 @@ const PayrollPage = lazy(() => import('./pages/payroll/PayrollPage'));
 const MyPayslipsPage = lazy(() => import('./pages/payroll/MyPayslipsPage'));
 const CheckinPage = lazy(() => import('./pages/checkin/CheckinPage'));
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
+const AuditPage = lazy(() => import('./pages/audit/AuditPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/PasswordRecoveryPages').then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./pages/PasswordRecoveryPages').then((m) => ({ default: m.ResetPasswordPage })));
 
@@ -62,6 +63,7 @@ const App = () => (
       <Route path="users" element={<Navigate to="/team" replace />} />
       <Route path="profile" element={guard(<ProfilePage />, undefined, { allowBlocked: true })} />
       <Route path="billing" element={guard(<BillingPage />, undefined, { admin: true, allowBlocked: true })} />
+      <Route path="audit" element={guard(<AuditPage />, undefined, { admin: true })} />
       <Route path="platform" element={guard(<PlatformPage />, undefined, { superAdmin: true })} />
       <Route path="platform/companies/:id" element={guard(<PlatformCompanyPage />, undefined, { superAdmin: true })} />
       <Route path="platform/feedback" element={guard(<FeedbackPage />, undefined, { superAdmin: true })} />

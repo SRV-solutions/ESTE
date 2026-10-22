@@ -27,7 +27,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useLoader } from '../../hooks/useLoader';
 import { api, errorMessage, fieldErrors } from '../../lib/api';
-import { formatDate, formatDateTime, userName } from '../../lib/format';
+import { formatDate, formatDateTime, timeAgo, userName } from '../../lib/format';
 import RolesSection from './RolesSection';
 
 /** Tipos de acceso. "Sin acceso" es parte del módulo de sueldos. */
@@ -180,6 +180,11 @@ const PersonDialog = ({ person, roles: allRoles, payroll, limits, onClose, onSav
           {isMe ? 'No podés cambiar tu propio acceso.' : ACCESS[form.access].help}
           {!payroll && form.access !== 'none' && !isMe && ' Las personas sin acceso son parte del módulo de sueldos (plan Profesional).'}
         </Typography>
+        {!isNew && person.access !== 'none' && (
+          <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.5 }}>
+            {person.lastLoginAt ? `Último ingreso: ${formatDateTime(person.lastLoginAt)}${person.lastLoginIp ? ` desde ${person.lastLoginIp}` : ''}.` : 'Todavía no entró a Event Box.'}
+          </Typography>
+        )}
         {form.access === 'app' && person.access !== 'app' && (
           <Typography variant="caption" color={limits.appUsers >= limits.maxUsers ? 'error' : 'text.secondary'}>
             Usuarios de la app: {limits.appUsers} de {limits.maxUsers}.
@@ -465,6 +470,9 @@ const TeamPage = () => {
                       <Typography variant="caption" color="text.secondary" component="div" noWrap>
                         {[p.username && `@${p.username}`, p.position, p.area].filter(Boolean).join(' · ') || p.email || '—'}
                         {p.startDate ? ` · desde ${formatDate(p.startDate)}` : ''}
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled" component="div" noWrap>
+                        {p.access === 'none' ? 'No usa la app' : p.lastLoginAt ? `Último ingreso ${timeAgo(p.lastLoginAt)}` : 'Nunca entró'}
                       </Typography>
                       <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
                         {p.access !== 'none' && p.roleName && <Chip size="small" label={p.roleName} variant="outlined" />}

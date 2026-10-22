@@ -1,3 +1,4 @@
+import AuditLog from './AuditLog';
 import Blueprint from './Blueprint';
 import Category from './Category';
 import CheckIn from './CheckIn';
@@ -85,6 +86,7 @@ StoreItem.belongsTo(Item, { foreignKey: 'itemIdChild', as: 'Child' });
 Item.hasMany(StoreItem, { foreignKey: 'itemIdParent', as: 'PermanentContents' });
 
 export {
+  AuditLog,
   Blueprint,
   Category,
   CheckIn,
