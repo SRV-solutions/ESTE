@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 import { sequelize } from '../config/database';
 import { env } from '../config/env';
 import { assertCanLogin, signToken, tenant } from '../middlewares/auth';
-import { effectivePlan } from '../services/plan';
+import { dealLocksPlan, effectivePlan } from '../services/plan';
 import { Company, LoginLinkToken, PasswordResetToken, Permission, Role, User } from '../models';
 import { hasLogin } from '../models/User';
 import { audit, clientIp } from '../services/audit';
@@ -37,6 +37,10 @@ const toSession = async (user: User) => {
           custom: plan.custom,
           dealUntil: plan.custom ? plan.deal?.until ?? null : null,
           dealNote: plan.custom ? plan.deal?.note ?? null : null,
+          // Acuerdo vigente o pactado para más adelante: el plan lo cambia solo SRV hasta que termine.
+          locked: dealLocksPlan(user.Company!),
+          dealFrom: plan.deal?.from ?? null,
+          lockedUntil: plan.deal?.until ?? null,
           userCount,
         }
       : null,

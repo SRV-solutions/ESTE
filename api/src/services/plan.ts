@@ -55,7 +55,16 @@ export const effectivePlan = (company: CompanyDeal): EffectivePlan => {
   return { id: base.id, name: base.name, features: base.features, inDevelopment: IN_DEVELOPMENT, maxUsers: base.maxUsers, maxTemporary: base.maxTemporary, priceUsd: Number(company.monthlyPriceUsd), custom: false, deal };
 };
 
-export const planHasFeature = (plan: EffectivePlan | null | undefined, feature: Feature) => !!plan?.features.includes(feature);
+/**
+ * Un acuerdo especial vigente, o pactado para más adelante, fija las condiciones hasta su fecha de fin:
+ * mientras tanto el plan solo lo cambia SRV (superadmin). Sin fecha de fin, queda fijo hasta que SRV lo quite.
+ */
+export const dealLocksPlan = (company: CompanyDeal) => {
+  const deal = dealOf(company);
+  return !!deal && (!deal.until || deal.until >= todayAR());
+};
+
+export const planHasFeature =(plan: EffectivePlan | null | undefined, feature: Feature) => !!plan?.features.includes(feature);
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

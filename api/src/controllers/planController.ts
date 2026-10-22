@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { FEATURES, getPlan, IN_DEVELOPMENT, PERMISSION_ENTITIES, PlanId, PLANS } from '../config/plans';
 import { Company } from '../models';
+import { dealLocksPlan } from '../services/plan';
 import { countAppUsers } from '../services/team';
 import { HttpError } from '../utils/http';
 
@@ -25,6 +26,15 @@ export const changeMyPlan = async (req: Request, res: Response) => {
   if (!plan) throw new HttpError(400, 'Plan inválido.');
   const company = await Company.findByPk(req.user!.companyId!);
   if (!company) throw new HttpError(404, 'Empresa no encontrada.');
+  if (dealLocksPlan(company) && !req.user!.isSuperAdmin) {
+    const until = company.dealUntil ? new Date(`${company.dealUntil}T12:00:00`).toLocaleDateString('es-AR') : null;
+    throw new HttpError(
+      403,
+      until
+        ? `Tu empresa tiene un acuerdo especial con SRV hasta el ${until}. Hasta esa fecha, el plan solo lo cambia SRV: escribinos a info@wearesrv.com.`
+        : 'Tu empresa tiene un acuerdo especial con SRV. Para cambiar el plan, escribinos a info@wearesrv.com.',
+    );
+  }
 
   const { users } = await planUsage(company.id, plan.id);
   if (users > plan.maxUsers) {

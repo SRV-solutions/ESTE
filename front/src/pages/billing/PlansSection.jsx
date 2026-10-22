@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Button, Chip, Grid, LinearProgress, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Grid, LinearProgress, Paper, Stack, Typography } from '@mui/material';
 import CheckRounded from '@mui/icons-material/CheckRounded';
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
@@ -13,7 +13,7 @@ import { BRAND } from '../../theme';
  * cuesta poco más y el precio por persona baja mucho.
  */
 const PlansSection = ({ onChanged }) => {
-  const { plan: current, isAdmin, refresh } = useAuth();
+  const { plan: current, isAdmin, isSuperAdmin, refresh } = useAuth();
   const { notify, confirm } = useFeedback();
   const [busy, setBusy] = useState(null);
   const { data } = useLoader(() => api.get('/plans').then((r) => r.data), []);
@@ -39,6 +39,10 @@ const PlansSection = ({ onChanged }) => {
       </Box>
     );
   }
+
+  // Un acuerdo especial pactado (aunque todavía no empiece) fija el plan hasta su fecha de fin: lo cambia solo SRV.
+  const locked = current.locked && !isSuperAdmin;
+  const dateAR = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('es-AR');
 
   const change = async (plan) => {
     const downgrade = plan.priceUsd < data.plans.find((p) => p.id === current.id).priceUsd;
@@ -78,6 +82,13 @@ const PlansSection = ({ onChanged }) => {
           <LinearProgress variant="determinate" value={usage} color={usage > 85 ? 'warning' : 'primary'} sx={{ height: 8, borderRadius: 4 }} />
         </Box>
       </Stack>
+      {locked && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Tu empresa tiene un acuerdo especial con SRV
+          {current.dealFrom ? ` desde el ${dateAR(current.dealFrom)}` : ''}
+          {current.lockedUntil ? ` hasta el ${dateAR(current.lockedUntil)}` : ''}. Mientras tanto, el plan lo cambia solo SRV: escribinos a info@wearesrv.com.
+        </Alert>
+      )}
       <Grid container spacing={2}>
         {data.plans.map((p) => {
           const isCurrent = p.id === current.id;
@@ -132,7 +143,7 @@ const PlansSection = ({ onChanged }) => {
                   ))}
                 </Stack>
                 <Box sx={{ mt: 'auto' }}>
-                  {isAdmin && !isCurrent && (
+                  {isAdmin && !isCurrent && !locked && (
                     <Button fullWidth variant={p.highlight ? 'contained' : 'outlined'} onClick={() => change(p)} disabled={!!busy}>
                       {busy === p.id ? 'Cambiando…' : `Pasar a ${p.name}`}
                     </Button>
