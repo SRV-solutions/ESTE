@@ -1,12 +1,19 @@
 import { useRef, useState } from 'react';
 import {
+  Alert,
   Autocomplete,
   Box,
   Button,
   Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   IconButton,
   Paper,
+  Snackbar,
   Stack,
   TextField,
   Tooltip,
@@ -22,7 +29,7 @@ import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useLoader } from '../../hooks/useLoader';
-import { api, errorMessage, openPrivateFile } from '../../lib/api';
+import { api, errorMessage, fetchPrivateBlob, openPrivateFile } from '../../lib/api';
 import { formatDate, formatDateTime, userName } from '../../lib/format';
 
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -104,12 +111,39 @@ const BlueprintsPage = () => {
     return { blueprints, events };
   }, []);
 
+  const [busy, setBusy] = useState(null); // { title, view } mientras se descarga
+  const [preview, setPreview] = useState(null); // { b, url } para ver imágenes dentro de la app
+
+  /**
+   * Las imágenes se ven en un visor dentro de la app (abrirlas en otra pestaña falla en varios
+   * navegadores); los PDF, en una pestaña nueva. Mientras baja, se muestra un aviso con animación.
+   */
   const open = async (b, view) => {
+    if (busy) return;
+    const isImage = b.mimeType?.startsWith('image/') && b.mimeType !== 'image/vnd.dwg';
+    setBusy({ title: b.title, view });
     try {
-      await openPrivateFile(`/blueprints/${b.id}/file${view ? '?view=1' : ''}`, { view, fileName: b.fileName });
+      if (view && isImage) {
+        const url = await fetchPrivateBlob(`/blueprints/${b.id}/file?view=1`);
+        setPreview({ b, url });
+      } else {
+        await openPrivateFile(`/blueprints/${b.id}/file${view ? '?view=1' : ''}`, { view, fileName: b.fileName });
+        if (!view) notify(`Plano “${b.title}” descargado.`);
+      }
     } catch (err) {
       notify(errorMessage(err, 'No se pudo abrir el plano.'), 'error');
+    } finally {
+      setBusy(null);
     }
+  };
+
+  const closePreview = () => {
+    if (preview) URL.revokeObjectURL(preview.url);
+    setPreview(null);
+  };
+
+  const downloadPreview = () => {
+    Object.assign(document.createElement('a'), { href: preview.url, download: preview.b.fileName }).click();
   };
 
   const remove = async (b) => {
@@ -188,11 +222,11 @@ const BlueprintsPage = () => {
                 )}
                 <Stack direction="row" spacing={1} sx={{ mt: 'auto', pt: 0.5 }} alignItems="center">
                   {b.mimeType !== 'image/vnd.dwg' && (
-                    <Button size="small" variant="contained" startIcon={<VisibilityOutlined />} onClick={() => open(b, true)}>
+                    <Button size="small" variant="contained" startIcon={<VisibilityOutlined />} onClick={() => open(b, true)} disabled={!!busy}>
                       Ver
                     </Button>
                   )}
-                  <Button size="small" startIcon={<DownloadOutlined />} onClick={() => open(b, false)}>
+                  <Button size="small" startIcon={<DownloadOutlined />} onClick={() => open(b, false)} disabled={!!busy}>
                     Descargar
                   </Button>
                   {canUpload && (
@@ -208,6 +242,29 @@ const BlueprintsPage = () => {
           ))}
         </Grid>
       )}
+
+      {/* Aviso mientras baja el plano */}
+      <Snackbar open={!!busy} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity="info" icon={<CircularProgress size={18} thickness={5} />} sx={{ alignItems: 'center', minWidth: 300 }}>
+          {busy?.view ? 'Abriendo' : 'Descargando'} el plano “{busy?.title}”…
+        </Alert>
+      </Snackbar>
+
+      {/* Visor de imágenes */}
+      <Dialog open={!!preview} onClose={closePreview} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>{preview?.b.title}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', placeItems: 'center', bgcolor: 'background.default', p: 1 }}>
+          {preview && <Box component="img" src={preview.url} alt={preview.b.title} sx={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: 1 }} />}
+        </DialogContent>
+        <DialogActions>
+          <Button startIcon={<DownloadOutlined />} onClick={downloadPreview}>
+            Descargar
+          </Button>
+          <Button variant="contained" onClick={closePreview}>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <UploadDialog
         open={uploading}

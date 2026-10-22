@@ -78,6 +78,20 @@ export const openPrivateFile = async (path, { view = false, fileName = 'archivo'
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };
 
+/** Baja un archivo privado y devuelve una URL local (blob) para mostrarlo dentro de la app. */
+export const fetchPrivateBlob = async (path) => {
+  const headers = {};
+  const token = tokenStore.get();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(API_URL + path, { headers });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    if (res.status === 401) onUnauthorized();
+    throw new ApiError(res.status, data);
+  }
+  return URL.createObjectURL(await res.blob());
+};
+
 /** Mensaje legible de cualquier error de la API. */
 export const errorMessage = (error, fallback = 'Ocurrió un error inesperado.') => {
   if (!error?.response) return error?.message === 'Network Error' ? 'No hay conexión con el servidor.' : fallback;
