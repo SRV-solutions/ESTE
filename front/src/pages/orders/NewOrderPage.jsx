@@ -1,14 +1,30 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Autocomplete, Box, Button, Grid, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import {
+  Autocomplete,
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  Grid,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from '@mui/material';
 import Add from '@mui/icons-material/Add';
+import EventRepeatOutlined from '@mui/icons-material/EventRepeatOutlined';
 import { ErrorState, Loading, PageHeader } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useLoader } from '../../hooks/useLoader';
 import { api, errorMessage } from '../../lib/api';
 import { eventLabel, formatDate, userName } from '../../lib/format';
-import EventDialog from './EventDialog';
+import EventFields from './EventFields';
+import { EMPTY_EVENT, eventComplete } from './eventForm';
 import { ORDER_DATES, validateOrderDates } from './orderDates';
 
 const Section = ({ title, children }) => (
@@ -20,16 +36,29 @@ const Section = ({ title, children }) => (
   </Paper>
 );
 
+/** Desde hoy a las 00:00: los eventos que ya pasaron no se ofrecen (casi nunca se repiten). */
+const startOfToday = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
 const NewOrderPage = () => {
-  const { user, hasFeature } = useAuth();
+  const { user, hasFeature, can } = useAuth();
   const { notify } = useFeedback();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const [eventDialog, setEventDialog] = useState(false);
+  const canCreateEvent = can('events', 'create');
+  const presetEvent = Number(params.get('event')) || null; // Viene preelegido desde la pantalla de Eventos.
+  // Casi todas las órdenes son de un evento nuevo (cada uno tiene su fecha): es lo primero que se ofrece.
+  const [eventMode, setEventMode] = useState(presetEvent || !canCreateEvent ? 'existing' : 'new');
+  const [newEvent, setNewEvent] = useState(EMPTY_EVENT);
+  const [createdEvent, setCreatedEvent] = useState(null); // si la orden falla, no se crea el evento dos veces
+  const [showPast, setShowPast] = useState(false);
   const [saving, setSaving] = useState(false);
   const stageOwners = hasFeature('stageOwners');
   const [form, setForm] = useState({
-    eventId: Number(params.get('event')) || null, // Viene preelegido desde la pantalla de Eventos.
+    eventId: presetEvent,
     orderedBy: user.id,
     checkedBy: '',
     deployedBy: '',
@@ -51,22 +80,34 @@ const NewOrderPage = () => {
     ]);
     return { users, events, locations };
   }, []);
-  const [extraEvents, setExtraEvents] = useState([]);
 
   if (loading && !data) return <Loading />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
 
-  const events = [...extraEvents, ...data.events];
-  const selectedEvent = events.find((e) => e.id === form.eventId) || null;
+  const today = startOfToday();
+  const events = data.events.filter((e) => showPast || e.id === form.eventId || new Date(e.dateEvent) >= today);
+  const selectedEvent = data.events.find((e) => e.id === form.eventId) || null;
   const dateErrors = validateOrderDates(form);
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+  const eventReady = eventMode === 'new' ? eventComplete(newEvent) : !!form.eventId;
+
+  /** Crea el evento nuevo (o actualiza el que quedó creado si la orden falló antes). */
+  const saveNewEvent = async () => {
+    const payload = { ...newEvent, dateEvent: new Date(newEvent.dateEvent).toISOString() };
+    const { data: ev } = createdEvent
+      ? await api.patch(`/events/${createdEvent.id}`, payload)
+      : await api.post('/events', payload);
+    setCreatedEvent(ev);
+    return ev.id;
+  };
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.eventId || Object.keys(dateErrors).length) return;
+    if (!eventReady || Object.keys(dateErrors).length) return;
     setSaving(true);
     try {
-      const payload = { ...form };
+      const eventId = eventMode === 'new' ? await saveNewEvent() : form.eventId;
+      const payload = { ...form, eventId };
       if (!stageOwners) {
         delete payload.logisticsBy;
         delete payload.receptionBy;
@@ -98,32 +139,63 @@ const NewOrderPage = () => {
 
   return (
     <Box component="form" onSubmit={submit} noValidate>
-      <PageHeader title="Nueva orden de servicio" subtitle="Elegí el evento y quiénes participan. Los ítems se cargan en el paso siguiente." />
+      <PageHeader title="Nueva orden de servicio" subtitle="Cargá el evento y quiénes participan. Los ítems se cargan en el paso siguiente." />
       <Stack spacing={2}>
         <Section title="Evento">
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-            <Autocomplete
-              fullWidth
-              options={events}
-              value={selectedEvent}
-              onChange={(_, ev) => setForm((f) => ({ ...f, eventId: ev?.id ?? null }))}
-              getOptionLabel={(ev) => `${eventLabel(ev)} — ${formatDate(ev.dateEvent)}`}
-              renderOption={(props, ev) => (
-                <li {...props} key={ev.id}>
-                  <Box>
-                    <Typography sx={{ fontWeight: 700 }}>{eventLabel(ev)}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDate(ev.dateEvent)} · {ev.organizer} · {ev.finalClient}
-                    </Typography>
-                  </Box>
-                </li>
-              )}
-              renderInput={(params) => <TextField {...params} label="Buscar evento" required />}
-            />
-            <Button variant="outlined" startIcon={<Add />} onClick={() => setEventDialog(true)} sx={{ flexShrink: 0 }}>
-              Nuevo evento
-            </Button>
-          </Stack>
+          {canCreateEvent && (
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              color="primary"
+              value={eventMode}
+              onChange={(_, v) => v && setEventMode(v)}
+              sx={{ mb: 2, flexWrap: 'wrap' }}
+            >
+              <ToggleButton value="new" sx={{ px: 2 }}>
+                <Add fontSize="small" sx={{ mr: 0.75 }} />
+                Evento nuevo
+              </ToggleButton>
+              <ToggleButton value="existing" sx={{ px: 2 }}>
+                <EventRepeatOutlined fontSize="small" sx={{ mr: 0.75 }} />
+                Uno ya cargado
+              </ToggleButton>
+            </ToggleButtonGroup>
+          )}
+          {eventMode === 'new' ? (
+            <>
+              <EventFields form={newEvent} onChange={setNewEvent} locations={data.locations} columns={2} />
+              <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 1.5 }}>
+                El evento se crea junto con la orden y después lo ves en Eventos.
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Autocomplete
+                fullWidth
+                options={events}
+                noOptionsText={showPast ? 'No hay eventos cargados' : 'No hay eventos próximos'}
+                value={selectedEvent}
+                onChange={(_, ev) => setForm((f) => ({ ...f, eventId: ev?.id ?? null }))}
+                getOptionLabel={(ev) => `${eventLabel(ev)} — ${formatDate(ev.dateEvent)}`}
+                renderOption={(props, ev) => (
+                  <li {...props} key={ev.id}>
+                    <Box>
+                      <Typography sx={{ fontWeight: 700 }}>{eventLabel(ev)}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {formatDate(ev.dateEvent)} · {ev.organizer} · {ev.finalClient}
+                      </Typography>
+                    </Box>
+                  </li>
+                )}
+                renderInput={(params) => <TextField {...params} label="Buscar evento" required />}
+              />
+              <FormControlLabel
+                sx={{ mt: 0.5 }}
+                control={<Checkbox size="small" checked={showPast} onChange={(e) => setShowPast(e.target.checked)} />}
+                label={<Typography variant="body2">Mostrar también eventos que ya pasaron</Typography>}
+              />
+            </>
+          )}
         </Section>
 
         <Section title="Responsables">
@@ -188,22 +260,11 @@ const NewOrderPage = () => {
           <Button color="inherit" onClick={() => navigate('/service-orders')}>
             Cancelar
           </Button>
-          <Button type="submit" variant="contained" disabled={saving || !form.eventId || !!Object.keys(dateErrors).length}>
+          <Button type="submit" variant="contained" disabled={saving || !eventReady || !!Object.keys(dateErrors).length}>
             {saving ? 'Creando…' : 'Crear y cargar ítems'}
           </Button>
         </Stack>
       </Stack>
-
-      <EventDialog
-        open={eventDialog}
-        onClose={() => setEventDialog(false)}
-        locations={data.locations}
-        onSaved={(ev) => {
-          setExtraEvents((list) => [ev, ...list]);
-          setForm((f) => ({ ...f, eventId: ev.id }));
-          setEventDialog(false);
-        }}
-      />
     </Box>
   );
 };
