@@ -147,12 +147,28 @@ Un contenedor (baúl, rack, caja) puede tener **contenido fijo**, que viaja siem
 
 ## Acuerdos especiales (Panel SRV)
 
-Desde **Panel SRV → empresa → Acuerdo especial**, SRV puede pactar con una empresa, por un período (desde / hasta, o sin vencimiento), un **precio propio por mes** (incluso 0), los **módulos** que quiera sin importar el plan y límites propios de usuarios y temporales. Mientras rige, la empresa ve "Acuerdo especial" en Mi empresa, paga ese precio y no puede cambiar de plan desde la app; al vencer, vuelve sola a su plan y precio de lista. Se guarda en `Company.deal*` y lo resuelve `api/src/services/plan.ts` (`effectivePlan`).
+Desde **Panel SRV → empresa → Acuerdo especial**, SRV puede pactar con una empresa, por un período (desde / hasta, o sin vencimiento), un **precio propio por mes** (incluso 0), los **módulos** que quiera sin importar el plan y límites propios de usuarios y temporales. Mientras rige, la empresa ve "Acuerdo especial" en Mi empresa, paga ese precio y su administrador no puede cambiar el plan hasta la fecha de fin, aunque el acuerdo todavía no haya empezado (`dealLocksPlan`): solo un superadmin lo cambia. Al vencer, vuelve sola a su plan y precio de lista. Se guarda en `Company.deal*` y lo resuelve `api/src/services/plan.ts` (`effectivePlan`).
 
 ## Check-in / out y reportes (plan Empresa)
 
 - **Check-in / out**: desde la app móvil o la web, la persona registra cuándo el material llega al evento (check-in) y cuándo se retira (check-out). Si el lugar tiene coordenadas (se cargan en Lugares con "Estoy acá" o desde Google Maps), la API calcula la distancia: dentro del radio (`CHECKIN_RADIUS_M`, 300 m por defecto) queda "en el lugar"; si está lejos, avisa y pide confirmación.
 - **Reportes**: órdenes por mes y por estado, categorías más pedidas, ítems más usados, lugares con más eventos, quién pide más, ítems nunca usados, ciclo promedio de una orden y check-ins del período.
+
+## Buscador general
+
+Arriba a la derecha (Ctrl/⌘ + K). Busca pantallas y acciones (`front/src/components/searchActions.js`) en el navegador, y los datos de la empresa en `GET /search` (`api/src/services/search.ts`): categorías, órdenes, eventos, lugares, personas y planos desde un índice en memoria por empresa (se rehace cuando la empresa cambia algo, o al minuto), e ítems por comienzo de código directo en la base con el índice `Item_company_code_search_idx` (migración 012). El motor (`searchEngine`, igual en API y front) es un índice invertido por forma fonética en castellano (b/v, c/s/z, h, tildes, plurales), tolera errores de tipeo y expande sinónimos del rubro (cajón → baúl, case, rack). Cada persona ve solo lo que su rol y su plan permiten. Los resultados abren la pantalla con `?accion=`, `?buscar=`, `?categoria=` o `?ver=` (`useUrlParams`).
+
+## Auditoría
+
+Panel **Auditoría** (administradores; el superadmin puede ver todas las empresas). Registra ingresos con IP y dispositivo, intentos fallidos, salidas, acciones de seguridad, cambios y documentos abiertos (`api/src/services/audit.ts`). Nunca guarda contraseñas ni cuerpos de pedidos. Se conserva `AUDIT_RETENTION_DAYS` días (365 por defecto). El equipo muestra el último ingreso de cada persona.
+
+## Planos y recibos: visor
+
+Ver un plano o un recibo abre un visor dentro de la app (`front/src/components/FileViewer.jsx`) con el avance de la descarga. En la computadora el PDF usa el visor del navegador; en el celular se dibuja con pdf.js, que se descarga solo cuando hace falta. Lo abierto queda en memoria durante la sesión.
+
+## Si la app se rompe o sale una versión nueva
+
+Las pantallas se cargan por partes. Si el navegador tiene una versión vieja y la parte ya no existe, la app recarga una vez sola (`front/src/lib/lazyPage.js`), y Netlify devuelve 404 para archivos de `/assets` que no existen. Si una pantalla falla, se muestra "Recargar página" y "Reportar el problema" con el detalle técnico adjunto (`ErrorBoundary`). Las direcciones que no existen muestran la página 404.
 
 ## Equipo: desactivar y eliminar
 
