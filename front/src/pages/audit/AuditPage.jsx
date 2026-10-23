@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Autocomplete, Box, Chip, FormControlLabel, Paper, Stack, Switch, TablePagination, TextField, Tooltip, Typography } from '@mui/material';
+import { useState } from 'react';
+import { Autocomplete, Box, Chip, Paper, Stack, TablePagination, TextField, Tooltip, Typography } from '@mui/material';
 import LoginOutlined from '@mui/icons-material/LoginOutlined';
 import LogoutOutlined from '@mui/icons-material/LogoutOutlined';
 import GppBadOutlined from '@mui/icons-material/GppBadOutlined';
@@ -9,7 +9,6 @@ import FileOpenOutlined from '@mui/icons-material/FileOpenOutlined';
 import DataTable from '../../components/DataTable';
 import UserAvatar from '../../components/UserAvatar';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui';
-import { useAuth } from '../../context/AuthContext';
 import { useColumns } from '../../hooks/useColumns';
 import { useDebounced } from '../../hooks/useDebounced';
 import { useLoader } from '../../hooks/useLoader';
@@ -63,7 +62,7 @@ const COLUMNS = [
       );
     },
   },
-  { id: 'company', label: 'Empresa', hidden: true, render: (e) => e.company || '—' },
+  { id: 'company', label: 'Empresa', render: (e) => e.company || '—' },
   {
     id: 'ip',
     label: 'IP',
@@ -83,27 +82,25 @@ const COLUMNS = [
 
 /**
  * Auditoría: quién entró, desde qué IP y dispositivo, y qué hizo (cambios, descargas de documentos,
- * acciones de seguridad e intentos fallidos). Solo el administrador; el equipo de SRV puede ver todas las empresas.
+ * acciones de seguridad e intentos fallidos). Solo el equipo de SRV, con todas las empresas.
  */
 const AuditPage = () => {
-  const { isSuperAdmin } = useAuth();
   const [kind, setKind] = useState('');
-  const [person, setPerson] = useState(null);
+  const [company, setCompany] = useState(null);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [search, setSearch] = useState('');
-  const [all, setAll] = useState(false);
   const [page, setPage] = useState(0);
   const q = useDebounced(search);
-  const columns = useColumns(all ? 'audit-all' : 'audit', useMemo(() => COLUMNS.map((c) => (c.id === 'company' ? { ...c, hidden: !all } : c)), [all]));
+  const columns = useColumns('audit-all', COLUMNS);
 
-  const people = useLoader(() => api.get('/team').then((r) => r.data.people), []);
+  const companies = useLoader(() => api.get('/platform/companies').then((r) => r.data), []);
   const { data, loading, error, reload } = useLoader(
     () =>
       api
-        .get('/audit', { params: { kind: kind || undefined, user: person?.id, from: from || undefined, to: to || undefined, q: q || undefined, page: page + 1, scope: all ? 'all' : undefined } })
+        .get('/audit', { params: { kind: kind || undefined, company: company?.id, from: from || undefined, to: to || undefined, q: q || undefined, page: page + 1 } })
         .then((r) => r.data),
-    [kind, person, from, to, q, page, all],
+    [kind, company, from, to, q, page],
   );
   const reset = (fn) => (v) => {
     fn(v);
@@ -112,7 +109,7 @@ const AuditPage = () => {
 
   return (
     <>
-      <PageHeader title="Auditoría" subtitle="Quién entró, desde dónde y qué hizo. Los registros se guardan un año." />
+      <PageHeader overline="SRV" title="Auditoría" subtitle="Quién entró, desde dónde y qué hizo, en todas las empresas. Los registros se guardan un año." />
 
       <Stack spacing={1.5} sx={{ mb: 2 }}>
         <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
@@ -125,20 +122,17 @@ const AuditPage = () => {
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
           <Autocomplete
             sx={{ flex: 1, minWidth: 220 }}
-            options={people.data || []}
-            value={person}
-            onChange={(_, v) => reset(setPerson)(v)}
-            getOptionLabel={(p) => `${userName(p)}${p.username ? ` (@${p.username})` : ''}`}
+            options={companies.data || []}
+            value={company}
+            onChange={(_, v) => reset(setCompany)(v)}
+            getOptionLabel={(c) => c.name}
             isOptionEqualToValue={(a, b) => a.id === b.id}
-            renderInput={(params) => <TextField {...params} label="Persona" />}
+            renderInput={(params) => <TextField {...params} label="Empresa" placeholder="Todas" />}
           />
           <TextField type="date" label="Desde" value={from} onChange={(e) => reset(setFrom)(e.target.value)} InputLabelProps={{ shrink: true }} />
           <TextField type="date" label="Hasta" value={to} onChange={(e) => reset(setTo)(e.target.value)} InputLabelProps={{ shrink: true }} />
-          <TextField sx={{ flex: 1 }} label="Buscar texto, usuario o IP" value={search} onChange={(e) => reset(setSearch)(e.target.value)} />
+          <TextField sx={{ flex: 1 }} label="Buscar persona, texto o IP" value={search} onChange={(e) => reset(setSearch)(e.target.value)} />
         </Stack>
-        {isSuperAdmin && (
-          <FormControlLabel control={<Switch checked={all} onChange={(e) => reset(setAll)(e.target.checked)} />} label="Todas las empresas (equipo de SRV)" />
-        )}
       </Stack>
 
       {error ? (

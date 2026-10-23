@@ -55,7 +55,7 @@ const ACTIONS = [
   { title: 'Cargar un recibo de sueldo', subtitle: 'Subir el PDF para que lo firmen', path: '/payroll?accion=cargar', icon: UploadFileOutlined, perm: ['payroll', 'create'], feature: 'payroll', kw: 'cargar subir nuevo recibo sueldo pdf liquidacion' },
   { title: 'Mi empresa', subtitle: 'Abono, datos y logo', path: '/billing', icon: StorefrontOutlined, admin: true, kw: 'empresa abono pago pagar factura cuit datos logo cuenta suscripcion vencimiento' },
   { title: 'Planes', subtitle: 'Comparar y cambiar de plan', path: '/billing#planes', icon: WorkspacePremiumOutlined, admin: true, kw: 'plan planes precio cambiar mejorar usuarios limite basico profesional empresa' },
-  { title: 'Auditoría', subtitle: 'Quién entró, desde dónde y qué hizo', path: '/audit', icon: ManageSearchOutlined, admin: true, kw: 'auditoria logs registros seguridad ingresos ip historial quien actividad accesos' },
+  { title: 'Auditoría', subtitle: 'Quién entró, desde dónde y qué hizo', path: '/audit', icon: ManageSearchOutlined, superAdmin: true, kw: 'auditoria logs registros seguridad ingresos ip historial quien actividad accesos' },
   { title: 'Mi perfil', subtitle: 'Nombre, email, foto y DNI', path: '/profile', icon: PersonOutline, kw: 'perfil cuenta nombre foto avatar email mail dni datos' },
   { title: 'Cambiar mi contraseña', subtitle: 'En Mi perfil', path: '/profile?accion=contrasena', icon: LockOutlined, kw: 'contrasena clave password cambiar olvide seguridad' },
   { title: 'Reportar un problema', subtitle: 'Avisarle a SRV de un error o una idea', command: 'feedback', icon: BugReportOutlined, kw: 'reportar error problema bug falla ayuda soporte sugerencia consulta reclamo idea' },

@@ -35,8 +35,8 @@ export const NAV = [
   { to: '/team', label: 'Equipo', icon: GroupOutlined, perm: ['users', 'read'], section: 'Equipo' },
   { to: '/payroll', label: 'Sueldos', icon: BadgeOutlined, perm: ['payroll', 'read'], feature: 'payroll', section: 'Equipo' },
   { to: '/billing', label: 'Mi empresa', icon: StorefrontOutlined, admin: true, section: 'Administración' },
-  { to: '/audit', label: 'Auditoría', icon: ManageSearchOutlined, admin: true, section: 'Administración' },
   { to: '/platform', label: 'Panel SRV', icon: AdminPanelSettingsOutlined, superAdmin: true, section: 'SRV' },
+  { to: '/audit', label: 'Auditoría', icon: ManageSearchOutlined, superAdmin: true, section: 'SRV' },
 ];
 
 /**

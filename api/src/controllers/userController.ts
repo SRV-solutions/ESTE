@@ -61,6 +61,8 @@ const baseSession = (user: User) => ({
   roleName: user.Role?.roleName ?? null,
   isAdmin: !!user.companyId && user.roleId === env.adminRoleId,
   isSuperAdmin: user.isSuperAdmin,
+  /** Entró con una contraseña temporal: la app le pide elegir una propia antes de seguir. */
+  mustChangePassword: user.mustChangePassword,
   permissions: (user.Role?.Permissions || []).map((p) => ({ entity: p.entity, action: p.action })),
   company: user.Company
     ? {
@@ -148,12 +150,16 @@ export const changeMyPassword = async (req: Request, res: Response) => {
   const user = await User.scope('withPassword').findByPk(req.user!.id);
   if (!user) throw new HttpError(404, 'Usuario no encontrado.');
 
-  if (!currentPassword || !(await checkPassword(currentPassword, user.password))) {
+  // Con la contraseña temporal recién usada para entrar no se la vuelve a pedir.
+  if (!user.mustChangePassword && (!currentPassword || !(await checkPassword(currentPassword, user.password)))) {
     throw new HttpError(400, 'La contraseña actual es incorrecta.', { currentPassword: 'Contraseña incorrecta.' });
   }
   assertPassword(newPassword, 'newPassword');
+  if (user.mustChangePassword && (await checkPassword(newPassword, user.password))) {
+    throw new HttpError(400, 'Elegí una contraseña distinta a la temporal.', { newPassword: 'Tiene que ser distinta a la temporal.' });
+  }
 
-  await user.update({ password: await hashPassword(newPassword) });
+  await user.update({ password: await hashPassword(newPassword), mustChangePassword: false });
   res.json({ message: 'Contraseña actualizada.' });
 };
 
@@ -256,7 +262,7 @@ export const resetPassword = async (req: Request, res: Response) => {
   assertPassword(req.body.password);
 
   await sequelize.transaction(async (transaction) => {
-    await User.update({ password: await hashPassword(req.body.password) }, { where: { id: record.userId }, transaction });
+    await User.update({ password: await hashPassword(req.body.password), mustChangePassword: false }, { where: { id: record.userId }, transaction });
     // El link usado y cualquier otro pendiente del mismo usuario dejan de servir.
     await PasswordResetToken.update({ usedAt: new Date() }, { where: { userId: record.userId, usedAt: null }, transaction });
   });

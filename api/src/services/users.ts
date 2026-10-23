@@ -1,8 +1,10 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { Op } from 'sequelize';
 import { env } from '../config/env';
 import { User } from '../models';
 import { HttpError } from '../utils/http';
+import { button, details, paragraph, sendEmail } from './email';
 
 /** Reglas de las cuentas de usuario, compartidas por perfil, equipo y Panel SRV. */
 
@@ -33,6 +35,42 @@ export const findByIdentifier = (identifier: string, scope = User) => {
 
 export const hashPassword = (password: string) => bcrypt.hash(String(password), BCRYPT_ROUNDS);
 export const checkPassword = (password: unknown, hash: string) => bcrypt.compare(String(password), hash);
+
+// Sin letras ni números que se confunden al copiarla del mail (0/O, 1/l/I).
+const TEMP_ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/** Contraseña temporal de 10 caracteres: la persona la usa para entrar la primera vez y la cambia. */
+export const generateTemporaryPassword = () => Array.from({ length: 10 }, () => TEMP_ALPHABET[crypto.randomInt(TEMP_ALPHABET.length)]).join('');
+
+/**
+ * Le manda a la persona su usuario y la contraseña temporal para entrar.
+ * Devuelve si el mail salió (sin email o sin Resend configurado, no sale).
+ */
+export const sendAccessEmail = (
+  user: { email: string | null; username: string; firstname: string | null },
+  password: string,
+  { companyName, isNew = true }: { companyName?: string | null; isNew?: boolean } = {},
+) => {
+  if (!user.email) return Promise.resolve(false);
+  return sendEmail({
+    to: user.email,
+    subject: isNew ? 'Tu usuario de Event Box' : 'Tu nueva contraseña de Event Box',
+    title: isNew ? '¡Ya tenés usuario en Event Box!' : 'Te cambiaron la contraseña',
+    body:
+      paragraph(
+        isNew
+          ? `Hola ${user.firstname || user.username}, te crearon un usuario en Event Box${companyName ? ` para ${companyName}` : ''}.`
+          : `Hola ${user.firstname || user.username}, un administrador te puso una contraseña nueva en Event Box.`,
+      ) +
+      details([
+        ['Usuario', user.username],
+        ['Contraseña temporal', password],
+      ]) +
+      paragraph('Al entrar te vamos a pedir que elijas una contraseña nueva. También podés entrar con tu email o tu DNI en lugar del usuario.') +
+      button('Entrar a Event Box', `${env.appUrl}/login`) +
+      paragraph('Si no esperabas este mail, avisale al administrador de tu empresa.'),
+  });
+};
 
 type FieldErrors = Record<string, string>;
 

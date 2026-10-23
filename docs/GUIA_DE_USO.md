@@ -12,7 +12,8 @@ se explica en [MOBILE.md](MOBILE.md).
 
 ![Ingreso](img/login.jpg)
 
-- Cada persona entra con su **usuario, su email o su DNI** y la contraseña que le dio el administrador.
+- Cada persona entra con su **usuario, su email o su DNI**. Al crearle el usuario le llega un mail con una
+  **contraseña temporal** (o se la pasa el administrador si no tiene email); al entrar la primera vez elige una propia.
 - *Olvidé mi contraseña* manda un link por mail que vale una hora y sirve una sola vez.
 - **Mi perfil** (la foto, arriba a la derecha): nombre, email, DNI, foto y contraseña.
 - **Llevar al celular** (al pie del menú) muestra un QR. Al escanearlo, el celular entra directo con tu
@@ -158,13 +159,14 @@ Abono del mes, datos y logo de la empresa, y **Planes**: comparación, uso y cam
 tiene un **acuerdo especial** con SRV, el plan queda fijo hasta la fecha pactada; para cambiarlo, hay que
 hablar con SRV.
 
-## Auditoría (administrador)
+## Auditoría (equipo de SRV)
 
 ![Auditoría](img/auditoria.jpg)
 
 Quién entró, desde dónde y qué hizo: ingresos con fecha, IP y dispositivo; intentos fallidos; salidas;
-acciones de seguridad (contraseñas, roles, accesos); cambios y documentos abiertos. Se filtra por tipo,
-persona, fechas o texto. Nunca se guardan contraseñas y los registros se conservan un año.
+acciones de seguridad (contraseñas, roles, accesos); cambios y documentos abiertos. La ve solo el equipo de
+SRV, con los registros de todas las empresas. Se filtra por empresa, tipo, fechas o texto (persona, acción o
+IP). Nunca se guardan contraseñas y los registros se conservan un año.
 
 ## En el celular
 

@@ -1,10 +1,14 @@
+import { Suspense } from 'react';
 import { Navigate, Link as RouterLink, useLocation } from 'react-router-dom';
 import { Button } from '@mui/material';
 import LockOutlined from '@mui/icons-material/LockOutlined';
 import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
 import { useAuth } from '../context/AuthContext';
+import { lazyPage } from '../lib/lazyPage';
 import { ComingSoonScreen, UpsellScreen } from './ModuleScreens';
 import { EmptyState, Loading } from './ui';
+
+const TemporaryPasswordPage = lazyPage(() => import('../pages/PasswordRecoveryPages').then((m) => ({ default: m.TemporaryPasswordPage })));
 
 /**
  * Protege rutas.
@@ -12,13 +16,21 @@ import { EmptyState, Loading } from './ui';
  * - `admin` / `superAdmin`: solo administradores de la empresa / equipo de SRV.
  * - `allowBlocked`: se puede usar aunque la suscripción esté vencida (pantalla de pago).
  * - `shell`: solo exige sesión (el layout; cada pantalla aplica sus propias reglas).
+ * Quien entró con una contraseña temporal no ve la app hasta elegir una propia.
  */
 const RequireAuth = ({ children, perm, admin, superAdmin, allowBlocked, shell, feature }) => {
-  const { status, can, isAdmin, isSuperAdmin, company, hasAccess, subscription, hasFeature, inDevelopment } = useAuth();
+  const { status, user, can, isAdmin, isSuperAdmin, company, hasAccess, subscription, hasFeature, inDevelopment } = useAuth();
   const location = useLocation();
 
   if (status === 'loading') return <Loading label="Abriendo Event Box…" />;
   if (status === 'anonymous') return <Navigate to="/login" replace state={{ from: location }} />;
+  if (user?.mustChangePassword) {
+    return shell ? (
+      <Suspense fallback={<Loading />}>
+        <TemporaryPasswordPage />
+      </Suspense>
+    ) : null;
+  }
   if (shell) return children;
 
   const denied = (

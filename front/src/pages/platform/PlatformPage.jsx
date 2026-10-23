@@ -34,7 +34,7 @@ import { EMPTY_COMPANY } from '../billing/companyDefaults';
 const EMPTY_ADMIN = { firstname: '', lastname: '', username: '', email: '', password: '' };
 
 const NewCompanyDialog = ({ open, onClose, onCreated }) => {
-  const { notify } = useFeedback();
+  const { notify, confirm } = useFeedback();
   const [company, setCompany] = useState(EMPTY_COMPANY);
   const [admin, setAdmin] = useState(EMPTY_ADMIN);
   const [plan, setPlan] = useState('profesional');
@@ -43,17 +43,32 @@ const NewCompanyDialog = ({ open, onClose, onCreated }) => {
   const [saving, setSaving] = useState(false);
 
   const setA = (field) => (e) => setAdmin((a) => ({ ...a, [field]: e.target.value }));
-  const valid = company.name.trim() && admin.username.trim() && admin.email.trim() && admin.password.length >= 8;
+  const valid = company.name.trim() && admin.username.trim() && admin.email.trim() && (!admin.password || admin.password.length >= 8);
 
   const save = async () => {
     setSaving(true);
     setErrors({});
     try {
       const { data } = await api.post('/platform/companies', { ...company, plan, monthlyPriceUsd: price, admin });
-      notify(`${data.name} creada. Ya puede entrar con el usuario ${admin.username}.`);
+      notify(
+        data.mailed
+          ? `${data.name} creada. Le mandamos a ${admin.email} el usuario ${admin.username} y la contraseña temporal.`
+          : `${data.name} creada, pero no se pudo mandar el mail: pasale la contraseña al administrador.`,
+        data.mailed ? 'success' : 'warning',
+      );
       setCompany(EMPTY_COMPANY);
       setAdmin(EMPTY_ADMIN);
       onCreated(data);
+      if (data.temporaryPassword) {
+        await confirm({
+          title: `Contraseña temporal de ${data.name}`,
+          message: `Usuario: ${admin.username}
+Contraseña temporal: ${data.temporaryPassword}
+
+No se pudo mandar el mail. Copiala ahora: no se vuelve a mostrar. La cambia al entrar.`,
+          confirmLabel: 'Listo',
+        });
+      }
     } catch (err) {
       setErrors(fieldErrors(err));
       notify(errorMessage(err), 'error');
@@ -110,13 +125,12 @@ const NewCompanyDialog = ({ open, onClose, onCreated }) => {
         <Grid item xs={12} sm={4}>
           <PasswordField
             fullWidth
-            label="Contraseña inicial"
+            label="Contraseña temporal"
             value={admin.password}
             onChange={setA('password')}
-            required
             autoComplete="new-password"
             error={!!errors.password}
-            helperText={errors.password || 'Mínimo 8 caracteres'}
+            helperText={errors.password || 'Opcional (mínimo 8). Vacía, la generamos. Le llega por mail.'}
           />
         </Grid>
       </Grid>

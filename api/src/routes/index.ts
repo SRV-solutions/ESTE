@@ -29,7 +29,7 @@ import {
 } from '../middlewares/auth';
 import { blueprintUpload, csvUpload, imageUpload, pdfUpload } from '../middlewares/upload';
 import { Action, Entity } from '../models/enums';
-import { asyncHandler as h, HttpError } from '../utils/http';
+import { asyncHandler as h } from '../utils/http';
 
 const { CREATE, READ, UPDATE, DELETE } = Action;
 const { USERS, CATEGORIES, ITEMS, SERVICE_ORDERS, EVENTS, LOCATIONS, BLUEPRINTS, PAYROLL, CHECKIN, REPORTS } = Entity;
@@ -176,8 +176,6 @@ router.post('/company/logo', companyAdmin, imageUpload, h(billing.uploadLogo));
 router.delete('/company/logo', companyAdmin, h(billing.deleteLogo));
 router.patch('/company/plan', companyAdmin, h(plans.changeMyPlan));
 router.get('/plans', isAuth, plans.listPlans);
-// Auditoría: el administrador ve su empresa; el equipo de SRV, todas (scope=all).
-router.get('/audit', isAuth, (req, _res, next) => (req.user!.isAdmin || req.user!.isSuperAdmin ? next() : next(new HttpError(403, 'Solo el administrador de la empresa puede ver la auditoría.'))), h(audit.listAudit));
 router.post('/billing/checkout', companyAdmin, h(billing.checkout));
 router.get('/billing/invoices/:id', isAuth, h(billing.getInvoice));
 router.post('/billing/mercadopago/webhook', h(billing.mercadoPagoWebhook)); // Público: lo valida la firma.
@@ -192,6 +190,8 @@ router.patch('/platform/companies/:id', superAdmin, h(platform.updateCompany));
 router.post('/platform/companies/:id/payments', superAdmin, h(platform.addManualPayment));
 router.post('/platform/payments/:paymentId/invoice', superAdmin, h(platform.retryInvoice));
 router.get('/platform/feedback', superAdmin, h(feedback.listFeedback));
+// Auditoría de todas las empresas: solo el equipo de SRV.
+router.get('/audit', superAdmin, h(audit.listAudit));
 router.patch('/platform/feedback/:id', superAdmin, h(feedback.updateFeedback));
 
 export default router;

@@ -13,6 +13,7 @@ import dni from './migrations/009_dni';
 import loginPorQr from './migrations/010_login_por_qr';
 import auditoria from './migrations/011_auditoria';
 import buscador from './migrations/012_buscador';
+import contrasenaTemporal from './migrations/013_contrasena_temporal';
 
 export interface Migration {
   name: string;
@@ -20,7 +21,7 @@ export interface Migration {
 }
 
 /** Orden de aplicación. Nunca se edita una migración ya aplicada: se agrega una nueva. */
-const MIGRATIONS: Migration[] = [baseline, multiempresa, archivosYAvisos, planesYModulos, personalEsUsuario, accesoDelEquipo, rolesPorEmpresa, checkinReportesPermisos, acuerdosEspeciales, dni, loginPorQr, auditoria, buscador];
+const MIGRATIONS: Migration[] = [baseline, multiempresa, archivosYAvisos, planesYModulos, personalEsUsuario, accesoDelEquipo, rolesPorEmpresa, checkinReportesPermisos, acuerdosEspeciales, dni, loginPorQr, auditoria, buscador, contrasenaTemporal];
 
 const run = (sql: string, t: Transaction) => sequelize.query(sql, { transaction: t });
 export const sql = run;

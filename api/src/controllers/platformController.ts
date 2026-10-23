@@ -15,7 +15,7 @@ import { effectivePlan, parseDeal } from '../services/plan';
 import { addDays, subscriptionState, todayAR } from '../services/subscription';
 import { HttpError, parseId } from '../utils/http';
 import { parseCompanyInput } from '../utils/companyInput';
-import { EMAIL_RE, hashPassword } from '../services/users';
+import { EMAIL_RE, generateTemporaryPassword, hashPassword } from '../services/users';
 
 const count = (table: string, extra = '') =>
   literal(`(SELECT COUNT(*) FROM "${table}" x WHERE x."companyId" = "Company"."id" ${extra})::int`);
@@ -87,10 +87,12 @@ export const createCompany = async (req: Request, res: Response) => {
   const admin = req.body.admin || {};
   const username = String(admin.username || '').trim();
   const email = String(admin.email || '').trim();
-  const password = String(admin.password || '');
+  // Contraseña temporal: la que escribió SRV o una generada. Le llega por mail y la cambia al entrar.
+  const typedPassword = String(admin.password || '');
   if (!/^[a-zA-Z0-9_.-]+$/.test(username)) throw new HttpError(400, 'Usuario del administrador inválido.', { username: 'Solo letras, números, puntos y guiones.' });
   if (!EMAIL_RE.test(email)) throw new HttpError(400, 'Email del administrador inválido.', { email: 'Email inválido.' });
-  if (password.length < 8) throw new HttpError(400, 'La contraseña del administrador debe tener al menos 8 caracteres.', { password: 'Mínimo 8 caracteres.' });
+  if (typedPassword && typedPassword.length < 8) throw new HttpError(400, 'La contraseña del administrador debe tener al menos 8 caracteres.', { password: 'Mínimo 8 caracteres.' });
+  const password = typedPassword || generateTemporaryPassword();
   const plan = PLANS.find((p) => p.id === req.body.plan) ?? getPlan('profesional');
   // Precio del plan, salvo que SRV le ponga uno especial.
   const price = req.body.monthlyPriceUsd !== undefined && req.body.monthlyPriceUsd !== '' ? Number(req.body.monthlyPriceUsd) : plan.priceUsd;
@@ -110,6 +112,7 @@ export const createCompany = async (req: Request, res: Response) => {
         firstname: String(admin.firstname || '').trim() || null,
         lastname: String(admin.lastname || '').trim() || null,
         password: await hashPassword(password),
+        mustChangePassword: true,
         roleId: env.adminRoleId,
       },
       { transaction: t },
@@ -117,8 +120,7 @@ export const createCompany = async (req: Request, res: Response) => {
     return c;
   });
 
-  // La contraseña no viaja por mail: se la pasa SRV por otro medio.
-  void sendEmail({
+  const mailed = await sendEmail({
     to: email,
     subject: `Bienvenidos a Event Box, ${company.name}`,
     title: '¡Ya tienen Event Box!',
@@ -126,16 +128,18 @@ export const createCompany = async (req: Request, res: Response) => {
       paragraph(`Hola ${String(admin.firstname || '').trim() || username}, creamos la cuenta de ${company.name} en Event Box.`) +
       details([
         ['Tu usuario', username],
+        ['Contraseña temporal', password],
         ['Tu rol', 'Administrador de la empresa'],
         ['Plan', `${plan.name} (hasta ${plan.maxUsers} usuarios)`],
         ['Período de prueba', `${env.billing.trialDays} días`],
       ]) +
-      paragraph('La contraseña inicial te la pasamos aparte. Al entrar, podés cambiarla desde Mi perfil.') +
+      paragraph('Al entrar te vamos a pedir que elijas una contraseña nueva.') +
       button('Entrar a Event Box', `${env.appUrl}/login`) +
       paragraph('Desde Mi empresa podés subir el logo, cargar los datos para la factura y crear los usuarios de tu equipo.'),
   });
 
-  res.status(201).json(withState(company));
+  // Si el mail no salió, SRV ve la contraseña generada para pasársela por otro medio.
+  res.status(201).json({ ...withState(company), mailed, temporaryPassword: !mailed && !typedPassword ? password : undefined });
 };
 
 export const updateCompany = async (req: Request, res: Response) => {

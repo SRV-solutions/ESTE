@@ -75,6 +75,11 @@ Se entra con el **usuario, el email o el DNI** (sin puntos o con puntos, da igua
 Mi perfil o en Equipo; si la persona tiene CUIL en su ficha, se completa solo. **Llevar al celular** (abajo del menú) muestra
 un QR que entra directo en el teléfono con la sesión de la PC: es de un solo uso y vence a los 5 minutos.
 
+**Contraseña temporal**: al crear un usuario (en Equipo, o el primer administrador desde el Panel SRV) la contraseña es
+opcional; si se deja vacía se genera una. Le llega por mail con su usuario y, al entrar, la app le pide elegir una propia
+(`User.mustChangePassword`). Lo mismo cuando un administrador le pone una contraseña nueva. Si el mail no sale (sin
+email o sin `RESEND_API_KEY`), la pantalla le muestra la contraseña generada al administrador una sola vez.
+
 - **Equipo de SRV (superadmin)**: entra al **Panel SRV**, crea empresas con su primer administrador, ve pagos y facturas, registra pagos manuales y suspende empresas. Se habilita con:
 
   ```bash
@@ -160,7 +165,7 @@ Arriba a la derecha (Ctrl/⌘ + K). Busca pantallas y acciones (`front/src/compo
 
 ## Auditoría
 
-Panel **Auditoría** (administradores; el superadmin puede ver todas las empresas). Registra ingresos con IP y dispositivo, intentos fallidos, salidas, acciones de seguridad, cambios y documentos abiertos (`api/src/services/audit.ts`). Nunca guarda contraseñas ni cuerpos de pedidos. Se conserva `AUDIT_RETENTION_DAYS` días (365 por defecto). El equipo muestra el último ingreso de cada persona.
+Panel **Auditoría** (solo superadmin, con todas las empresas; se filtra por empresa). Registra ingresos con IP y dispositivo, intentos fallidos, salidas, acciones de seguridad, cambios y documentos abiertos (`api/src/services/audit.ts`). Nunca guarda contraseñas ni cuerpos de pedidos. Se conserva `AUDIT_RETENTION_DAYS` días (365 por defecto). El equipo muestra el último ingreso de cada persona.
 
 ## Planos y recibos: visor
 

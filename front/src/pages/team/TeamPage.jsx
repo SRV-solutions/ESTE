@@ -129,7 +129,7 @@ const PersonDialog = ({ person, roles: allRoles, payroll, limits, onClose, onSav
   const [saving, setSaving] = useState(false);
   const set = (f) => (e) => setForm((s) => ({ ...s, [f]: e.target.value }));
   const login = form.access !== 'none';
-  // Pasa a tener usuario por primera vez: necesita contraseña.
+  // Pasa a tener usuario por primera vez: si no le ponen contraseña, se genera una temporal.
   const needsPassword = login && (isNew || person.access === 'none');
   const becomesTemporary = form.access === 'temporary' && person.access !== 'temporary';
   // El rol Administrador lo da solo un administrador, y nunca a un acceso temporal.
@@ -137,7 +137,7 @@ const PersonDialog = ({ person, roles: allRoles, payroll, limits, onClose, onSav
   const dayOptions = Array.from({ length: limits.temporaryMaxDays }, (_, i) => i + 1);
 
   const valid =
-    form.firstname.trim() && (form.access !== 'app' || form.email.trim()) && (!login || (form.username.trim() && form.roleId && (!needsPassword || form.password.length >= 6)));
+    form.firstname.trim() && (form.access !== 'app' || form.email.trim()) && (!login || (form.username.trim() && form.roleId && (!form.password || form.password.length >= 6)));
 
   const save = async () => {
     setSaving(true);
@@ -153,8 +153,20 @@ const PersonDialog = ({ person, roles: allRoles, payroll, limits, onClose, onSav
         else if (renew) payload.days = renew;
       }
       const { data } = isNew ? await api.post('/team', payload) : await api.patch(`/team/${person.id}`, payload);
-      notify(data.message);
+      notify(data.message, data.temporaryPassword ? 'warning' : 'success');
       onSaved();
+      // El mail no salió: el administrador ve la contraseña generada para pasársela.
+      if (data.temporaryPassword) {
+        await confirm({
+          title: `Contraseña temporal de ${form.firstname.trim()}`,
+          message: `Usuario: ${form.username.trim()}
+Contraseña temporal: ${data.temporaryPassword}
+
+${data.message}
+Copiala ahora: no se vuelve a mostrar.`,
+          confirmLabel: 'Listo',
+        });
+      }
     } catch (err) {
       setErrors(fieldErrors(err));
       notify(errorMessage(err), 'error');
@@ -223,13 +235,19 @@ const PersonDialog = ({ person, roles: allRoles, payroll, limits, onClose, onSav
             <Grid item xs={12} sm={6}>
               <PasswordField
                 fullWidth
-                label={needsPassword ? 'Contraseña' : 'Nueva contraseña'}
+                label={needsPassword ? 'Contraseña temporal' : 'Nueva contraseña temporal'}
                 value={form.password}
                 onChange={set('password')}
-                required={needsPassword}
                 autoComplete="new-password"
                 error={!!errors.password}
-                helperText={errors.password || (needsPassword ? 'Mínimo 6 caracteres.' : 'Dejala vacía para no cambiarla.')}
+                helperText={
+                  errors.password ||
+                  (needsPassword
+                    ? 'Opcional: si la dejás vacía la generamos. Le llega por mail y la cambia al entrar.'
+                    : isMe
+                      ? 'Dejala vacía para no cambiarla.'
+                      : 'Dejala vacía para no cambiarla. Si ponés una, le llega por mail y la cambia al entrar.')
+                }
               />
             </Grid>
             <Grid item xs={12} sm={6}>

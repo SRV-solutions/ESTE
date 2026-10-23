@@ -21,6 +21,8 @@ class User extends Model {
   /** DNI sin puntos: sirve para entrar, igual que el usuario o el email. */
   declare dni: string | null;
   declare password: string;
+  /** La contraseña es temporal (la puso un administrador o se generó al crearlo): la cambia al entrar. */
+  declare mustChangePassword: boolean;
   declare access: UserAccess;
   declare accessUntil: Date | null;
   /** Desactivado: no entra ni cuenta para el plan, pero conserva su historial. */
@@ -46,6 +48,7 @@ User.init(
     email: { type: DataTypes.STRING, allowNull: true, unique: true },
     dni: { type: DataTypes.STRING(10), allowNull: true },
     password: { type: DataTypes.STRING, allowNull: true },
+    mustChangePassword: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     access: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'app' },
     accessUntil: { type: DataTypes.DATE, allowNull: true },
     disabledAt: { type: DataTypes.DATE, allowNull: true },

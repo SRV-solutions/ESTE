@@ -65,7 +65,7 @@ const App = () => (
       <Route path="users" element={<Navigate to="/team" replace />} />
       <Route path="profile" element={guard(<ProfilePage />, undefined, { allowBlocked: true })} />
       <Route path="billing" element={guard(<BillingPage />, undefined, { admin: true, allowBlocked: true })} />
-      <Route path="audit" element={guard(<AuditPage />, undefined, { admin: true })} />
+      <Route path="audit" element={guard(<AuditPage />, undefined, { superAdmin: true })} />
       <Route path="platform" element={guard(<PlatformPage />, undefined, { superAdmin: true })} />
       <Route path="platform/companies/:id" element={guard(<PlatformCompanyPage />, undefined, { superAdmin: true })} />
       <Route path="platform/feedback" element={guard(<FeedbackPage />, undefined, { superAdmin: true })} />

@@ -5,13 +5,13 @@ import { env } from '../config/env';
 import { TEMPORARY_MAX_DAYS } from '../config/plans';
 import { planHasFeature } from '../services/plan';
 import { tenant } from '../middlewares/auth';
-import { Employee, Payslip, Role, User } from '../models';
+import { Company, Employee, Payslip, Role, User } from '../models';
 import { hasLogin, UserAccess } from '../models/User';
 import { countActiveTemporary, countAppUsers, fichaOf, findTeamMember, personName } from '../services/team';
 import { deletePrivateFile } from '../services/storage';
 import { HttpError, parseId, pick } from '../utils/http';
 import { isValidCuit } from '../utils/companyInput';
-import { assertNotLastAdmin, assertPassword, hashPassword, normalizeDni, validateProfile } from '../services/users';
+import { assertNotLastAdmin, assertPassword, generateTemporaryPassword, hashPassword, normalizeDni, sendAccessEmail, validateProfile } from '../services/users';
 
 /**
  * Equipo: todas las personas de la empresa en un solo lugar.
@@ -157,6 +157,28 @@ export const listTeam = async (req: Request, res: Response) => {
   });
 };
 
+/** Nombre de la empresa, para el mail con el usuario y la contraseña temporal. */
+const companyName = async (companyId: number) => (await Company.findByPk(companyId, { attributes: ['name'] }))?.name ?? null;
+
+/**
+ * Le avisa por mail la contraseña temporal. Si el mail no sale y la contraseña la generó el sistema,
+ * se la devuelve al administrador para que se la pase por otro medio.
+ */
+const deliverPassword = async (
+  user: User,
+  password: string,
+  { generated, isNew }: { generated: boolean; isNew: boolean },
+) => {
+  const mailed = await sendAccessEmail(user, password, { companyName: await companyName(user.companyId!), isNew });
+  const why = user.email ? 'No se pudo mandar el mail' : 'No tiene email cargado';
+  return {
+    note: mailed
+      ? ` Le mandamos un mail a ${user.email} con la contraseña temporal: la cambia al entrar.`
+      : ` ${why}: pasale la contraseña ${generated ? 'temporal ' : ''}vos (la cambia al entrar).`,
+    temporaryPassword: !mailed && generated ? password : undefined,
+  };
+};
+
 const parseAccess = (value: unknown, fallback: UserAccess) => {
   if (value === undefined) return fallback;
   if (!ACCESS.includes(value as UserAccess)) throw new HttpError(400, 'Tipo de acceso inválido.');
@@ -178,10 +200,11 @@ export const createPerson = async (req: Request, res: Response) => {
   if (login && !username) throw new HttpError(400, 'Elegí el usuario con el que va a entrar.', { username: 'Obligatorio.' });
   if (access === 'app' && !email) throw new HttpError(400, 'El email es obligatorio para quien usa la app.', { email: 'Obligatorio.' });
   await validateProfile({ username: username ?? undefined, email: email ?? undefined, firstname, lastname: lastname ?? undefined, dni });
-  if (login) {
-    assertPassword(req.body.password);
-    await assertCompanyRole(req, roleId);
-  }
+  // Contraseña temporal: la que escribió el administrador o una generada. Le llega por mail y la cambia al entrar.
+  const typedPassword = login && req.body.password ? String(req.body.password) : null;
+  if (typedPassword) assertPassword(typedPassword);
+  const password = login ? (typedPassword ?? generateTemporaryPassword()) : null;
+  if (login) await assertCompanyRole(req, roleId);
   const accessUntil = access === 'temporary' ? parseDays(req.body.days) : null;
   const payroll = planHasFeature(req.user!.plan, 'payroll');
   const ficha = payroll ? parseFicha(req.body) : {};
@@ -200,7 +223,8 @@ export const createPerson = async (req: Request, res: Response) => {
         firstname,
         lastname,
         roleId,
-        password: login ? await hashPassword(req.body.password) : null,
+        password: password ? await hashPassword(password) : null,
+        mustChangePassword: login,
       },
       { transaction },
     );
@@ -215,7 +239,8 @@ export const createPerson = async (req: Request, res: Response) => {
       : access === 'temporary'
         ? `${name} puede entrar con el usuario ${username} hasta el ${accessUntil!.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} h.`
         : `${name} ya es parte del personal (sin acceso a la app).`;
-  res.status(201).json({ id: user.id, message });
+  const delivery = password ? await deliverPassword(user, password, { generated: !typedPassword, isNew: true }) : null;
+  res.status(201).json({ id: user.id, message: message + (delivery?.note ?? ''), temporaryPassword: delivery?.temporaryPassword });
 };
 
 export const updatePerson = async (req: Request, res: Response) => {
@@ -223,6 +248,7 @@ export const updatePerson = async (req: Request, res: Response) => {
   const user = await User.scope('withPassword').findOne({ where: { id: parseId(req.params.id, 'persona'), companyId } });
   if (!user) throw new HttpError(404, 'Esa persona no es de tu empresa.');
   const isMe = user.id === req.user!.id;
+  const hadLogin = !!user.password;
   // Solo un administrador toca a otro administrador (si no, cualquiera con permiso de usuarios podría quitarle el acceso o la contraseña).
   if (user.roleId === env.adminRoleId && !req.user!.isAdmin) throw new HttpError(403, 'Solo un administrador puede modificar a otro administrador.');
 
@@ -239,19 +265,20 @@ export const updatePerson = async (req: Request, res: Response) => {
   // DNI: el que mandan; si lo dejan vacío y cargan CUIL, se deriva del CUIL.
   const dni = req.body.dni !== undefined ? normalizeDni(req.body.dni) ?? dniFromCuil(req.body.cuil) ?? null : undefined;
   const roleId = req.body.roleId !== undefined && req.body.roleId !== '' ? Number(req.body.roleId) : user.roleId;
-  const password = req.body.password ? String(req.body.password) : null;
+  const typedPassword = req.body.password ? String(req.body.password) : null;
+  // Pasa a tener usuario por primera vez sin que le pongan contraseña: se genera una temporal.
+  const password = typedPassword ?? (login && !user.password ? generateTemporaryPassword() : null);
 
   if (firstname === null) throw new HttpError(400, 'El nombre es obligatorio.', { firstname: 'Obligatorio.' });
   const finalEmail = email === undefined ? user.email : email;
   const finalUsername = username === undefined ? user.username : username;
   if (access === 'app' && !finalEmail) throw new HttpError(400, 'El email es obligatorio para quien usa la app.', { email: 'Obligatorio.' });
   if (login && !finalUsername) throw new HttpError(400, 'Elegí el usuario con el que va a entrar.', { username: 'Obligatorio.' });
-  if (login && !user.password && !password) throw new HttpError(400, 'Poné una contraseña para que pueda entrar.', { password: 'Obligatoria.' });
   await validateProfile(
     { username: username ?? undefined, email: email ?? undefined, firstname: firstname ?? undefined, lastname: lastname ?? undefined, dni },
     user.id,
   );
-  if (password) assertPassword(password);
+  if (typedPassword) assertPassword(typedPassword);
   if (login && !roleId) throw new HttpError(400, 'Elegí un rol.', { roleId: 'Obligatorio.' });
   if (roleId && roleId !== user.roleId) {
     if (isMe) throw new HttpError(400, 'No podés cambiar tu propio rol.', { roleId: 'No podés cambiar tu propio rol.' });
@@ -279,13 +306,15 @@ export const updatePerson = async (req: Request, res: Response) => {
         firstname: firstname === undefined ? user.firstname : firstname,
         lastname: lastname === undefined ? user.lastname : lastname,
         roleId,
-        ...(password ? { password: await hashPassword(password) } : {}),
+        // La contraseña que pone un administrador es temporal (salvo que se la cambie a sí mismo).
+        ...(password ? { password: await hashPassword(password), mustChangePassword: !isMe } : {}),
       },
       { transaction },
     );
     if (payroll && Object.keys(ficha).length) await (await fichaOf(user, transaction)).update(ficha, { transaction });
   });
-  res.json({ message: 'Datos guardados.' });
+  const delivery = password && login && !isMe ? await deliverPassword(user, password, { generated: !typedPassword, isNew: !hadLogin }) : null;
+  res.json({ message: `Datos guardados.${delivery?.note ?? ''}`, temporaryPassword: delivery?.temporaryPassword });
 };
 
 /** Quién puede tocar a esta persona: nadie a sí mismo, y a un administrador solo otro administrador. */

@@ -3,10 +3,11 @@ import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-d
 import { Alert, Box, Button, Link, Stack, TextField, Typography } from '@mui/material';
 import { BySrv, EventBoxLogo } from '../components/Brand';
 import PasswordField from '../components/PasswordField';
+import { useAuth } from '../context/AuthContext';
 import { useFeedback } from '../context/FeedbackContext';
 import { api, errorMessage } from '../lib/api';
 
-const AuthCard = ({ title, subtitle, children }) => (
+const AuthCard = ({ title, subtitle, children, footer }) => (
   <Box sx={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', p: { xs: 3, sm: 6 } }}>
     <Box sx={{ width: '100%', maxWidth: 400 }}>
       <EventBoxLogo size={36} fontSize={22} />
@@ -18,9 +19,11 @@ const AuthCard = ({ title, subtitle, children }) => (
       </Typography>
       {children}
       <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link component={RouterLink} to="/login" variant="body2">
-          Volver a iniciar sesión
-        </Link>
+        {footer ?? (
+          <Link component={RouterLink} to="/login" variant="body2">
+            Volver a iniciar sesión
+          </Link>
+        )}
         <BySrv />
       </Box>
     </Box>
@@ -129,6 +132,63 @@ export const ResetPasswordPage = () => {
         )}
         <Button type="submit" variant="contained" size="large" disabled={loading || password.length < 6 || password !== confirm}>
           {loading ? 'Guardando…' : 'Guardar contraseña'}
+        </Button>
+      </Stack>
+    </AuthCard>
+  );
+};
+
+/**
+ * Entró con la contraseña temporal (la del mail o la que le puso un administrador):
+ * elige una propia antes de usar la app.
+ */
+export const TemporaryPasswordPage = () => {
+  const { user, refresh, logout } = useAuth();
+  const { notify } = useFeedback();
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const mismatch = confirm && password !== confirm;
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await api.put('/me/password', { newPassword: password });
+      await refresh();
+      notify('Listo: ya tenés tu contraseña propia.');
+    } catch (err) {
+      setError(errorMessage(err));
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AuthCard
+      title="Elegí tu contraseña"
+      subtitle={`Hola ${user?.firstname || user?.username}: entraste con una contraseña temporal. Elegí una propia para seguir (mínimo 6 caracteres).`}
+      footer={
+        <Link component="button" type="button" variant="body2" onClick={logout}>
+          Salir
+        </Link>
+      }
+    >
+      <Stack component="form" spacing={2} onSubmit={submit} noValidate>
+        <PasswordField label="Contraseña nueva" size="medium" autoFocus autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <PasswordField
+          label="Repetir contraseña"
+          size="medium"
+          autoComplete="new-password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          error={!!mismatch}
+          helperText={mismatch ? 'No coincide' : ' '}
+        />
+        {error && <Alert severity="error">{error}</Alert>}
+        <Button type="submit" variant="contained" size="large" disabled={loading || password.length < 6 || password !== confirm}>
+          {loading ? 'Guardando…' : 'Guardar y entrar'}
         </Button>
       </Stack>
     </AuthCard>

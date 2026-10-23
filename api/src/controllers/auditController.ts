@@ -2,23 +2,19 @@ import { Request, Response } from 'express';
 import { Op, WhereOptions } from 'sequelize';
 import { AuditLog, Company, User } from '../models';
 import { deviceOf } from '../services/audit';
-import { HttpError } from '../utils/http';
 
 const KINDS = ['login', 'login_failed', 'logout', 'change', 'security', 'download'];
 const PAGE_SIZE = 50;
 
 /**
- * Panel de auditoría. El administrador ve lo de su empresa; el equipo de SRV puede ver todas
- * (`scope=all`). Filtros: tipo, persona, fechas y texto libre.
+ * Panel de auditoría: solo el equipo de SRV, con los registros de todas las empresas.
+ * Filtros: empresa, tipo, persona, fechas y texto libre.
  */
 export const listAudit = async (req: Request, res: Response) => {
-  const me = req.user!;
-  const all = me.isSuperAdmin && req.query.scope === 'all';
-  if (!all && !me.companyId) throw new HttpError(403, 'Tu usuario no pertenece a ninguna empresa.');
-
   const where: WhereOptions = {};
   const and: WhereOptions[] = [];
-  if (!all) and.push({ companyId: me.companyId });
+  const companyId = Number(req.query.company) || null;
+  if (companyId) and.push({ companyId });
   const kind = String(req.query.kind || '');
   if (KINDS.includes(kind)) and.push({ kind });
   const userId = Number(req.query.user) || null;
@@ -27,7 +23,14 @@ export const listAudit = async (req: Request, res: Response) => {
   if (DATE.test(String(req.query.from))) and.push({ createdAt: { [Op.gte]: new Date(`${req.query.from}T00:00:00-03:00`) } });
   if (DATE.test(String(req.query.to))) and.push({ createdAt: { [Op.lte]: new Date(`${req.query.to}T23:59:59.999-03:00`) } });
   const q = String(req.query.q || '').trim();
-  if (q) and.push({ [Op.or]: [{ summary: { [Op.iLike]: `%${q}%` } }, { username: { [Op.iLike]: `%${q}%` } }, { ip: { [Op.iLike]: `%${q}%` } }] });
+  if (q) {
+    // También encuentra a la persona por nombre, apellido o usuario (los cambios no guardan el usuario escrito).
+    const like = { [Op.iLike]: `%${q}%` };
+    const people = await User.findAll({ where: { [Op.or]: [{ username: like }, { firstname: like }, { lastname: like }, { email: like }] }, attributes: ['id'], limit: 200 });
+    and.push({
+      [Op.or]: [{ summary: like }, { username: like }, { ip: like }, ...(people.length ? [{ userId: people.map((p) => p.id) }] : [])],
+    });
+  }
   if (and.length) Object.assign(where, { [Op.and]: and });
 
   const page = Math.max(Number(req.query.page) || 1, 1);
@@ -39,7 +42,7 @@ export const listAudit = async (req: Request, res: Response) => {
   });
 
   const userIds = [...new Set(rows.map((r) => r.userId).filter(Boolean))] as number[];
-  const companyIds = all ? ([...new Set(rows.map((r) => r.companyId).filter(Boolean))] as number[]) : [];
+  const companyIds = [...new Set(rows.map((r) => r.companyId).filter(Boolean))] as number[];
   const [users, companies] = await Promise.all([
     userIds.length ? User.findAll({ where: { id: userIds }, attributes: ['id', 'username', 'firstname', 'lastname', 'avatarUrl'] }) : [],
     companyIds.length ? Company.findAll({ where: { id: companyIds }, attributes: ['id', 'name'] }) : [],
