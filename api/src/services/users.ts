@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import { env } from '../config/env';
-import { User } from '../models';
+import { Company, LoginLinkToken, User } from '../models';
 import { HttpError } from '../utils/http';
 import { button, details, paragraph, sendEmail } from './email';
 
@@ -42,34 +42,69 @@ const TEMP_ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 /** Contraseña temporal de 10 caracteres: la persona la usa para entrar la primera vez y la cambia. */
 export const generateTemporaryPassword = () => Array.from({ length: 10 }, () => TEMP_ALPHABET[crypto.randomInt(TEMP_ALPHABET.length)]).join('');
 
+export const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
+
+const MAIL_LINK_TTL_MS = 72 * 60 * 60 * 1000;
+
 /**
- * Le manda a la persona su usuario y la contraseña temporal para entrar.
+ * Link de un solo uso para entrar directo desde el mail (vale 72 horas). Se guarda hasheado.
+ * Los links anteriores de la persona dejan de servir: solo vale el del último mail.
+ */
+export const createMailLoginLink = async (userId: number) => {
+  const token = crypto.randomBytes(32).toString('hex');
+  await LoginLinkToken.update({ usedAt: new Date() }, { where: { userId, usedAt: null } });
+  await LoginLinkToken.create({ userId, tokenHash: sha256(token), expiresAt: new Date(Date.now() + MAIL_LINK_TTL_MS) });
+  const link = `${env.appUrl}/login?link=${token}&via=mail`;
+  if (!env.isProduction) console.log(`[eventbox] Link de acceso por mail para el usuario #${userId}: ${link}`);
+  return link;
+};
+
+/**
+ * Le manda a la persona su usuario, la contraseña temporal y un botón para entrar directo.
  * Devuelve si el mail salió (sin email o sin Resend configurado, no sale).
  */
 export const sendAccessEmail = (
   user: { email: string | null; username: string; firstname: string | null },
   password: string,
-  { companyName, isNew = true }: { companyName?: string | null; isNew?: boolean } = {},
+  { companyName, isNew = true, link }: { companyName?: string | null; isNew?: boolean; link: string },
 ) => {
   if (!user.email) return Promise.resolve(false);
   return sendEmail({
     to: user.email,
     subject: isNew ? 'Tu usuario de Event Box' : 'Tu nueva contraseña de Event Box',
-    title: isNew ? '¡Ya tenés usuario en Event Box!' : 'Te cambiaron la contraseña',
+    title: isNew ? '¡Ya tenés usuario en Event Box!' : 'Te blanquearon la contraseña',
     body:
       paragraph(
         isNew
           ? `Hola ${user.firstname || user.username}, te crearon un usuario en Event Box${companyName ? ` para ${companyName}` : ''}.`
-          : `Hola ${user.firstname || user.username}, un administrador te puso una contraseña nueva en Event Box.`,
+          : `Hola ${user.firstname || user.username}, un administrador te puso una contraseña nueva en Event Box. La anterior ya no sirve.`,
       ) +
+      paragraph('Tocá el botón para entrar directo y elegir tu contraseña. El botón sirve una sola vez y vence en 72 horas.') +
+      button('Entrar a Event Box', link) +
+      paragraph('Si el botón ya no funciona, entrá con estos datos (también podés usar tu email o tu DNI en lugar del usuario):') +
       details([
         ['Usuario', user.username],
         ['Contraseña temporal', password],
       ]) +
-      paragraph('Al entrar te vamos a pedir que elijas una contraseña nueva. También podés entrar con tu email o tu DNI en lugar del usuario.') +
-      button('Entrar a Event Box', `${env.appUrl}/login`) +
-      paragraph('Si no esperabas este mail, avisale al administrador de tu empresa.'),
+      paragraph('Al entrar te vamos a pedir que elijas una contraseña nueva. Si no esperabas este mail, avisale al administrador de tu empresa.'),
   });
+};
+
+/**
+ * Le manda la contraseña temporal (con el link para entrar directo) y arma el aviso para quien la creó.
+ * Si el mail no sale y la contraseña la generó el sistema, se la devuelve para que la pase por otro medio.
+ */
+export const deliverTemporaryPassword = async (user: User, password: string, { generated, isNew }: { generated: boolean; isNew: boolean }) => {
+  const company = user.companyId ? await Company.findByPk(user.companyId, { attributes: ['name'] }) : null;
+  const mailed = user.email ? await sendAccessEmail(user, password, { companyName: company?.name, isNew, link: await createMailLoginLink(user.id) }) : false;
+  const why = user.email ? 'No se pudo mandar el mail' : 'No tiene email cargado';
+  return {
+    mailed,
+    note: mailed
+      ? ` Le mandamos un mail a ${user.email} con la contraseña temporal y un botón para entrar directo.`
+      : ` ${why}: pasale la contraseña ${generated ? 'temporal ' : ''}vos (la cambia al entrar).`,
+    temporaryPassword: !mailed && generated ? password : undefined,
+  };
 };
 
 type FieldErrors = Record<string, string>;

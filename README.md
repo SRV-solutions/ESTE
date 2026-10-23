@@ -76,9 +76,12 @@ Mi perfil o en Equipo; si la persona tiene CUIL en su ficha, se completa solo. *
 un QR que entra directo en el teléfono con la sesión de la PC: es de un solo uso y vence a los 5 minutos.
 
 **Contraseña temporal**: al crear un usuario (en Equipo, o el primer administrador desde el Panel SRV) la contraseña es
-opcional; si se deja vacía se genera una. Le llega por mail con su usuario y, al entrar, la app le pide elegir una propia
-(`User.mustChangePassword`). Lo mismo cuando un administrador le pone una contraseña nueva. Si el mail no sale (sin
-email o sin `RESEND_API_KEY`), la pantalla le muestra la contraseña generada al administrador una sola vez.
+opcional; si se deja vacía se genera una. Le llega por mail con su usuario y un botón para **entrar directo** (link de un
+solo uso, vence en 72 horas, `LoginLinkToken`); al entrar, la app le pide elegir una propia (`User.mustChangePassword`).
+**Blanquear contraseña** (en la ficha de Equipo, o en la empresa desde el Panel SRV) hace lo mismo con una contraseña
+nueva: la anterior y los links de mails anteriores dejan de servir. Si el mail no sale (sin email o Resend lo rechaza), la
+pantalla le muestra la contraseña generada al administrador una sola vez. **Probar mail** (Panel SRV) manda un mail de
+prueba y muestra el motivo exacto si Resend lo rechaza.
 
 - **Equipo de SRV (superadmin)**: entra al **Panel SRV**, crea empresas con su primer administrador, ve pagos y facturas, registra pagos manuales y suspende empresas. Se habilita con:
 

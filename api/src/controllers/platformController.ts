@@ -7,7 +7,7 @@ import { Company, Feedback, Invoice, Payment, Role, User } from '../models';
 import { isArcaConfigured } from '../services/arca';
 import { invoicePayment, registerManualPayment } from '../services/billing';
 import { getBlueRate, usdToArs } from '../services/dollar';
-import { button, details, isEmailConfigured, paragraph, sendEmail } from '../services/email';
+import { button, details, isEmailConfigured, paragraph, sendEmail, sendEmailResult } from '../services/email';
 import { cloneTemplateRoles } from '../services/roles';
 import { isR2Configured } from '../services/storage';
 import { isMercadoPagoConfigured } from '../services/mercadopago';
@@ -15,7 +15,7 @@ import { effectivePlan, parseDeal } from '../services/plan';
 import { addDays, subscriptionState, todayAR } from '../services/subscription';
 import { HttpError, parseId } from '../utils/http';
 import { parseCompanyInput } from '../utils/companyInput';
-import { EMAIL_RE, generateTemporaryPassword, hashPassword } from '../services/users';
+import { createMailLoginLink, deliverTemporaryPassword, EMAIL_RE, generateTemporaryPassword, hashPassword } from '../services/users';
 
 const count = (table: string, extra = '') =>
   literal(`(SELECT COUNT(*) FROM "${table}" x WHERE x."companyId" = "Company"."id" ${extra})::int`);
@@ -98,13 +98,13 @@ export const createCompany = async (req: Request, res: Response) => {
   const price = req.body.monthlyPriceUsd !== undefined && req.body.monthlyPriceUsd !== '' ? Number(req.body.monthlyPriceUsd) : plan.priceUsd;
   if (!Number.isFinite(price) || price < 0) throw new HttpError(400, 'Precio mensual inválido.');
 
-  const company = await sequelize.transaction(async (t) => {
+  const { company, adminId } = await sequelize.transaction(async (t) => {
     const c = await Company.create(
       { ...data, plan: plan.id, monthlyPriceUsd: price, status: 'active', paidUntil: addDays(todayAR(), env.billing.trialDays) },
       { transaction: t },
     );
     await cloneTemplateRoles(c.id, t);
-    await User.create(
+    const created = await User.create(
       {
         companyId: c.id,
         username,
@@ -117,8 +117,9 @@ export const createCompany = async (req: Request, res: Response) => {
       },
       { transaction: t },
     );
-    return c;
+    return { company: c, adminId: created.id };
   });
+  const link = await createMailLoginLink(adminId);
 
   const mailed = await sendEmail({
     to: email,
@@ -133,8 +134,8 @@ export const createCompany = async (req: Request, res: Response) => {
         ['Plan', `${plan.name} (hasta ${plan.maxUsers} usuarios)`],
         ['Período de prueba', `${env.billing.trialDays} días`],
       ]) +
-      paragraph('Al entrar te vamos a pedir que elijas una contraseña nueva.') +
-      button('Entrar a Event Box', `${env.appUrl}/login`) +
+      paragraph('Tocá el botón para entrar directo y elegir tu contraseña (sirve una sola vez y vence en 72 horas). Si ya no funciona, entrá con tu usuario y la contraseña temporal.') +
+      button('Entrar a Event Box', link) +
       paragraph('Desde Mi empresa podés subir el logo, cargar los datos para la factura y crear los usuarios de tu equipo.'),
   });
 
@@ -179,6 +180,32 @@ export const addManualPayment = async (req: Request, res: Response) => {
 export const retryInvoice = async (req: Request, res: Response) => {
   if (!isArcaConfigured()) throw new HttpError(503, 'ARCA no está configurado en el servidor.');
   res.json(await invoicePayment(parseId(req.params.paymentId)));
+};
+
+/** Blanquea la contraseña de cualquier usuario (por ejemplo, el administrador de una empresa). */
+export const resetUserPassword = async (req: Request, res: Response) => {
+  const user = await User.findByPk(parseId(req.params.id, 'usuario'));
+  if (!user) throw new HttpError(404, 'Usuario no encontrado.');
+  if (user.id === req.user!.id) throw new HttpError(400, 'Tu propia contraseña la cambiás desde Mi perfil.');
+  if (!user.username || user.access === 'none') throw new HttpError(400, 'Esa persona no entra a la app.');
+  const password = generateTemporaryPassword();
+  await user.update({ password: await hashPassword(password), mustChangePassword: true });
+  const delivery = await deliverTemporaryPassword(user, password, { generated: true, isNew: false });
+  res.json({ message: `Contraseña de ${user.username} blanqueada.${delivery.note}`, temporaryPassword: delivery.temporaryPassword });
+};
+
+/** Manda un mail de prueba y devuelve el motivo exacto si Resend lo rechaza. */
+export const testEmail = async (req: Request, res: Response) => {
+  const me = await User.findByPk(req.user!.id, { attributes: ['email'] });
+  const to = String(req.body.to || me?.email || '').trim();
+  if (!EMAIL_RE.test(to)) throw new HttpError(400, 'Poné un email válido para la prueba.');
+  const result = await sendEmailResult({
+    to,
+    subject: 'Prueba de mail de Event Box',
+    title: 'Prueba de mail',
+    body: paragraph('Si te llegó este mail, los mails de Event Box funcionan: bienvenidas, contraseñas temporales y recuperación.'),
+  });
+  res.json({ ...result, to, from: env.email.from, configured: isEmailConfigured() });
 };
 
 /** Roles disponibles (para mostrar en el panel). */

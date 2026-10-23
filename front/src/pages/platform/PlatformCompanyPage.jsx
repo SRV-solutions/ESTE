@@ -23,6 +23,7 @@ import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
 import PictureAsPdfOutlined from '@mui/icons-material/PictureAsPdfOutlined';
 import ReplayOutlined from '@mui/icons-material/ReplayOutlined';
 import HandshakeOutlined from '@mui/icons-material/HandshakeOutlined';
+import LockResetOutlined from '@mui/icons-material/LockResetOutlined';
 import FormDialog from '../../components/FormDialog';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../../components/ui';
 import { useFeedback } from '../../context/FeedbackContext';
@@ -171,6 +172,36 @@ const PlatformCompanyPage = () => {
       );
   };
 
+  // Blanquear al administrador: contraseña temporal nueva por mail, con un botón para entrar directo.
+  const resetAdminPassword = async (admin) => {
+    const ok = await confirm({
+      title: `Blanquear la contraseña de ${userName(admin)}`,
+      message: `Se genera una contraseña temporal y le llega por mail a ${admin.email || 'su email'}, con un botón para entrar directo. La contraseña actual deja de servir y al entrar elige una nueva.`,
+      confirmLabel: 'Blanquear',
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/platform/users/${admin.id}/reset-password`);
+      notify(data.message, data.temporaryPassword ? 'warning' : 'success');
+      if (data.temporaryPassword) {
+        await confirm({
+          title: `Contraseña temporal de ${userName(admin)}`,
+          message: `Usuario: ${admin.username}
+Contraseña temporal: ${data.temporaryPassword}
+
+${data.message}
+Copiala ahora: no se vuelve a mostrar.`,
+          confirmLabel: 'Listo',
+        });
+      }
+    } catch (err) {
+      notify(errorMessage(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const state = ACCESS_STATE[company.subscription.state];
 
   return (
@@ -243,14 +274,19 @@ const PlatformCompanyPage = () => {
             </Typography>
             <Stack spacing={1}>
               {company.admins.map((a) => (
-                <div key={a.id}>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                    {userName(a)}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    @{a.username} · {a.email}
-                  </Typography>
-                </div>
+                <Stack key={a.id} direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                  <div>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      {userName(a)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      @{a.username} · {a.email}
+                    </Typography>
+                  </div>
+                  <Button size="small" startIcon={<LockResetOutlined />} onClick={() => resetAdminPassword(a)} disabled={busy} sx={{ flexShrink: 0 }}>
+                    Blanquear
+                  </Button>
+                </Stack>
               ))}
               {!company.admins.length && <Typography color="text.secondary">Sin administradores.</Typography>}
             </Stack>

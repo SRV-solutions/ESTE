@@ -5,13 +5,13 @@ import { env } from '../config/env';
 import { TEMPORARY_MAX_DAYS } from '../config/plans';
 import { planHasFeature } from '../services/plan';
 import { tenant } from '../middlewares/auth';
-import { Company, Employee, Payslip, Role, User } from '../models';
+import { Employee, Payslip, Role, User } from '../models';
 import { hasLogin, UserAccess } from '../models/User';
 import { countActiveTemporary, countAppUsers, fichaOf, findTeamMember, personName } from '../services/team';
 import { deletePrivateFile } from '../services/storage';
 import { HttpError, parseId, pick } from '../utils/http';
 import { isValidCuit } from '../utils/companyInput';
-import { assertNotLastAdmin, assertPassword, generateTemporaryPassword, hashPassword, normalizeDni, sendAccessEmail, validateProfile } from '../services/users';
+import { assertNotLastAdmin, assertPassword, deliverTemporaryPassword, generateTemporaryPassword, hashPassword, normalizeDni, validateProfile } from '../services/users';
 
 /**
  * Equipo: todas las personas de la empresa en un solo lugar.
@@ -157,28 +157,6 @@ export const listTeam = async (req: Request, res: Response) => {
   });
 };
 
-/** Nombre de la empresa, para el mail con el usuario y la contraseña temporal. */
-const companyName = async (companyId: number) => (await Company.findByPk(companyId, { attributes: ['name'] }))?.name ?? null;
-
-/**
- * Le avisa por mail la contraseña temporal. Si el mail no sale y la contraseña la generó el sistema,
- * se la devuelve al administrador para que se la pase por otro medio.
- */
-const deliverPassword = async (
-  user: User,
-  password: string,
-  { generated, isNew }: { generated: boolean; isNew: boolean },
-) => {
-  const mailed = await sendAccessEmail(user, password, { companyName: await companyName(user.companyId!), isNew });
-  const why = user.email ? 'No se pudo mandar el mail' : 'No tiene email cargado';
-  return {
-    note: mailed
-      ? ` Le mandamos un mail a ${user.email} con la contraseña temporal: la cambia al entrar.`
-      : ` ${why}: pasale la contraseña ${generated ? 'temporal ' : ''}vos (la cambia al entrar).`,
-    temporaryPassword: !mailed && generated ? password : undefined,
-  };
-};
-
 const parseAccess = (value: unknown, fallback: UserAccess) => {
   if (value === undefined) return fallback;
   if (!ACCESS.includes(value as UserAccess)) throw new HttpError(400, 'Tipo de acceso inválido.');
@@ -239,7 +217,7 @@ export const createPerson = async (req: Request, res: Response) => {
       : access === 'temporary'
         ? `${name} puede entrar con el usuario ${username} hasta el ${accessUntil!.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} h.`
         : `${name} ya es parte del personal (sin acceso a la app).`;
-  const delivery = password ? await deliverPassword(user, password, { generated: !typedPassword, isNew: true }) : null;
+  const delivery = password ? await deliverTemporaryPassword(user, password, { generated: !typedPassword, isNew: true }) : null;
   res.status(201).json({ id: user.id, message: message + (delivery?.note ?? ''), temporaryPassword: delivery?.temporaryPassword });
 };
 
@@ -313,7 +291,7 @@ export const updatePerson = async (req: Request, res: Response) => {
     );
     if (payroll && Object.keys(ficha).length) await (await fichaOf(user, transaction)).update(ficha, { transaction });
   });
-  const delivery = password && login && !isMe ? await deliverPassword(user, password, { generated: !typedPassword, isNew: !hadLogin }) : null;
+  const delivery = password && login && !isMe ? await deliverTemporaryPassword(user, password, { generated: !typedPassword, isNew: !hadLogin }) : null;
   res.json({ message: `Datos guardados.${delivery?.note ?? ''}`, temporaryPassword: delivery?.temporaryPassword });
 };
 
@@ -321,6 +299,23 @@ export const updatePerson = async (req: Request, res: Response) => {
 const assertCanManage = (req: Request, user: User, verb: string) => {
   if (user.id === req.user!.id) throw new HttpError(400, `No podés ${verb} tu propio usuario.`);
   if (user.roleId === env.adminRoleId && !req.user!.isAdmin) throw new HttpError(403, `Solo un administrador puede ${verb} a otro administrador.`);
+};
+
+/**
+ * Blanquear la contraseña: se genera una temporal y le llega por mail con un botón para entrar directo
+ * (después elige una propia). La contraseña anterior y los links de mails anteriores dejan de servir.
+ */
+export const resetPersonPassword = async (req: Request, res: Response) => {
+  const user = await findTeamMember(tenant(req), req.params.id);
+  if (user.id === req.user!.id) throw new HttpError(400, 'Tu propia contraseña la cambiás desde Mi perfil.');
+  if (user.roleId === env.adminRoleId && !req.user!.isAdmin) throw new HttpError(403, 'Solo un administrador puede blanquear la contraseña de otro administrador.');
+  if (!user.username || !hasLogin(user)) {
+    throw new HttpError(400, `${personName(user)} no puede entrar a la app ahora (sin acceso, desactivado o con el acceso vencido): no hay contraseña para blanquear.`);
+  }
+  const password = generateTemporaryPassword();
+  await user.update({ password: await hashPassword(password), mustChangePassword: true });
+  const delivery = await deliverTemporaryPassword(user, password, { generated: true, isNew: false });
+  res.json({ message: `Contraseña de ${personName(user)} blanqueada.${delivery.note}`, temporaryPassword: delivery.temporaryPassword });
 };
 
 /**

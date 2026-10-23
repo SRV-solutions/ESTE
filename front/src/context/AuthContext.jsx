@@ -54,9 +54,9 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   }, []);
 
-  /** Entra con el link de un solo uso del QR "Llevar al celular" (generado desde una sesión abierta). */
-  const loginWithLink = useCallback(async (token) => {
-    const { data } = await api.post('/auth/link/redeem', { token });
+  /** Entra con un link de un solo uso: el QR "Llevar al celular" o el botón del mail de acceso (`via: 'mail'`). */
+  const loginWithLink = useCallback(async (token, via) => {
+    const { data } = await api.post('/auth/link/redeem', { token, via });
     tokenStore.set(data.token);
     setUser(data.user);
     setStatus('authenticated');

@@ -13,7 +13,10 @@ se explica en [MOBILE.md](MOBILE.md).
 ![Ingreso](img/login.jpg)
 
 - Cada persona entra con su **usuario, su email o su DNI**. Al crearle el usuario le llega un mail con una
-  **contraseña temporal** (o se la pasa el administrador si no tiene email); al entrar la primera vez elige una propia.
+  **contraseña temporal** y un botón para entrar directo (o se la pasa el administrador si no tiene email); al entrar
+  la primera vez elige una propia.
+- **Blanquear contraseña** (en la ficha de la persona, en Equipo): le llega por mail una contraseña temporal nueva con
+  el botón para entrar directo. La anterior deja de servir.
 - *Olvidé mi contraseña* manda un link por mail que vale una hora y sirve una sola vez.
 - **Mi perfil** (la foto, arriba a la derecha): nombre, email, DNI, foto y contraseña.
 - **Llevar al celular** (al pie del menú) muestra un QR. Al escanearlo, el celular entra directo con tu

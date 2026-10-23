@@ -19,6 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
+import LockResetOutlined from '@mui/icons-material/LockResetOutlined';
 import FormDialog from '../../components/FormDialog';
 import PasswordField from '../../components/PasswordField';
 import UserAvatar from '../../components/UserAvatar';
@@ -118,6 +119,38 @@ const PersonDialog = ({ person, roles: allRoles, payroll, limits, onClose, onSav
       confirmLabel: 'Eliminar definitivamente',
       request: () => api.delete(`/team/${person.id}`),
     });
+  // Blanquear: contraseña temporal nueva por mail, con un botón para entrar directo.
+  const resetPassword = async () => {
+    const ok = await confirm({
+      title: `Blanquear la contraseña de ${userName(person)}`,
+      message: person.email
+        ? `Se genera una contraseña temporal y le llega por mail a ${person.email}, con un botón para entrar directo. La contraseña actual deja de servir y al entrar elige una nueva.`
+        : 'Se genera una contraseña temporal y te la mostramos para que se la pases (no tiene email cargado). La contraseña actual deja de servir y al entrar elige una nueva.',
+      confirmLabel: 'Blanquear',
+    });
+    if (!ok) return;
+    setActing(true);
+    try {
+      const { data } = await api.post(`/team/${person.id}/reset-password`);
+      notify(data.message, data.temporaryPassword ? 'warning' : 'success');
+      onSaved();
+      if (data.temporaryPassword) {
+        await confirm({
+          title: `Contraseña temporal de ${userName(person)}`,
+          message: `Usuario: ${person.username}
+Contraseña temporal: ${data.temporaryPassword}
+
+${data.message}
+Copiala ahora: no se vuelve a mostrar.`,
+          confirmLabel: 'Listo',
+        });
+      }
+    } catch (err) {
+      notify(errorMessage(err), 'error');
+    } finally {
+      setActing(false);
+    }
+  };
   const isNew = !person.id;
   const isMe = person.id === me.id;
   const [form, setForm] = useState(() => ({
@@ -339,13 +372,18 @@ Copiala ahora: no se vuelve a mostrar.`,
         {!isNew && !isMe && (
           <Grid item xs={12}>
             <Box sx={{ mt: 1, p: 2, borderRadius: 2, border: 1, borderColor: 'divider' }}>
-              <Typography variant="subtitle2">{disabled ? 'Usuario desactivado' : 'Desactivar o eliminar'}</Typography>
+              <Typography variant="subtitle2">{disabled ? 'Usuario desactivado' : 'Contraseña y acceso'}</Typography>
               <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 1.5 }}>
                 {disabled
                   ? `Desactivado el ${formatDateTime(person.disabledAt)}: no entra ni cuenta para el plan.`
-                  : 'Desactivar conserva todo y se puede revertir. Eliminar es definitivo.'}
+                  : `${person.canLogin ? 'Blanquear le manda por mail una contraseña temporal nueva. ' : ''}Desactivar conserva todo y se puede revertir. Eliminar es definitivo.`}
               </Typography>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {person.canLogin && (
+                  <Button variant="outlined" size="small" startIcon={<LockResetOutlined />} onClick={resetPassword} disabled={acting || saving}>
+                    Blanquear contraseña
+                  </Button>
+                )}
                 <Button variant="outlined" color={disabled ? 'primary' : 'warning'} size="small" onClick={toggleDisabled} disabled={acting || saving}>
                   {disabled ? 'Volver a activar' : 'Desactivar'}
                 </Button>

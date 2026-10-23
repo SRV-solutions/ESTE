@@ -83,6 +83,7 @@ router.get('/team', can(USERS, READ), h(team.listTeam));
 router.post('/team', can(USERS, CREATE), h(team.createPerson));
 router.patch('/team/:id', can(USERS, UPDATE), h(team.updatePerson));
 router.patch('/team/:id/disabled', can(USERS, UPDATE), h(team.setDisabled));
+router.post('/team/:id/reset-password', can(USERS, UPDATE), mailLimiter, h(team.resetPersonPassword));
 router.delete('/team/:id', can(USERS, DELETE), requireCompanyAdmin, h(team.deletePerson));
 
 router.get('/roles', can(USERS, READ), h(roles.listRoles));
@@ -189,6 +190,8 @@ router.get('/platform/companies/:id', superAdmin, h(platform.getCompany));
 router.patch('/platform/companies/:id', superAdmin, h(platform.updateCompany));
 router.post('/platform/companies/:id/payments', superAdmin, h(platform.addManualPayment));
 router.post('/platform/payments/:paymentId/invoice', superAdmin, h(platform.retryInvoice));
+router.post('/platform/users/:id/reset-password', superAdmin, h(platform.resetUserPassword));
+router.post('/platform/email-test', superAdmin, h(platform.testEmail));
 router.get('/platform/feedback', superAdmin, h(feedback.listFeedback));
 // Auditoría de todas las empresas: solo el equipo de SRV.
 router.get('/audit', superAdmin, h(audit.listAudit));

@@ -10,7 +10,7 @@ import { errorMessage } from '../lib/api';
 import { BRAND } from '../theme';
 
 const LoginPage = () => {
-  const { login, loginWithLink, status } = useAuth();
+  const { login, loginWithLink, logout, status } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [params, setParams] = useSearchParams();
@@ -19,23 +19,27 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const link = params.get('link');
+  const fromMail = params.get('via') === 'mail';
   const linkTried = useRef(false);
 
-  // Llegó escaneando el QR de "Llevar al celular": entra con el link de un solo uso, sin contraseña.
+  // Llegó escaneando el QR de "Llevar al celular" o con el botón del mail: entra con el link de un solo uso, sin contraseña.
   useEffect(() => {
-    if (!link || linkTried.current || status !== 'anonymous') return;
+    if (!link || linkTried.current) return;
+    // Había otra sesión abierta en este navegador: el link es para entrar como otra persona.
+    if (status === 'authenticated') logout();
+    if (status !== 'anonymous') return;
     linkTried.current = true;
     setLoading(true);
-    loginWithLink(link)
+    loginWithLink(link, fromMail ? 'mail' : undefined)
       .then(() => navigate('/', { replace: true }))
       .catch((err) => {
         setError(errorMessage(err, 'No se pudo entrar con el código.'));
         setParams({}, { replace: true });
       })
       .finally(() => setLoading(false));
-  }, [link, status, loginWithLink, navigate, setParams]);
+  }, [link, fromMail, status, loginWithLink, logout, navigate, setParams]);
 
-  if (status === 'authenticated') return <Navigate to="/" replace />;
+  if (status === 'authenticated' && !link) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,7 +105,7 @@ const LoginPage = () => {
             Iniciar sesión
           </Typography>
           <Typography color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
-            {link && loading ? 'Entrando con el código de la PC…' : 'Entrá con tu usuario, tu email o tu DNI.'}
+            {link && loading ? (fromMail ? 'Entrando con el botón del mail…' : 'Entrando con el código de la PC…') : 'Entrá con tu usuario, tu email o tu DNI.'}
           </Typography>
           <Stack spacing={2}>
             <TextField

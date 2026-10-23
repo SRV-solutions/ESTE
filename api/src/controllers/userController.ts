@@ -9,7 +9,7 @@ import { Company, LoginLinkToken, PasswordResetToken, Permission, Role, User } f
 import { hasLogin } from '../models/User';
 import { audit, clientIp } from '../services/audit';
 import { countAppUsers } from '../services/team';
-import { assertPassword, checkPassword, findByIdentifier, hashPassword, normalizeDni, validateProfile } from '../services/users';
+import { assertPassword, checkPassword, findByIdentifier, hashPassword, normalizeDni, sha256, validateProfile } from '../services/users';
 import { button, paragraph, sendEmail } from '../services/email';
 import { deleteByUrl, saveImage } from '../services/storage';
 import { subscriptionState } from '../services/subscription';
@@ -189,7 +189,6 @@ export const deleteMyAvatar = async (req: Request, res: Response) => {
 // ---------- Recuperar contraseña ----------
 
 const RESET_TTL_MS = 60 * 60 * 1000;
-const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
 
 /**
  * Manda un link para elegir una contraseña nueva. Responde siempre lo mismo,
@@ -239,17 +238,24 @@ export const createLoginLink = async (req: Request, res: Response) => {
   res.json({ url: `${env.appUrl}/login?link=${token}`, expiresAt });
 };
 
+/** Canjea el link de un solo uso: el del QR de la PC o el botón del mail con la contraseña temporal. */
 export const redeemLoginLink = async (req: Request, res: Response) => {
   const token = String(req.body.token || '');
+  const fromMail = req.body.via === 'mail';
   const record = token ? await LoginLinkToken.findOne({ where: { tokenHash: sha256(token) } }) : null;
   if (!record || record.usedAt || record.expiresAt < new Date()) {
-    throw new HttpError(400, 'El código ya se usó o venció. Volvé a abrir "Llevar al celular" en la PC y escaneá el nuevo.');
+    throw new HttpError(
+      400,
+      fromMail
+        ? 'El botón del mail ya se usó o venció. Entrá con tu usuario y la contraseña temporal del mail, o pedile a un administrador que te la blanquee.'
+        : 'El código ya se usó o venció. Volvé a abrir "Llevar al celular" en la PC y escaneá el nuevo.',
+    );
   }
   const user = await User.findByPk(record.userId, { include: sessionIncludes });
   if (!user) throw new HttpError(400, 'El usuario ya no existe.');
   assertCanLogin(user);
   await record.update({ usedAt: new Date() });
-  await registerLogin(req, user, 'escaneando el QR de la PC');
+  await registerLogin(req, user, fromMail ? 'con el botón del mail de acceso' : 'escaneando el QR de la PC');
   res.json({ token: signToken(user), user: await toSession(user) });
 };
 

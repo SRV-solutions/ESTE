@@ -114,6 +114,7 @@ const RULES: Record<string, Rule> = {
   'PATCH /team/:id': R('security', (p) => `Editó los datos o el acceso de la persona #${p.id}`),
   'PATCH /team/:id/disabled': R('security', (p, b) => `${b.disabled === false ? 'Reactivó' : 'Desactivó'} a la persona #${p.id}`),
   'DELETE /team/:id': R('security', (p) => `Eliminó a la persona #${p.id}`),
+  'POST /team/:id/reset-password': R('security', (p) => `Blanqueó la contraseña de la persona #${p.id}`),
   'POST /roles': R('security', 'Creó un rol'),
   'PATCH /roles/:id': R('security', (p) => `Cambió los permisos del rol #${p.id}`),
   'DELETE /roles/:id': R('security', (p) => `Borró el rol #${p.id}`),
@@ -130,6 +131,8 @@ const RULES: Record<string, Rule> = {
   'POST /platform/companies': R('security', 'SRV: dio de alta una empresa'),
   'PATCH /platform/companies/:id': R('security', (p) => `SRV: editó la empresa #${p.id}`),
   'POST /platform/companies/:id/payments': R('security', (p) => `SRV: registró un pago de la empresa #${p.id}`),
+  'POST /platform/users/:id/reset-password': R('security', (p) => `SRV: blanqueó la contraseña del usuario #${p.id}`),
+  'POST /platform/email-test': R('change', 'SRV: mandó un mail de prueba'),
 };
 
 /** "/team/:id/disabled" + "/team/12/disabled" → { id: "12" }. */

@@ -50,12 +50,15 @@ interface SendInput {
   replyTo?: string;
 }
 
-/** Envía un mail. Nunca tira error: un mail que no sale no tiene que cortar la acción del usuario. */
-export const sendEmail = async ({ to, subject, title, body, replyTo }: SendInput) => {
+/**
+ * Envía un mail y dice por qué no salió (para la prueba del Panel SRV).
+ * Nunca tira error: un mail que no sale no tiene que cortar la acción del usuario.
+ */
+export const sendEmailResult = async ({ to, subject, title, body, replyTo }: SendInput): Promise<{ ok: boolean; error?: string }> => {
   const html = layout(title, body);
   if (!isEmailConfigured()) {
     console.log(`[eventbox] (mail no enviado, falta RESEND_API_KEY) Para: ${to} · ${subject}`);
-    return false;
+    return { ok: false, error: 'Falta RESEND_API_KEY en el servidor.' };
   }
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -65,12 +68,21 @@ export const sendEmail = async ({ to, subject, title, body, replyTo }: SendInput
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
-      console.error('[eventbox] Resend rechazó el mail', res.status, await res.text());
-      return false;
+      const text = await res.text();
+      console.error(`[eventbox] Resend rechazó el mail para ${to}`, res.status, text);
+      let reason = text;
+      try {
+        reason = JSON.parse(text).message || text;
+      } catch {
+        /* no era JSON */
+      }
+      return { ok: false, error: `Resend respondió ${res.status}: ${reason}`.slice(0, 500) };
     }
-    return true;
+    return { ok: true };
   } catch (err) {
     console.error('[eventbox] No se pudo enviar el mail', err);
-    return false;
+    return { ok: false, error: `No se pudo conectar con Resend: ${(err as Error).message}` };
   }
 };
+
+export const sendEmail = async (input: SendInput) => (await sendEmailResult(input)).ok;

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Alert,
   Button,
   Chip,
   Grid,
@@ -18,10 +19,12 @@ import {
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import BugReportOutlined from '@mui/icons-material/BugReportOutlined';
+import MailOutlined from '@mui/icons-material/MailOutlined';
 import FormDialog from '../../components/FormDialog';
 import { PLAN_OPTIONS } from '../../lib/plans';
 import PasswordField from '../../components/PasswordField';
 import { EmptyState, ErrorState, Loading, PageHeader, StatTile } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
 import { useFeedback } from '../../context/FeedbackContext';
 import { useLoader } from '../../hooks/useLoader';
 import { api, errorMessage, fieldErrors } from '../../lib/api';
@@ -138,9 +141,56 @@ No se pudo mandar el mail. Copiala ahora: no se vuelve a mostrar. La cambia al e
   );
 };
 
+/** Manda un mail de prueba y muestra el motivo exacto si Resend lo rechaza (dominio sin verificar, remitente mal escrito…). */
+const EmailTestDialog = ({ open, onClose }) => {
+  const { user } = useAuth();
+  const [to, setTo] = useState('');
+  const [result, setResult] = useState(null);
+  const [sending, setSending] = useState(false);
+
+  const send = async () => {
+    setSending(true);
+    setResult(null);
+    try {
+      const { data } = await api.post('/platform/email-test', { to: to.trim() || undefined });
+      setResult(data);
+    } catch (err) {
+      setResult({ ok: false, error: errorMessage(err) });
+    } finally {
+      setSending(false);
+    }
+  };
+  const close = () => {
+    setResult(null);
+    onClose();
+  };
+
+  return (
+    <FormDialog open={open} onClose={close} title="Probar mail" onSubmit={send} saving={sending} submitLabel="Mandar prueba" maxWidth="xs">
+      <TextField type="email" label="Mandar a" value={to} onChange={(e) => setTo(e.target.value)} placeholder={user?.email || 'tu@email.com'} helperText="Vacío: a tu email." />
+      {result &&
+        (result.ok ? (
+          <Alert severity="success">
+            Resend aceptó el mail para {result.to}. Si no aparece en unos minutos, revisá spam. Remitente: {result.from}
+          </Alert>
+        ) : (
+          <Alert severity="error">
+            {result.error}
+            {result.from && (
+              <Typography variant="caption" component="div" sx={{ mt: 0.5 }}>
+                Remitente configurado (EMAIL_FROM): {result.from}
+              </Typography>
+            )}
+          </Alert>
+        ))}
+    </FormDialog>
+  );
+};
+
 const PlatformPage = () => {
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
   const { data, loading, error, reload } = useLoader(async () => {
     const [overview, companies] = await Promise.all([api.get('/platform/overview').then((r) => r.data), api.get('/platform/companies').then((r) => r.data)]);
     return { overview, companies };
@@ -204,7 +254,9 @@ const PlatformPage = () => {
           color={overview.integrations.email ? 'success' : 'default'}
           label={`Mails (Resend): ${overview.integrations.email ? 'conectado' : 'sin configurar'}`}
         />
+        <Chip variant="outlined" icon={<MailOutlined />} label="Probar mail" onClick={() => setTestingEmail(true)} />
       </Stack>
+      <EmailTestDialog open={testingEmail} onClose={() => setTestingEmail(false)} />
 
       <TableContainer component={Paper} variant="outlined">
         <Table size="small" sx={{ minWidth: 760 }}>
